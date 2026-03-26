@@ -1,0 +1,20 @@
+import org.gradle.api.tasks.JavaExec
+
+plugins {
+    id("buildsrc.convention.kotlin-jvm")
+    application
+}
+
+dependencies {
+    implementation(project(":core"))
+    implementation(libs.gdxBackendLwjgl3)
+    runtimeOnly("com.badlogicgames.gdx:gdx-platform:${libs.versions.gdx.get()}:natives-desktop")
+}
+
+application {
+    mainClass = "com.faultory.desktop.DesktopLauncherKt"
+}
+
+tasks.named<JavaExec>("run") {
+    workingDir = rootProject.file("assets")
+}

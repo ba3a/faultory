@@ -1,0 +1,28 @@
+{
+  "towers": [
+    {
+      "id": "pebble-cannon",
+      "displayName": "Pebble Cannon",
+      "cost": 50,
+      "range": 140.0,
+      "damagePerShot": 12,
+      "fireRatePerSecond": 1.0
+    },
+    {
+      "id": "arc-coil",
+      "displayName": "Arc Coil",
+      "cost": 80,
+      "range": 110.0,
+      "damagePerShot": 8,
+      "fireRatePerSecond": 2.4
+    },
+    {
+      "id": "glacier-fan",
+      "displayName": "Glacier Fan",
+      "cost": 65,
+      "range": 96.0,
+      "damagePerShot": 4,
+      "fireRatePerSecond": 1.8
+    }
+  ]
+}
