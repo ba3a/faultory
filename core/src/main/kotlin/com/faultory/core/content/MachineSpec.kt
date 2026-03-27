@@ -6,13 +6,14 @@ import kotlinx.serialization.Serializable
 data class MachineSpec(
     val id: String,
     val displayName: String,
+    val level: Int,
     val type: MachineType,
     val manuality: Manuality,
     val skin: String,
     val productIds: List<String>,
     val installCost: Int,
     val operationDurationSeconds: Float,
-    val upgradeTargetId: String? = null,
+    val upgradeTree: BinaryUpgradeTree? = null,
     val producerProfile: ProducerMachineProfile? = null,
     val qaProfile: QaMachineProfile? = null
 )

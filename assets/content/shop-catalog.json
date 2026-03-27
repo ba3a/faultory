@@ -3,6 +3,7 @@
     {
       "id": "line-inspector",
       "displayName": "Line Inspector",
+      "level": 1,
       "hireCost": 60,
       "walkSpeed": 128.0,
       "skin": "worker_line_inspector",
@@ -18,11 +19,37 @@
           "defectChance": 0.16,
           "coverageRadius": 116.0
         }
+      ],
+      "upgradeTree": {
+        "leftUpgradeId": "line-inspector-lead",
+        "rightUpgradeId": "line-inspector-rover"
+      }
+    },
+    {
+      "id": "line-inspector-lead",
+      "displayName": "Line Lead",
+      "level": 2,
+      "hireCost": 96,
+      "walkSpeed": 134.0,
+      "skin": "worker_line_inspector_lead",
+      "roleProfiles": [
+        {
+          "role": "PRODUCER_OPERATOR",
+          "taskDurationSeconds": 1.7,
+          "defectChance": 0.09
+        },
+        {
+          "role": "QA",
+          "taskDurationSeconds": 1.2,
+          "defectChance": 0.10,
+          "coverageRadius": 128.0
+        }
       ]
     },
     {
       "id": "float-tech",
       "displayName": "Float Tech",
+      "level": 1,
       "hireCost": 85,
       "walkSpeed": 148.0,
       "skin": "worker_float_tech",
@@ -38,6 +65,73 @@
           "defectChance": 0.12,
           "coverageRadius": 136.0
         }
+      ],
+      "upgradeTree": {
+        "leftUpgradeId": "float-tech-analyst",
+        "rightUpgradeId": "float-tech-foreman"
+      }
+    },
+    {
+      "id": "line-inspector-rover",
+      "displayName": "Line Rover",
+      "level": 2,
+      "hireCost": 102,
+      "walkSpeed": 168.0,
+      "skin": "worker_line_inspector_rover",
+      "roleProfiles": [
+        {
+          "role": "PRODUCER_OPERATOR",
+          "taskDurationSeconds": 1.5,
+          "defectChance": 0.10
+        },
+        {
+          "role": "QA",
+          "taskDurationSeconds": 1.3,
+          "defectChance": 0.11,
+          "coverageRadius": 148.0
+        }
+      ]
+    },
+    {
+      "id": "float-tech-analyst",
+      "displayName": "Float Analyst",
+      "level": 2,
+      "hireCost": 124,
+      "walkSpeed": 154.0,
+      "skin": "worker_float_tech_analyst",
+      "roleProfiles": [
+        {
+          "role": "PRODUCER_OPERATOR",
+          "taskDurationSeconds": 1.2,
+          "defectChance": 0.06
+        },
+        {
+          "role": "QA",
+          "taskDurationSeconds": 0.9,
+          "defectChance": 0.08,
+          "coverageRadius": 148.0
+        }
+      ]
+    },
+    {
+      "id": "float-tech-foreman",
+      "displayName": "Float Foreman",
+      "level": 2,
+      "hireCost": 130,
+      "walkSpeed": 176.0,
+      "skin": "worker_float_tech_foreman",
+      "roleProfiles": [
+        {
+          "role": "PRODUCER_OPERATOR",
+          "taskDurationSeconds": 1.1,
+          "defectChance": 0.07
+        },
+        {
+          "role": "QA",
+          "taskDurationSeconds": 1.0,
+          "defectChance": 0.09,
+          "coverageRadius": 154.0
+        }
       ]
     }
   ],
@@ -45,6 +139,7 @@
     {
       "id": "bench-assembler",
       "displayName": "Bench Assembler",
+      "level": 1,
       "type": "PRODUCER",
       "manuality": "HUMAN_OPERATED",
       "skin": "machine_bench_assembler",
@@ -54,7 +149,10 @@
       ],
       "installCost": 75,
       "operationDurationSeconds": 1.8,
-      "upgradeTargetId": "servo-assembler",
+      "upgradeTree": {
+        "leftUpgradeId": "servo-assembler",
+        "rightUpgradeId": "precision-assembler"
+      },
       "producerProfile": {
         "defectChance": 0.18
       }
@@ -62,6 +160,7 @@
     {
       "id": "servo-assembler",
       "displayName": "Servo Assembler",
+      "level": 2,
       "type": "PRODUCER",
       "manuality": "AUTOMATIC",
       "skin": "machine_servo_assembler",
@@ -77,8 +176,26 @@
       }
     },
     {
+      "id": "precision-assembler",
+      "displayName": "Precision Assembler",
+      "level": 2,
+      "type": "PRODUCER",
+      "manuality": "AUTOMATIC",
+      "skin": "machine_precision_assembler",
+      "productIds": [
+        "ceramic-mug",
+        "tea-kettle"
+      ],
+      "installCost": 154,
+      "operationDurationSeconds": 1.1,
+      "producerProfile": {
+        "defectChance": 0.05
+      }
+    },
+    {
       "id": "camera-gate",
       "displayName": "Camera Gate",
+      "level": 1,
       "type": "QA",
       "manuality": "AUTOMATIC",
       "skin": "machine_camera_gate",
@@ -89,13 +206,54 @@
       ],
       "installCost": 90,
       "operationDurationSeconds": 0.8,
+      "upgradeTree": {
+        "leftUpgradeId": "spectral-camera-gate",
+        "rightUpgradeId": "multi-angle-camera-gate"
+      },
       "qaProfile": {
         "detectionAccuracy": 0.86
       }
     },
     {
+      "id": "spectral-camera-gate",
+      "displayName": "Spectral Camera Gate",
+      "level": 2,
+      "type": "QA",
+      "manuality": "AUTOMATIC",
+      "skin": "machine_spectral_camera_gate",
+      "productIds": [
+        "ceramic-mug",
+        "glass-jar",
+        "tea-kettle"
+      ],
+      "installCost": 148,
+      "operationDurationSeconds": 0.7,
+      "qaProfile": {
+        "detectionAccuracy": 0.92
+      }
+    },
+    {
+      "id": "multi-angle-camera-gate",
+      "displayName": "Multi-Angle Camera Gate",
+      "level": 2,
+      "type": "QA",
+      "manuality": "AUTOMATIC",
+      "skin": "machine_multi_angle_camera_gate",
+      "productIds": [
+        "ceramic-mug",
+        "glass-jar",
+        "tea-kettle"
+      ],
+      "installCost": 146,
+      "operationDurationSeconds": 0.65,
+      "qaProfile": {
+        "detectionAccuracy": 0.90
+      }
+    },
+    {
       "id": "weight-checker",
       "displayName": "Weight Checker",
+      "level": 1,
       "type": "QA",
       "manuality": "AUTOMATIC",
       "skin": "machine_weight_checker",

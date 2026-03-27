@@ -6,10 +6,12 @@ import kotlinx.serialization.Serializable
 data class WorkerProfile(
     val id: String,
     val displayName: String,
+    val level: Int,
     val hireCost: Int,
     val walkSpeed: Float,
     val skin: String,
-    val roleProfiles: List<WorkerRoleProfile>
+    val roleProfiles: List<WorkerRoleProfile>,
+    val upgradeTree: BinaryUpgradeTree? = null
 ) {
     fun profileFor(role: WorkerRole): WorkerRoleProfile? {
         return roleProfiles.firstOrNull { it.role == role }
