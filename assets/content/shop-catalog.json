@@ -147,6 +147,9 @@
         "ceramic-mug",
         "glass-jar"
       ],
+      "minimumOperatorWorkerIds": [
+        "line-inspector"
+      ],
       "installCost": 75,
       "operationDurationSeconds": 1.8,
       "upgradeTree": {

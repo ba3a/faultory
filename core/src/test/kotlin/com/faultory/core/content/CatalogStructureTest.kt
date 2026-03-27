@@ -21,6 +21,7 @@ class CatalogStructureTest {
         assertEquals(1, producerMachine.level)
         assertEquals(MachineType.PRODUCER, producerMachine.type)
         assertEquals(Manuality.HUMAN_OPERATED, producerMachine.manuality)
+        assertTrue(producerMachine.minimumOperatorWorkerIds.contains("line-inspector"))
         val producerUpgradeTree = assertNotNull(producerMachine.upgradeTree)
         assertEquals("servo-assembler", producerUpgradeTree.leftUpgradeId)
         assertEquals("precision-assembler", producerUpgradeTree.rightUpgradeId)

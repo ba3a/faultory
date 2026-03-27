@@ -16,6 +16,36 @@ data class WorkerProfile(
     fun profileFor(role: WorkerRole): WorkerRoleProfile? {
         return roleProfiles.firstOrNull { it.role == role }
     }
+
+    fun isSameOrHigherOnUpgradeBranch(
+        rootWorkerId: String,
+        workersById: Map<String, WorkerProfile>
+    ): Boolean {
+        if (id == rootWorkerId) {
+            return true
+        }
+
+        val visited = mutableSetOf<String>()
+        return isDescendantOf(rootWorkerId, workersById, visited)
+    }
+
+    private fun isDescendantOf(
+        currentWorkerId: String,
+        workersById: Map<String, WorkerProfile>,
+        visited: MutableSet<String>
+    ): Boolean {
+        if (!visited.add(currentWorkerId)) {
+            return false
+        }
+
+        val currentWorker = workersById[currentWorkerId] ?: return false
+        return currentWorker.upgradeTree
+            ?.upgradeIds()
+            ?.any { childWorkerId ->
+                childWorkerId == id || isDescendantOf(childWorkerId, workersById, visited)
+            }
+            ?: false
+    }
 }
 
 @Serializable
