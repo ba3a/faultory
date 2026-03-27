@@ -4,11 +4,12 @@ import com.badlogic.gdx.ScreenAdapter
 import com.badlogic.gdx.utils.ScreenUtils
 import com.faultory.core.FaultoryGame
 import com.faultory.core.assets.AssetPaths
-import com.faultory.core.config.GameConfig
+import com.faultory.core.content.LevelDefinition
 import com.faultory.core.shop.ShopFloor
 
 class BootScreen(
-    private val game: FaultoryGame
+    private val game: FaultoryGame,
+    private val level: LevelDefinition
 ) : ScreenAdapter() {
     private var finished = false
 
@@ -19,10 +20,14 @@ class BootScreen(
         }
 
         finished = true
-        val save = game.saveRepository.load(GameConfig.bootstrapSlotId)
-            ?: error("Bootstrap save missing after initialization")
         val shopCatalog = game.shopCatalogLoader.load(AssetPaths.shopCatalog)
-        val shopFloor = ShopFloor(game.shopBlueprintLoader.load(AssetPaths.tutorialShop))
+        val shopBlueprint = game.shopBlueprintLoader.load(level.shopAssetPath)
+        val save = game.loadOrCreateLevelSave(
+            slotId = level.id,
+            shopId = shopBlueprint.id,
+            targetQualityPercent = shopBlueprint.qualityThresholdPercent
+        )
+        val shopFloor = ShopFloor(shopBlueprint)
 
         game.setScreen(ShopFloorScreen(game, shopFloor, save, shopCatalog))
     }

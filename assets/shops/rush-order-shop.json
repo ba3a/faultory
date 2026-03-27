@@ -1,0 +1,74 @@
+{
+  "id": "rush-order-shop",
+  "displayName": "Rush Order Bottling",
+  "qualityThresholdPercent": 95.0,
+  "shiftLengthSeconds": 150.0,
+  "conveyorBelts": [
+    {
+      "id": "belt-a",
+      "checkpoints": [
+        {
+          "x": 140.0,
+          "y": 560.0
+        },
+        {
+          "x": 500.0,
+          "y": 560.0
+        },
+        {
+          "x": 500.0,
+          "y": 240.0
+        },
+        {
+          "x": 980.0,
+          "y": 240.0
+        },
+        {
+          "x": 980.0,
+          "y": 660.0
+        },
+        {
+          "x": 1460.0,
+          "y": 660.0
+        }
+      ]
+    }
+  ],
+  "inspectionAnchors": [
+    {
+      "id": "camera-west",
+      "x": 360.0,
+      "y": 660.0,
+      "reach": 28.0
+    },
+    {
+      "id": "weight-mid",
+      "x": 720.0,
+      "y": 420.0,
+      "reach": 30.0
+    },
+    {
+      "id": "camera-south",
+      "x": 1080.0,
+      "y": 520.0,
+      "reach": 28.0
+    }
+  ],
+  "workerSpawnPoints": [
+    {
+      "id": "crew-entry-west",
+      "x": 180.0,
+      "y": 160.0
+    },
+    {
+      "id": "crew-entry-central",
+      "x": 820.0,
+      "y": 100.0
+    },
+    {
+      "id": "crew-entry-east",
+      "x": 1360.0,
+      "y": 180.0
+    }
+  ]
+}

@@ -1,6 +1,5 @@
 package com.faultory.core.save
 
-import com.faultory.core.config.GameConfig
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -14,7 +13,11 @@ data class GameSave(
     companion object {
         const val CURRENT_VERSION = 1
 
-        fun bootstrap(slotId: String = GameConfig.bootstrapSlotId): GameSave {
+        fun forLevel(
+            slotId: String,
+            shopId: String,
+            targetQualityPercent: Float
+        ): GameSave {
             return GameSave(
                 slotId = slotId,
                 createdAtEpochMillis = System.currentTimeMillis(),
@@ -24,11 +27,11 @@ data class GameSave(
                     unlockedInspectionUnitIds = listOf("camera-gate")
                 ),
                 activeShift = ShiftSnapshot(
-                    shopId = "tutorial-shop",
+                    shopId = shopId,
                     dayNumber = 1,
-                    targetQualityPercent = 92f,
-                    shippedProducts = 12,
-                    faultyProducts = 1
+                    targetQualityPercent = targetQualityPercent,
+                    shippedProducts = 0,
+                    faultyProducts = 0
                 )
             )
         }

@@ -7,6 +7,5 @@ object GameConfig {
     const val virtualWidth = 1600f
     const val virtualHeight = 900f
     const val targetFps = 60
-    const val bootstrapSlotId = "slot-001"
     const val saveDirectoryName = "saves"
 }

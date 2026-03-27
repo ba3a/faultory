@@ -7,7 +7,9 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.writeText
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.text.Charsets
 
@@ -51,6 +53,45 @@ class LocalSaveRepositoryTest {
             assertNull(repository.load(slotId))
             assertFalse(saveFile.toFile().exists())
             assertFalse(repository.hasSlot(slotId))
+        } finally {
+            tempRoot.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `save keeps each level in its own slot even when shop ids match`() {
+        val tempRoot = createTempDirectory("faultory-save-test")
+        try {
+            val repository = LocalSaveRepository(
+                rootDirectory = tempRoot.toString(),
+                handleFactory = { currentSlotId ->
+                    FileHandle(saveFileFor(tempRoot, currentSlotId).toFile())
+                }
+            )
+            val morningShiftSave = GameSave.forLevel(
+                slotId = "morning-shift",
+                shopId = "tutorial-shop",
+                targetQualityPercent = 92f
+            )
+            val eveningShiftSave = GameSave.forLevel(
+                slotId = "evening-shift",
+                shopId = "tutorial-shop",
+                targetQualityPercent = 96f
+            )
+
+            repository.save(morningShiftSave)
+            repository.save(eveningShiftSave)
+
+            val loadedMorningShift = assertNotNull(repository.load("morning-shift"))
+            val loadedEveningShift = assertNotNull(repository.load("evening-shift"))
+
+            assertEquals("morning-shift", loadedMorningShift.slotId)
+            assertEquals("tutorial-shop", loadedMorningShift.activeShift.shopId)
+            assertEquals(92f, loadedMorningShift.activeShift.targetQualityPercent)
+
+            assertEquals("evening-shift", loadedEveningShift.slotId)
+            assertEquals("tutorial-shop", loadedEveningShift.activeShift.shopId)
+            assertEquals(96f, loadedEveningShift.activeShift.targetQualityPercent)
         } finally {
             tempRoot.toFile().deleteRecursively()
         }

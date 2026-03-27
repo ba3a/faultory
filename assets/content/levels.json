@@ -1,0 +1,16 @@
+{
+  "levels": [
+    {
+      "id": "tutorial-shop",
+      "displayName": "Morning Ceramic Run",
+      "subtitle": "Balanced starter floor with one main conveyor loop.",
+      "shopAssetPath": "shops/tutorial-shop.json"
+    },
+    {
+      "id": "rush-order-shop",
+      "displayName": "Rush Order Bottling",
+      "subtitle": "Faster shift with tighter inspection spacing and a higher quality bar.",
+      "shopAssetPath": "shops/rush-order-shop.json"
+    }
+  ]
+}

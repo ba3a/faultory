@@ -1,9 +1,14 @@
 package com.faultory.core.screens
 
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.Input
+import com.badlogic.gdx.InputAdapter
 import com.badlogic.gdx.ScreenAdapter
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.math.Rectangle
+import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.faultory.core.FaultoryGame
@@ -21,15 +26,54 @@ class ShopFloorScreen(
     private val shopCatalog: ShopCatalog
 ) : ScreenAdapter() {
     private val viewport = FitViewport(GameConfig.virtualWidth, GameConfig.virtualHeight)
+    private val backButtonBounds = Rectangle(GameConfig.virtualWidth - 264f, GameConfig.virtualHeight - 92f, 216f, 40f)
+    private val scratchVector = Vector3()
+    private val titleLayout = GlyphLayout()
+    private val hintLayout = GlyphLayout()
     private val dayDirector = ProductionDayDirector(
         shiftLengthSeconds = shopFloor.blueprint.shiftLengthSeconds,
         targetQualityPercent = saveSnapshot.activeShift.targetQualityPercent,
         initialShippedProducts = saveSnapshot.activeShift.shippedProducts,
         initialFaultyProducts = saveSnapshot.activeShift.faultyProducts
     )
+    private var isBackButtonHovered = false
+
+    private val inputProcessor = object : InputAdapter() {
+        override fun keyDown(keycode: Int): Boolean {
+            if (keycode == Input.Keys.ESCAPE) {
+                returnToLevelSelection()
+                return true
+            }
+            return false
+        }
+
+        override fun mouseMoved(screenX: Int, screenY: Int): Boolean {
+            isBackButtonHovered = isBackButtonHit(screenX, screenY)
+            return isBackButtonHovered
+        }
+
+        override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
+            if (button != Input.Buttons.LEFT) {
+                return false
+            }
+
+            if (isBackButtonHit(screenX, screenY)) {
+                returnToLevelSelection()
+                return true
+            }
+            return false
+        }
+    }
 
     override fun show() {
         viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
+        Gdx.input.inputProcessor = inputProcessor
+    }
+
+    override fun hide() {
+        if (Gdx.input.inputProcessor === inputProcessor) {
+            Gdx.input.inputProcessor = null
+        }
     }
 
     override fun render(delta: Float) {
@@ -45,6 +89,7 @@ class ShopFloorScreen(
 
         drawFilledLayer(renderer)
         drawLineLayer(renderer)
+        drawText()
     }
 
     override fun resize(width: Int, height: Int) {
@@ -69,6 +114,13 @@ class ShopFloorScreen(
         renderer.color = Color(0.13f, 0.16f, 0.19f, 1f)
         renderer.rect(32f, GameConfig.virtualHeight - 144f, 520f, 104f)
         renderer.rect(GameConfig.virtualWidth - 344f, 40f, 304f, 112f)
+
+        renderer.color = if (isBackButtonHovered) {
+            Color(0.24f, 0.31f, 0.37f, 1f)
+        } else {
+            Color(0.16f, 0.20f, 0.24f, 1f)
+        }
+        renderer.rect(backButtonBounds.x, backButtonBounds.y, backButtonBounds.width, backButtonBounds.height)
 
         renderer.color = Color(0.20f, 0.62f, 0.49f, 1f)
         renderer.rect(56f, GameConfig.virtualHeight - 112f, 240f * qualityRatio, 22f)
@@ -121,6 +173,13 @@ class ShopFloorScreen(
         for (anchor in shopFloor.blueprint.inspectionAnchors) {
             renderer.circle(anchor.x, anchor.y, anchor.reach)
         }
+
+        renderer.color = if (isBackButtonHovered) {
+            Color(0.98f, 0.88f, 0.61f, 1f)
+        } else {
+            Color(0.55f, 0.61f, 0.66f, 1f)
+        }
+        renderer.rect(backButtonBounds.x, backButtonBounds.y, backButtonBounds.width, backButtonBounds.height)
         renderer.end()
     }
 
@@ -141,5 +200,39 @@ class ShopFloorScreen(
 
     private fun drawNode(renderer: ShapeRenderer, node: BeltNode) {
         renderer.circle(node.x, node.y, 10f)
+    }
+
+    private fun drawText() {
+        val batch = game.spriteBatch
+        val font = game.uiFont
+        batch.projectionMatrix = viewport.camera.combined
+
+        batch.begin()
+        font.color = Color(0.95f, 0.96f, 0.97f, 1f)
+        titleLayout.setText(font, shopFloor.blueprint.displayName)
+        font.draw(batch, titleLayout, 56f, GameConfig.virtualHeight - 48f)
+
+        font.color = Color(0.76f, 0.80f, 0.84f, 1f)
+        hintLayout.setText(font, "Esc or click the button to return to level selection")
+        font.draw(batch, hintLayout, 56f, GameConfig.virtualHeight - 72f)
+
+        font.color = if (isBackButtonHovered) {
+            Color(1f, 0.94f, 0.71f, 1f)
+        } else {
+            Color(0.90f, 0.93f, 0.95f, 1f)
+        }
+        titleLayout.setText(font, "Back To Level Selection")
+        font.draw(batch, titleLayout, backButtonBounds.x + 16f, backButtonBounds.y + 26f)
+        batch.end()
+    }
+
+    private fun isBackButtonHit(screenX: Int, screenY: Int): Boolean {
+        scratchVector.set(screenX.toFloat(), screenY.toFloat(), 0f)
+        viewport.unproject(scratchVector)
+        return backButtonBounds.contains(scratchVector.x, scratchVector.y)
+    }
+
+    private fun returnToLevelSelection() {
+        game.openLevelSelection()
     }
 }
