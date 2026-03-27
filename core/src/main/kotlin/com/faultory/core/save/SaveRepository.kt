@@ -14,7 +14,10 @@ interface SaveRepository {
 
 class LocalSaveRepository(
     private val codec: JsonSaveCodec = JsonSaveCodec(),
-    private val rootDirectory: String = SavePathResolver.defaultRootDirectory()
+    private val rootDirectory: String = SavePathResolver.defaultRootDirectory(),
+    private val handleFactory: (String) -> FileHandle = { slotId ->
+        defaultHandleFor(rootDirectory, slotId)
+    }
 ) : SaveRepository {
     override fun hasSlot(slotId: String): Boolean = handleFor(slotId).exists()
 
@@ -24,7 +27,13 @@ class LocalSaveRepository(
             return null
         }
 
-        return codec.decode(handle.readString(Charsets.UTF_8.name()))
+        val rawJson = handle.readString(Charsets.UTF_8.name())
+        if (!codec.isCompatibleVersion(rawJson)) {
+            handle.delete()
+            return null
+        }
+
+        return codec.decode(rawJson)
     }
 
     override fun save(save: GameSave) {
@@ -33,12 +42,16 @@ class LocalSaveRepository(
         handle.writeString(codec.encode(save), false, Charsets.UTF_8.name())
     }
 
-    private fun handleFor(slotId: String): FileHandle {
-        val path = Paths.get(
-            rootDirectory,
-            GameConfig.saveDirectoryName,
-            "$slotId.json"
-        ).toString()
-        return Gdx.files.absolute(path)
+    private fun handleFor(slotId: String): FileHandle = handleFactory(slotId)
+
+    companion object {
+        private fun defaultHandleFor(rootDirectory: String, slotId: String): FileHandle {
+            val path = Paths.get(
+                rootDirectory,
+                GameConfig.saveDirectoryName,
+                "$slotId.json"
+            ).toString()
+            return Gdx.files.absolute(path)
+        }
     }
 }

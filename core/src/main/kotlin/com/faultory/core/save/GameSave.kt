@@ -5,12 +5,15 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class GameSave(
+    val version: Int = CURRENT_VERSION,
     val slotId: String,
     val createdAtEpochMillis: Long,
     val player: PlayerProgress,
     val activeShift: ShiftSnapshot
 ) {
     companion object {
+        const val CURRENT_VERSION = 1
+
         fun bootstrap(slotId: String = GameConfig.bootstrapSlotId): GameSave {
             return GameSave(
                 slotId = slotId,

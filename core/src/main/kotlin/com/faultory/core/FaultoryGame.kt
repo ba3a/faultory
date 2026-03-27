@@ -29,7 +29,7 @@ class FaultoryGame : Game() {
         shopBlueprintLoader = JsonShopBlueprintLoader()
         shopCatalogLoader = JsonShopCatalogLoader()
 
-        if (!saveRepository.hasSlot(GameConfig.bootstrapSlotId)) {
+        if (saveRepository.load(GameConfig.bootstrapSlotId) == null) {
             saveRepository.save(GameSave.bootstrap())
         }
 
