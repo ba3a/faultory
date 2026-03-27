@@ -34,12 +34,22 @@ class CatalogStructureTest {
     }
 
     @Test
-    fun `shop blueprint includes producer and qa machine slots`() {
+    fun `level catalog exposes bank inventories`() {
+        val rawJson = assetPath("content", "levels.json").readText(Charsets.UTF_8)
+        val levelCatalog = FaultoryJson.instance.decodeFromString<LevelCatalog>(rawJson)
+
+        val tutorialLevel = assertNotNull(levelCatalog.levels.firstOrNull { it.id == "tutorial-shop" })
+        assertTrue(tutorialLevel.availableWorkerIds.contains("line-inspector"))
+        assertTrue(tutorialLevel.availableMachineIds.contains("bench-assembler"))
+    }
+
+    @Test
+    fun `shop blueprint starts with an empty floor`() {
         val rawJson = assetPath("shops", "tutorial-shop.json").readText(Charsets.UTF_8)
         val blueprint = FaultoryJson.instance.decodeFromString<ShopBlueprint>(rawJson)
 
-        assertTrue(blueprint.machineSlots.any { it.type == MachineType.PRODUCER && it.installedMachineId == "bench-assembler" })
-        assertTrue(blueprint.machineSlots.any { it.type == MachineType.QA && it.installedMachineId == "camera-gate" })
+        assertTrue(blueprint.machineSlots.isEmpty())
+        assertTrue(blueprint.workerSpawnPoints.isEmpty())
     }
 
     private fun assetPath(vararg segments: String): Path {

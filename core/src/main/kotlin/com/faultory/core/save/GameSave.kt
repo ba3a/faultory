@@ -1,5 +1,6 @@
 package com.faultory.core.save
 
+import com.faultory.core.shop.PlacedShopObject
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -11,27 +12,30 @@ data class GameSave(
     val activeShift: ShiftSnapshot
 ) {
     companion object {
-        const val CURRENT_VERSION = 1
+        const val CURRENT_VERSION = 2
 
         fun forLevel(
             slotId: String,
             shopId: String,
-            targetQualityPercent: Float
+            targetQualityPercent: Float,
+            unlockedWorkerIds: List<String>,
+            unlockedMachineIds: List<String>
         ): GameSave {
             return GameSave(
                 slotId = slotId,
                 createdAtEpochMillis = System.currentTimeMillis(),
                 player = PlayerProgress(
                     budget = 160,
-                    unlockedWorkerIds = listOf("line-inspector", "float-tech"),
-                    unlockedInspectionUnitIds = listOf("camera-gate")
+                    unlockedWorkerIds = unlockedWorkerIds,
+                    unlockedMachineIds = unlockedMachineIds
                 ),
                 activeShift = ShiftSnapshot(
                     shopId = shopId,
                     dayNumber = 1,
                     targetQualityPercent = targetQualityPercent,
                     shippedProducts = 0,
-                    faultyProducts = 0
+                    faultyProducts = 0,
+                    placedObjects = emptyList()
                 )
             )
         }
@@ -42,7 +46,7 @@ data class GameSave(
 data class PlayerProgress(
     val budget: Int,
     val unlockedWorkerIds: List<String>,
-    val unlockedInspectionUnitIds: List<String>
+    val unlockedMachineIds: List<String>
 )
 
 @Serializable
@@ -51,5 +55,6 @@ data class ShiftSnapshot(
     val dayNumber: Int,
     val targetQualityPercent: Float,
     val shippedProducts: Int,
-    val faultyProducts: Int
+    val faultyProducts: Int,
+    val placedObjects: List<PlacedShopObject>
 )

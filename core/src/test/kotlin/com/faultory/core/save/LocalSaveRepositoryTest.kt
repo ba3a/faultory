@@ -2,6 +2,10 @@ package com.faultory.core.save
 
 import com.badlogic.gdx.files.FileHandle
 import com.faultory.core.config.GameConfig
+import com.faultory.core.content.WorkerRole
+import com.faultory.core.shop.PlacedShopObject
+import com.faultory.core.shop.PlacedShopObjectKind
+import com.faultory.core.shop.TileCoordinate
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.createTempDirectory
@@ -71,12 +75,49 @@ class LocalSaveRepositoryTest {
             val morningShiftSave = GameSave.forLevel(
                 slotId = "morning-shift",
                 shopId = "tutorial-shop",
-                targetQualityPercent = 92f
+                targetQualityPercent = 92f,
+                unlockedWorkerIds = listOf("line-inspector"),
+                unlockedMachineIds = listOf("bench-assembler", "camera-gate")
+            ).copy(
+                activeShift = GameSave.forLevel(
+                    slotId = "morning-shift",
+                    shopId = "tutorial-shop",
+                    targetQualityPercent = 92f,
+                    unlockedWorkerIds = listOf("line-inspector"),
+                    unlockedMachineIds = listOf("bench-assembler", "camera-gate")
+                ).activeShift.copy(
+                    placedObjects = listOf(
+                        PlacedShopObject(
+                            catalogId = "line-inspector",
+                            kind = PlacedShopObjectKind.WORKER,
+                            position = TileCoordinate(6, 9),
+                            workerRole = WorkerRole.QA
+                        )
+                    )
+                )
             )
             val eveningShiftSave = GameSave.forLevel(
                 slotId = "evening-shift",
                 shopId = "tutorial-shop",
-                targetQualityPercent = 96f
+                targetQualityPercent = 96f,
+                unlockedWorkerIds = listOf("float-tech"),
+                unlockedMachineIds = listOf("bench-assembler", "camera-gate")
+            ).copy(
+                activeShift = GameSave.forLevel(
+                    slotId = "evening-shift",
+                    shopId = "tutorial-shop",
+                    targetQualityPercent = 96f,
+                    unlockedWorkerIds = listOf("float-tech"),
+                    unlockedMachineIds = listOf("bench-assembler", "camera-gate")
+                ).activeShift.copy(
+                    placedObjects = listOf(
+                        PlacedShopObject(
+                            catalogId = "bench-assembler",
+                            kind = PlacedShopObjectKind.MACHINE,
+                            position = TileCoordinate(12, 11)
+                        )
+                    )
+                )
             )
 
             repository.save(morningShiftSave)
@@ -88,10 +129,14 @@ class LocalSaveRepositoryTest {
             assertEquals("morning-shift", loadedMorningShift.slotId)
             assertEquals("tutorial-shop", loadedMorningShift.activeShift.shopId)
             assertEquals(92f, loadedMorningShift.activeShift.targetQualityPercent)
+            assertEquals(1, loadedMorningShift.activeShift.placedObjects.size)
+            assertEquals(TileCoordinate(6, 9), loadedMorningShift.activeShift.placedObjects.single().position)
 
             assertEquals("evening-shift", loadedEveningShift.slotId)
             assertEquals("tutorial-shop", loadedEveningShift.activeShift.shopId)
             assertEquals(96f, loadedEveningShift.activeShift.targetQualityPercent)
+            assertEquals(1, loadedEveningShift.activeShift.placedObjects.size)
+            assertEquals("bench-assembler", loadedEveningShift.activeShift.placedObjects.single().catalogId)
         } finally {
             tempRoot.toFile().deleteRecursively()
         }

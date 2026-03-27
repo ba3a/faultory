@@ -12,5 +12,7 @@ data class LevelDefinition(
     val id: String,
     val displayName: String,
     val subtitle: String,
-    val shopAssetPath: String
+    val shopAssetPath: String,
+    val availableWorkerIds: List<String>,
+    val availableMachineIds: List<String>
 )
