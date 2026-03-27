@@ -1,9 +1,9 @@
-package com.faultory.core.world.physics
+package com.faultory.core.shop.physics
 
 import org.jbox2d.common.Vec2
 import org.jbox2d.dynamics.World
 
-class TowerDefensePhysics(
+class ShopPhysics(
     gravity: Vec2 = Vec2(0f, 0f)
 ) {
     private val world = World(Vec2(gravity)).apply {

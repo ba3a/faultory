@@ -8,7 +8,7 @@ data class GameSave(
     val slotId: String,
     val createdAtEpochMillis: Long,
     val player: PlayerProgress,
-    val activeRun: RunSnapshot
+    val activeShift: ShiftSnapshot
 ) {
     companion object {
         fun bootstrap(slotId: String = GameConfig.bootstrapSlotId): GameSave {
@@ -16,13 +16,16 @@ data class GameSave(
                 slotId = slotId,
                 createdAtEpochMillis = System.currentTimeMillis(),
                 player = PlayerProgress(
-                    credits = 120,
-                    unlockedTowerIds = listOf("pebble-cannon", "arc-coil")
+                    budget = 160,
+                    unlockedWorkerIds = listOf("line-inspector", "float-tech"),
+                    unlockedInspectionUnitIds = listOf("camera-gate")
                 ),
-                activeRun = RunSnapshot(
-                    worldId = "tutorial-lane",
-                    currentWave = 1,
-                    fortressHealth = 20
+                activeShift = ShiftSnapshot(
+                    shopId = "tutorial-shop",
+                    dayNumber = 1,
+                    targetQualityPercent = 92f,
+                    shippedProducts = 12,
+                    faultyProducts = 1
                 )
             )
         }
@@ -31,13 +34,16 @@ data class GameSave(
 
 @Serializable
 data class PlayerProgress(
-    val credits: Int,
-    val unlockedTowerIds: List<String>
+    val budget: Int,
+    val unlockedWorkerIds: List<String>,
+    val unlockedInspectionUnitIds: List<String>
 )
 
 @Serializable
-data class RunSnapshot(
-    val worldId: String,
-    val currentWave: Int,
-    val fortressHealth: Int
+data class ShiftSnapshot(
+    val shopId: String,
+    val dayNumber: Int,
+    val targetQualityPercent: Float,
+    val shippedProducts: Int,
+    val faultyProducts: Int
 )

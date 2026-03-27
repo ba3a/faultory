@@ -5,7 +5,7 @@ import com.badlogic.gdx.utils.ScreenUtils
 import com.faultory.core.FaultoryGame
 import com.faultory.core.assets.AssetPaths
 import com.faultory.core.config.GameConfig
-import com.faultory.core.world.TowerDefenseWorld
+import com.faultory.core.shop.ShopFloor
 
 class BootScreen(
     private val game: FaultoryGame
@@ -21,9 +21,9 @@ class BootScreen(
         finished = true
         val save = game.saveRepository.load(GameConfig.bootstrapSlotId)
             ?: error("Bootstrap save missing after initialization")
-        val towerCatalog = game.towerCatalogLoader.load(AssetPaths.towerCatalog)
-        val world = TowerDefenseWorld(game.worldBlueprintLoader.load(AssetPaths.tutorialLane))
+        val shopCatalog = game.shopCatalogLoader.load(AssetPaths.shopCatalog)
+        val shopFloor = ShopFloor(game.shopBlueprintLoader.load(AssetPaths.tutorialShop))
 
-        game.setScreen(CommandCenterScreen(game, world, save, towerCatalog))
+        game.setScreen(ShopFloorScreen(game, shopFloor, save, shopCatalog))
     }
 }

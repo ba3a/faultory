@@ -1,11 +1,11 @@
-package com.faultory.core.world
+package com.faultory.core.shop
 
 import com.badlogic.gdx.utils.Disposable
-import com.faultory.core.world.physics.TowerDefensePhysics
+import com.faultory.core.shop.physics.ShopPhysics
 
-class TowerDefenseWorld(
-    val blueprint: WorldBlueprint,
-    private val physics: TowerDefensePhysics = TowerDefensePhysics()
+class ShopFloor(
+    val blueprint: ShopBlueprint,
+    private val physics: ShopPhysics = ShopPhysics()
 ) : Disposable {
     var elapsedSeconds: Float = 0f
         private set

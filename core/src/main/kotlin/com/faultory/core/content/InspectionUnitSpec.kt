@@ -3,11 +3,10 @@ package com.faultory.core.content
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class TowerArchetype(
+data class InspectionUnitSpec(
     val id: String,
     val displayName: String,
-    val cost: Int,
-    val range: Float,
-    val damagePerShot: Int,
-    val fireRatePerSecond: Float
+    val installCost: Int,
+    val inspectionDurationSeconds: Float,
+    val detectionAccuracy: Float
 )

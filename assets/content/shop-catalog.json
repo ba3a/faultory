@@ -1,0 +1,56 @@
+{
+  "workers": [
+    {
+      "id": "line-inspector",
+      "displayName": "Line Inspector",
+      "hireCost": 60,
+      "walkSpeed": 128.0,
+      "inspectionDurationSeconds": 1.5,
+      "coverageRadius": 116.0
+    },
+    {
+      "id": "float-tech",
+      "displayName": "Float Tech",
+      "hireCost": 85,
+      "walkSpeed": 148.0,
+      "inspectionDurationSeconds": 1.1,
+      "coverageRadius": 136.0
+    }
+  ],
+  "inspectionUnits": [
+    {
+      "id": "camera-gate",
+      "displayName": "Camera Gate",
+      "installCost": 90,
+      "inspectionDurationSeconds": 0.8,
+      "detectionAccuracy": 0.86
+    },
+    {
+      "id": "weight-checker",
+      "displayName": "Weight Checker",
+      "installCost": 72,
+      "inspectionDurationSeconds": 0.9,
+      "detectionAccuracy": 0.79
+    }
+  ],
+  "products": [
+    {
+      "id": "ceramic-mug",
+      "displayName": "Ceramic Mug",
+      "baseFaultChance": 0.16,
+      "saleValue": 22
+    },
+    {
+      "id": "glass-jar",
+      "displayName": "Glass Jar",
+      "baseFaultChance": 0.11,
+      "saleValue": 18
+    },
+    {
+      "id": "tea-kettle",
+      "displayName": "Tea Kettle",
+      "baseFaultChance": 0.09,
+      "saleValue": 35
+    }
+  ]
+}

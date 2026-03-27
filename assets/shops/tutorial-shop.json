@@ -1,0 +1,74 @@
+{
+  "id": "tutorial-shop",
+  "displayName": "Morning Ceramic Run",
+  "qualityThresholdPercent": 92.0,
+  "shiftLengthSeconds": 180.0,
+  "conveyorBelts": [
+    {
+      "id": "belt-a",
+      "checkpoints": [
+        {
+          "x": 120.0,
+          "y": 520.0
+        },
+        {
+          "x": 420.0,
+          "y": 520.0
+        },
+        {
+          "x": 420.0,
+          "y": 280.0
+        },
+        {
+          "x": 920.0,
+          "y": 280.0
+        },
+        {
+          "x": 920.0,
+          "y": 620.0
+        },
+        {
+          "x": 1480.0,
+          "y": 620.0
+        }
+      ]
+    }
+  ],
+  "inspectionAnchors": [
+    {
+      "id": "camera-west",
+      "x": 320.0,
+      "y": 620.0,
+      "reach": 30.0
+    },
+    {
+      "id": "weight-bend",
+      "x": 620.0,
+      "y": 410.0,
+      "reach": 32.0
+    },
+    {
+      "id": "camera-east",
+      "x": 1180.0,
+      "y": 720.0,
+      "reach": 30.0
+    }
+  ],
+  "workerSpawnPoints": [
+    {
+      "id": "crew-entry-west",
+      "x": 180.0,
+      "y": 180.0
+    },
+    {
+      "id": "crew-entry-central",
+      "x": 760.0,
+      "y": 120.0
+    },
+    {
+      "id": "crew-entry-east",
+      "x": 1320.0,
+      "y": 220.0
+    }
+  ]
+}
