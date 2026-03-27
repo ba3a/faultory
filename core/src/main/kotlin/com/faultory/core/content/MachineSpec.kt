@@ -9,6 +9,7 @@ data class MachineSpec(
     val type: MachineType,
     val manuality: Manuality,
     val skin: String,
+    val productIds: List<String>,
     val installCost: Int,
     val operationDurationSeconds: Float,
     val upgradeTargetId: String? = null,

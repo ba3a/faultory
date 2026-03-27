@@ -48,6 +48,10 @@
       "type": "PRODUCER",
       "manuality": "HUMAN_OPERATED",
       "skin": "machine_bench_assembler",
+      "productIds": [
+        "ceramic-mug",
+        "glass-jar"
+      ],
       "installCost": 75,
       "operationDurationSeconds": 1.8,
       "upgradeTargetId": "servo-assembler",
@@ -61,6 +65,11 @@
       "type": "PRODUCER",
       "manuality": "AUTOMATIC",
       "skin": "machine_servo_assembler",
+      "productIds": [
+        "ceramic-mug",
+        "glass-jar",
+        "tea-kettle"
+      ],
       "installCost": 160,
       "operationDurationSeconds": 1.0,
       "producerProfile": {
@@ -73,6 +82,11 @@
       "type": "QA",
       "manuality": "AUTOMATIC",
       "skin": "machine_camera_gate",
+      "productIds": [
+        "ceramic-mug",
+        "glass-jar",
+        "tea-kettle"
+      ],
       "installCost": 90,
       "operationDurationSeconds": 0.8,
       "qaProfile": {
@@ -85,6 +99,10 @@
       "type": "QA",
       "manuality": "AUTOMATIC",
       "skin": "machine_weight_checker",
+      "productIds": [
+        "glass-jar",
+        "tea-kettle"
+      ],
       "installCost": 72,
       "operationDurationSeconds": 0.9,
       "qaProfile": {

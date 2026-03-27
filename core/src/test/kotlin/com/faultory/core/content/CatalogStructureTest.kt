@@ -21,11 +21,13 @@ class CatalogStructureTest {
         assertEquals(MachineType.PRODUCER, producerMachine.type)
         assertEquals(Manuality.HUMAN_OPERATED, producerMachine.manuality)
         assertEquals("servo-assembler", producerMachine.upgradeTargetId)
+        assertTrue(producerMachine.productIds.contains("ceramic-mug"))
         assertEquals(0.18f, assertNotNull(producerMachine.producerProfile).defectChance)
 
         val qaMachine = assertNotNull(catalog.machines.firstOrNull { it.id == "camera-gate" })
         assertEquals(MachineType.QA, qaMachine.type)
         assertEquals(Manuality.AUTOMATIC, qaMachine.manuality)
+        assertTrue(qaMachine.productIds.contains("tea-kettle"))
         assertEquals(0.86f, assertNotNull(qaMachine.qaProfile).detectionAccuracy)
 
         val worker = assertNotNull(catalog.workers.firstOrNull { it.id == "line-inspector" })
