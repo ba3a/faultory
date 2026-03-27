@@ -5,6 +5,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ShopCatalog(
     val workers: List<WorkerProfile>,
-    val inspectionUnits: List<InspectionUnitSpec>,
+    val machines: List<MachineSpec>,
     val products: List<ProductDefinition>
 )

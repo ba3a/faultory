@@ -8,6 +8,24 @@ data class WorkerProfile(
     val displayName: String,
     val hireCost: Int,
     val walkSpeed: Float,
-    val inspectionDurationSeconds: Float,
-    val coverageRadius: Float
+    val skin: String,
+    val roleProfiles: List<WorkerRoleProfile>
+) {
+    fun profileFor(role: WorkerRole): WorkerRoleProfile? {
+        return roleProfiles.firstOrNull { it.role == role }
+    }
+}
+
+@Serializable
+data class WorkerRoleProfile(
+    val role: WorkerRole,
+    val taskDurationSeconds: Float,
+    val defectChance: Float,
+    val coverageRadius: Float? = null
 )
+
+@Serializable
+enum class WorkerRole {
+    PRODUCER_OPERATOR,
+    QA
+}

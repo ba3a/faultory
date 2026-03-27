@@ -1,5 +1,6 @@
 package com.faultory.core.shop
 
+import com.faultory.core.content.MachineType
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -9,7 +10,7 @@ data class ShopBlueprint(
     val qualityThresholdPercent: Float,
     val shiftLengthSeconds: Float,
     val conveyorBelts: List<ConveyorBelt>,
-    val inspectionAnchors: List<InspectionAnchor>,
+    val machineSlots: List<MachineSlot>,
     val workerSpawnPoints: List<WorkerSpawnPoint>
 )
 
@@ -26,11 +27,13 @@ data class BeltNode(
 )
 
 @Serializable
-data class InspectionAnchor(
+data class MachineSlot(
     val id: String,
+    val type: MachineType,
+    val installedMachineId: String? = null,
     val x: Float,
     val y: Float,
-    val reach: Float = 28f
+    val interactionRadius: Float = 28f
 )
 
 @Serializable

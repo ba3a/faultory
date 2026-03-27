@@ -34,24 +34,54 @@
       ]
     }
   ],
-  "inspectionAnchors": [
+  "machineSlots": [
     {
-      "id": "camera-west",
+      "id": "producer-west",
+      "type": "PRODUCER",
+      "installedMachineId": "bench-assembler",
+      "x": 220.0,
+      "y": 690.0,
+      "interactionRadius": 36.0
+    },
+    {
+      "id": "qa-west",
+      "type": "QA",
+      "installedMachineId": "camera-gate",
       "x": 360.0,
       "y": 660.0,
-      "reach": 28.0
+      "interactionRadius": 28.0
     },
     {
-      "id": "weight-mid",
+      "id": "producer-mid",
+      "type": "PRODUCER",
+      "installedMachineId": "bench-assembler",
+      "x": 620.0,
+      "y": 160.0,
+      "interactionRadius": 36.0
+    },
+    {
+      "id": "qa-mid",
+      "type": "QA",
+      "installedMachineId": "weight-checker",
       "x": 720.0,
       "y": 420.0,
-      "reach": 30.0
+      "interactionRadius": 30.0
     },
     {
-      "id": "camera-south",
+      "id": "qa-south",
+      "type": "QA",
+      "installedMachineId": "camera-gate",
       "x": 1080.0,
       "y": 520.0,
-      "reach": 28.0
+      "interactionRadius": 28.0
+    },
+    {
+      "id": "producer-east",
+      "type": "PRODUCER",
+      "installedMachineId": "bench-assembler",
+      "x": 1280.0,
+      "y": 520.0,
+      "interactionRadius": 36.0
     }
   ],
   "workerSpawnPoints": [

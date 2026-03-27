@@ -13,10 +13,14 @@ import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.faultory.core.FaultoryGame
 import com.faultory.core.config.GameConfig
+import com.faultory.core.content.MachineSpec
+import com.faultory.core.content.MachineType
+import com.faultory.core.content.Manuality
 import com.faultory.core.content.ShopCatalog
 import com.faultory.core.save.GameSave
 import com.faultory.core.shop.BeltNode
 import com.faultory.core.shop.ShopFloor
+import com.faultory.core.shop.MachineSlot
 import com.faultory.core.systems.ProductionDayDirector
 
 class ShopFloorScreen(
@@ -28,6 +32,7 @@ class ShopFloorScreen(
     private val viewport = FitViewport(GameConfig.virtualWidth, GameConfig.virtualHeight)
     private val backButtonBounds = Rectangle(GameConfig.virtualWidth - 264f, GameConfig.virtualHeight - 92f, 216f, 40f)
     private val scratchVector = Vector3()
+    private val machineSpecsById = shopCatalog.machines.associateBy { it.id }
     private val titleLayout = GlyphLayout()
     private val hintLayout = GlyphLayout()
     private val dayDirector = ProductionDayDirector(
@@ -102,7 +107,7 @@ class ShopFloorScreen(
 
     private fun drawFilledLayer(renderer: ShapeRenderer) {
         val workerCards = shopCatalog.workers.size.coerceAtLeast(1)
-        val unitCards = shopCatalog.inspectionUnits.size.coerceAtLeast(1)
+        val machineCards = shopCatalog.machines.size.coerceAtLeast(1)
         val productCards = shopCatalog.products.size.coerceAtLeast(1)
         val qualityRatio = (dayDirector.currentQualityPercent / 100f).coerceIn(0f, 1f)
         val shiftRatio = dayDirector.shiftProgress
@@ -137,13 +142,12 @@ class ShopFloorScreen(
             renderer.circle(88f + index * 44f, 112f, 14f)
         }
 
-        renderer.color = Color(0.76f, 0.51f, 0.18f, 1f)
-        for (anchor in shopFloor.blueprint.inspectionAnchors) {
-            renderer.rect(anchor.x - 16f, anchor.y - 16f, 32f, 32f)
+        for (slot in shopFloor.blueprint.machineSlots) {
+            drawMachineFill(renderer, slot, slot.installedMachineId?.let(machineSpecsById::get))
         }
 
         renderer.color = Color(0.71f, 0.73f, 0.75f, 1f)
-        repeat(unitCards) { index ->
+        repeat(machineCards) { index ->
             renderer.rect(88f + index * 52f, 72f, 28f, 20f)
         }
 
@@ -169,9 +173,8 @@ class ShopFloorScreen(
             renderer.circle(spawnPoint.x, spawnPoint.y, 18f)
         }
 
-        renderer.color = Color(0.87f, 0.55f, 0.20f, 1f)
-        for (anchor in shopFloor.blueprint.inspectionAnchors) {
-            renderer.circle(anchor.x, anchor.y, anchor.reach)
+        for (slot in shopFloor.blueprint.machineSlots) {
+            drawMachineOutline(renderer, slot, slot.installedMachineId?.let(machineSpecsById::get))
         }
 
         renderer.color = if (isBackButtonHovered) {
@@ -200,6 +203,44 @@ class ShopFloorScreen(
 
     private fun drawNode(renderer: ShapeRenderer, node: BeltNode) {
         renderer.circle(node.x, node.y, 10f)
+    }
+
+    private fun drawMachineFill(renderer: ShapeRenderer, slot: MachineSlot, machine: MachineSpec?) {
+        renderer.color = machineFillColor(machine)
+        if (machine?.type == MachineType.PRODUCER) {
+            renderer.rect(slot.x - 20f, slot.y - 20f, 40f, 40f)
+        } else {
+            renderer.rect(slot.x - 16f, slot.y - 16f, 32f, 32f)
+        }
+    }
+
+    private fun drawMachineOutline(renderer: ShapeRenderer, slot: MachineSlot, machine: MachineSpec?) {
+        renderer.color = machineOutlineColor(machine)
+        renderer.circle(slot.x, slot.y, slot.interactionRadius)
+
+        if (machine?.type == MachineType.PRODUCER) {
+            renderer.rect(slot.x - 22f, slot.y - 22f, 44f, 44f)
+        } else {
+            renderer.rect(slot.x - 18f, slot.y - 18f, 36f, 36f)
+        }
+    }
+
+    private fun machineFillColor(machine: MachineSpec?): Color {
+        return when {
+            machine == null -> Color(0.22f, 0.24f, 0.27f, 1f)
+            machine.type == MachineType.PRODUCER && machine.manuality == Manuality.HUMAN_OPERATED -> Color(0.74f, 0.45f, 0.24f, 1f)
+            machine.type == MachineType.PRODUCER && machine.manuality == Manuality.AUTOMATIC -> Color(0.80f, 0.64f, 0.22f, 1f)
+            machine.type == MachineType.QA && machine.manuality == Manuality.HUMAN_OPERATED -> Color(0.29f, 0.49f, 0.68f, 1f)
+            else -> Color(0.20f, 0.62f, 0.64f, 1f)
+        }
+    }
+
+    private fun machineOutlineColor(machine: MachineSpec?): Color {
+        return when {
+            machine == null -> Color(0.45f, 0.49f, 0.53f, 1f)
+            machine.type == MachineType.PRODUCER -> Color(0.98f, 0.79f, 0.40f, 1f)
+            else -> Color(0.67f, 0.87f, 0.90f, 1f)
+        }
     }
 
     private fun drawText() {
