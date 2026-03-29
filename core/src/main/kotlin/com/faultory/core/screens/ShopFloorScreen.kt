@@ -25,6 +25,8 @@ import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.TileCoordinate
+import com.faultory.core.shop.WorkerAssignmentFailureReason
+import com.faultory.core.shop.WorkerAssignmentResult
 import com.faultory.core.systems.ProductionDayDirector
 
 class ShopFloorScreen(
@@ -58,6 +60,13 @@ class ShopFloorScreen(
     private var hoveredBankKey: BankEntryKey? = null
     private var hoveredTile: TileCoordinate? = null
     private var isBackButtonHovered = false
+    private var pointerWorldX = 0f
+    private var pointerWorldY = 0f
+    private var workerContextMenu: WorkerContextMenuState? = null
+    private var isContextMenuOptionHovered = false
+    private var assignmentPendingWorkerId: String? = null
+    private var failedMachineBlinkId: String? = null
+    private var failedMachineBlinkRemaining = 0f
 
     private val inputProcessor = object : InputAdapter() {
         override fun keyDown(keycode: Int): Boolean {
@@ -70,32 +79,20 @@ class ShopFloorScreen(
 
         override fun mouseMoved(screenX: Int, screenY: Int): Boolean {
             updatePointerState(screenX, screenY)
-            return hoveredBankKey != null || hoveredTile != null || isBackButtonHovered
+            return hoveredBankKey != null ||
+                hoveredTile != null ||
+                isBackButtonHovered ||
+                workerContextMenu != null ||
+                assignmentPendingWorkerId != null
         }
 
         override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
-            if (button != Input.Buttons.LEFT) {
-                return false
-            }
-
             updatePointerState(screenX, screenY)
-            if (isBackButtonHovered) {
-                returnToLevelSelection()
-                return true
+            return when (button) {
+                Input.Buttons.LEFT -> handleLeftClick()
+                Input.Buttons.RIGHT -> handleRightClick()
+                else -> false
             }
-
-            val bankKey = hoveredBankKey
-            if (bankKey != null) {
-                selectedBankKey = if (selectedBankKey == bankKey) {
-                    null
-                } else {
-                    bankKey
-                }
-                return true
-            }
-
-            val tile = hoveredTile ?: return false
-            return attemptPlacement(tile)
         }
     }
 
@@ -113,8 +110,9 @@ class ShopFloorScreen(
     }
 
     override fun render(delta: Float) {
-        shopFloor.update(delta)
+        shopFloor.update(delta, workerProfilesById)
         dayDirector.update(delta)
+        updateFailureBlink(delta)
 
         ScreenUtils.clear(0.06f, 0.07f, 0.09f, 1f)
         viewport.apply()
@@ -135,6 +133,99 @@ class ShopFloorScreen(
 
     override fun dispose() {
         shopFloor.dispose()
+    }
+
+    private fun handleLeftClick(): Boolean {
+        if (isBackButtonHovered) {
+            returnToLevelSelection()
+            return true
+        }
+
+        if (handleContextMenuClick()) {
+            return true
+        }
+
+        if (handleAssignmentClick()) {
+            return true
+        }
+
+        val bankKey = hoveredBankKey
+        if (bankKey != null) {
+            assignmentPendingWorkerId = null
+            workerContextMenu = null
+            selectedBankKey = if (selectedBankKey == bankKey) {
+                null
+            } else {
+                bankKey
+            }
+            return true
+        }
+
+        val tile = hoveredTile ?: return false
+        return attemptPlacement(tile)
+    }
+
+    private fun handleRightClick(): Boolean {
+        val worker = hoveredTile
+            ?.let(shopFloor::objectAt)
+            ?.takeIf { it.kind == PlacedShopObjectKind.WORKER }
+        val hadContextMenu = workerContextMenu != null
+        workerContextMenu = null
+        isContextMenuOptionHovered = false
+
+        if (worker == null) {
+            return hadContextMenu
+        }
+
+        selectedBankKey = null
+        assignmentPendingWorkerId = null
+        openWorkerContextMenu(worker.id)
+        return true
+    }
+
+    private fun handleContextMenuClick(): Boolean {
+        val contextMenu = workerContextMenu ?: return false
+        workerContextMenu = null
+        return if (isContextMenuOptionHovered) {
+            assignmentPendingWorkerId = contextMenu.workerId
+            selectedBankKey = null
+            true
+        } else {
+            true
+        }
+    }
+
+    private fun handleAssignmentClick(): Boolean {
+        val workerId = assignmentPendingWorkerId ?: return false
+        val machine = hoveredTile
+            ?.let(shopFloor::objectAt)
+            ?.takeIf { it.kind == PlacedShopObjectKind.MACHINE }
+
+        if (machine == null) {
+            assignmentPendingWorkerId = null
+            return true
+        }
+
+        return when (val result = shopFloor.assignWorkerToMachine(workerId, machine.id, workerProfilesById, machineSpecsById)) {
+            is WorkerAssignmentResult.Success -> {
+                assignmentPendingWorkerId = null
+                persistPlacements()
+                true
+            }
+
+            is WorkerAssignmentResult.Failure -> {
+                if (result.reason in setOf(
+                        WorkerAssignmentFailureReason.INELIGIBLE_OPERATOR,
+                        WorkerAssignmentFailureReason.NO_FREE_NEIGHBOR_TILE,
+                        WorkerAssignmentFailureReason.NO_PATH,
+                        WorkerAssignmentFailureReason.MACHINE_NOT_FOUND
+                    )
+                ) {
+                    startFailureBlink(machine.id)
+                }
+                true
+            }
+        }
     }
 
     private fun drawFilledLayer(renderer: ShapeRenderer) {
@@ -208,6 +299,8 @@ class ShopFloorScreen(
             }
             renderer.rect(entry.bounds.x, entry.bounds.y + entry.bounds.height - 10f, entry.bounds.width, 10f)
         }
+
+        drawContextMenuFill(renderer)
         renderer.end()
     }
 
@@ -241,6 +334,9 @@ class ShopFloorScreen(
             drawPlacedObjectOutline(renderer, placedObject)
         }
 
+        drawAssignmentTargetHover(renderer)
+        drawFailureBlink(renderer)
+
         renderer.color = if (isBackButtonHovered) {
             Color(0.98f, 0.88f, 0.61f, 1f)
         } else {
@@ -256,36 +352,129 @@ class ShopFloorScreen(
             }
             renderer.rect(entry.bounds.x, entry.bounds.y, entry.bounds.width, entry.bounds.height)
         }
+
+        drawContextMenuOutline(renderer)
         renderer.end()
     }
 
     private fun drawPlacedObjectFill(renderer: ShapeRenderer, placedObject: PlacedShopObject) {
-        val worldX = shopFloor.grid.worldXFor(placedObject.position)
-        val worldY = shopFloor.grid.worldYFor(placedObject.position)
-
+        val renderPosition = renderPositionFor(placedObject)
         if (placedObject.kind == PlacedShopObjectKind.WORKER) {
             renderer.color = workerFillColor(placedObject.workerRole)
-            renderer.circle(worldX + GameConfig.tileSize / 2f, worldY + GameConfig.tileSize / 2f, 12f)
+            renderer.circle(
+                renderPosition.worldX + GameConfig.tileSize / 2f,
+                renderPosition.worldY + GameConfig.tileSize / 2f,
+                12f
+            )
             return
         }
 
         val machine = machineSpecsById[placedObject.catalogId]
         renderer.color = machineFillColor(machine)
-        renderer.rect(worldX + 4f, worldY + 4f, GameConfig.tileSize - 8f, GameConfig.tileSize - 8f)
+        renderer.rect(
+            renderPosition.worldX + 4f,
+            renderPosition.worldY + 4f,
+            GameConfig.tileSize - 8f,
+            GameConfig.tileSize - 8f
+        )
     }
 
     private fun drawPlacedObjectOutline(renderer: ShapeRenderer, placedObject: PlacedShopObject) {
-        val worldX = shopFloor.grid.worldXFor(placedObject.position)
-        val worldY = shopFloor.grid.worldYFor(placedObject.position)
-
+        val renderPosition = renderPositionFor(placedObject)
         if (placedObject.kind == PlacedShopObjectKind.WORKER) {
             renderer.color = Color(0.89f, 0.95f, 0.98f, 1f)
-            renderer.circle(worldX + GameConfig.tileSize / 2f, worldY + GameConfig.tileSize / 2f, 14f)
+            renderer.circle(
+                renderPosition.worldX + GameConfig.tileSize / 2f,
+                renderPosition.worldY + GameConfig.tileSize / 2f,
+                14f
+            )
+
+            if (placedObject.id == assignmentPendingWorkerId) {
+                renderer.color = Color(0.99f, 0.90f, 0.62f, 1f)
+                renderer.circle(
+                    renderPosition.worldX + GameConfig.tileSize / 2f,
+                    renderPosition.worldY + GameConfig.tileSize / 2f,
+                    18f
+                )
+            }
             return
         }
 
         renderer.color = machineOutlineColor(machineSpecsById[placedObject.catalogId])
-        renderer.rect(worldX + 2f, worldY + 2f, GameConfig.tileSize - 4f, GameConfig.tileSize - 4f)
+        renderer.rect(
+            renderPosition.worldX + 2f,
+            renderPosition.worldY + 2f,
+            GameConfig.tileSize - 4f,
+            GameConfig.tileSize - 4f
+        )
+    }
+
+    private fun drawAssignmentTargetHover(renderer: ShapeRenderer) {
+        if (assignmentPendingWorkerId == null) {
+            return
+        }
+
+        val machine = hoveredTile
+            ?.let(shopFloor::objectAt)
+            ?.takeIf { it.kind == PlacedShopObjectKind.MACHINE }
+            ?: return
+
+        val worldX = shopFloor.grid.worldXFor(machine.position)
+        val worldY = shopFloor.grid.worldYFor(machine.position)
+        renderer.color = Color(0.98f, 0.88f, 0.61f, 1f)
+        renderer.rect(worldX + 1f, worldY + 1f, GameConfig.tileSize - 2f, GameConfig.tileSize - 2f)
+    }
+
+    private fun drawFailureBlink(renderer: ShapeRenderer) {
+        val machineId = failedMachineBlinkId ?: return
+        if (failedMachineBlinkRemaining <= 0f) {
+            return
+        }
+
+        val machine = shopFloor.findObjectById(machineId) ?: return
+        if (((failedMachineBlinkRemaining * 12f).toInt() and 1) == 0) {
+            return
+        }
+
+        val worldX = shopFloor.grid.worldXFor(machine.position)
+        val worldY = shopFloor.grid.worldYFor(machine.position)
+        renderer.color = Color(0.97f, 0.28f, 0.24f, 1f)
+        renderer.rect(worldX, worldY, GameConfig.tileSize, GameConfig.tileSize)
+        renderer.rect(worldX + 3f, worldY + 3f, GameConfig.tileSize - 6f, GameConfig.tileSize - 6f)
+    }
+
+    private fun drawContextMenuFill(renderer: ShapeRenderer) {
+        val contextMenu = workerContextMenu ?: return
+        renderer.color = Color(0.14f, 0.16f, 0.19f, 0.98f)
+        renderer.rect(contextMenu.bounds.x, contextMenu.bounds.y, contextMenu.bounds.width, contextMenu.bounds.height)
+        renderer.color = if (isContextMenuOptionHovered) {
+            Color(0.28f, 0.34f, 0.40f, 1f)
+        } else {
+            Color(0.19f, 0.23f, 0.28f, 1f)
+        }
+        renderer.rect(
+            contextMenu.optionBounds.x,
+            contextMenu.optionBounds.y,
+            contextMenu.optionBounds.width,
+            contextMenu.optionBounds.height
+        )
+    }
+
+    private fun drawContextMenuOutline(renderer: ShapeRenderer) {
+        val contextMenu = workerContextMenu ?: return
+        renderer.color = Color(0.55f, 0.61f, 0.66f, 1f)
+        renderer.rect(contextMenu.bounds.x, contextMenu.bounds.y, contextMenu.bounds.width, contextMenu.bounds.height)
+        renderer.color = if (isContextMenuOptionHovered) {
+            Color(0.99f, 0.90f, 0.62f, 1f)
+        } else {
+            Color(0.68f, 0.74f, 0.79f, 1f)
+        }
+        renderer.rect(
+            contextMenu.optionBounds.x,
+            contextMenu.optionBounds.y,
+            contextMenu.optionBounds.width,
+            contextMenu.optionBounds.height
+        )
     }
 
     private fun machineFillColor(machine: MachineSpec?): Color {
@@ -327,14 +516,11 @@ class ShopFloorScreen(
         font.color = Color(0.76f, 0.80f, 0.84f, 1f)
         hintLayout.setText(
             font,
-            "Quality ${"%.1f".format(dayDirector.currentQualityPercent)}% / ${dayDirector.targetQualityPercent}%  |  Click bank item, then click floor tile"
+            "Quality ${"%.1f".format(dayDirector.currentQualityPercent)}% / ${dayDirector.targetQualityPercent}%"
         )
         font.draw(batch, hintLayout, 32f, GameConfig.virtualHeight - 52f)
 
-        hintLayout.setText(
-            font,
-            selectedItemText()
-        )
+        hintLayout.setText(font, selectedItemText())
         font.draw(batch, hintLayout, 32f, GameConfig.virtualHeight - 76f)
 
         font.color = if (isBackButtonHovered) {
@@ -361,13 +547,37 @@ class ShopFloorScreen(
             hintLayout.setText(font, if (entry.key.kind == PlacedShopObjectKind.WORKER) "Worker" else "Machine")
             font.draw(batch, hintLayout, entry.bounds.x + 12f, entry.bounds.y + 24f)
         }
+
+        val contextMenu = workerContextMenu
+        if (contextMenu != null) {
+            font.color = if (isContextMenuOptionHovered) {
+                Color(1f, 0.94f, 0.71f, 1f)
+            } else {
+                Color(0.92f, 0.95f, 0.97f, 1f)
+            }
+            titleLayout.setText(font, "Assign To Machine")
+            font.draw(
+                batch,
+                titleLayout,
+                contextMenu.optionBounds.x + 12f,
+                contextMenu.optionBounds.y + contextMenu.optionBounds.height - 12f
+            )
+        }
+
         batch.end()
     }
 
     private fun selectedItemText(): String {
-        val selectedKey = selectedBankKey ?: return "QA machines must be placed on the belt. Producer machines go on open floor tiles."
+        val assignmentWorker = assignmentPendingWorkerId
+            ?.let(shopFloor::findObjectById)
+            ?.let { workerProfilesById[it.catalogId]?.displayName ?: "Worker" }
+        if (assignmentWorker != null) {
+            return "Assigning $assignmentWorker: click a machine to assign, or click anywhere else to cancel."
+        }
+
+        val selectedKey = selectedBankKey ?: return "Left click a bank item to place it. Right click a worker to assign it to a machine."
         val entry = bankEntries.firstOrNull { it.key == selectedKey } ?: return ""
-        return "Selected: ${entry.displayName}"
+        return "Selected: ${entry.displayName}. QA machines go on the belt; producer machines go on open floor tiles."
     }
 
     private fun buildBankEntries() {
@@ -412,11 +622,21 @@ class ShopFloorScreen(
     private fun updatePointerState(screenX: Int, screenY: Int) {
         scratchVector.set(screenX.toFloat(), screenY.toFloat(), 0f)
         viewport.unproject(scratchVector)
+        pointerWorldX = scratchVector.x
+        pointerWorldY = scratchVector.y
 
-        isBackButtonHovered = backButtonBounds.contains(scratchVector.x, scratchVector.y)
-        hoveredBankKey = bankEntries.firstOrNull { it.bounds.contains(scratchVector.x, scratchVector.y) }?.key
-        hoveredTile = if (hoveredBankKey == null && !isBackButtonHovered) {
-            shopFloor.grid.tileAt(scratchVector.x, scratchVector.y)
+        val contextMenu = workerContextMenu
+        isContextMenuOptionHovered = contextMenu?.optionBounds?.contains(pointerWorldX, pointerWorldY) == true
+        val isContextMenuHovered = contextMenu?.bounds?.contains(pointerWorldX, pointerWorldY) == true
+
+        isBackButtonHovered = backButtonBounds.contains(pointerWorldX, pointerWorldY)
+        hoveredBankKey = if (!isBackButtonHovered && !isContextMenuHovered) {
+            bankEntries.firstOrNull { it.bounds.contains(pointerWorldX, pointerWorldY) }?.key
+        } else {
+            null
+        }
+        hoveredTile = if (hoveredBankKey == null && !isBackButtonHovered && !isContextMenuHovered) {
+            shopFloor.grid.tileAt(pointerWorldX, pointerWorldY)
         } else {
             null
         }
@@ -432,6 +652,7 @@ class ShopFloorScreen(
             PlacedShopObjectKind.WORKER -> {
                 val worker = workerProfilesById[selectedKey.catalogId] ?: return false
                 PlacedShopObject(
+                    id = shopFloor.createObjectId(PlacedShopObjectKind.WORKER),
                     catalogId = worker.id,
                     kind = PlacedShopObjectKind.WORKER,
                     position = tile,
@@ -442,6 +663,7 @@ class ShopFloorScreen(
             PlacedShopObjectKind.MACHINE -> {
                 val machine = machineSpecsById[selectedKey.catalogId] ?: return false
                 PlacedShopObject(
+                    id = shopFloor.createObjectId(PlacedShopObjectKind.MACHINE),
                     catalogId = machine.id,
                     kind = PlacedShopObjectKind.MACHINE,
                     position = tile
@@ -479,6 +701,55 @@ class ShopFloorScreen(
             ?: worker.roleProfiles.first().role
     }
 
+    private fun openWorkerContextMenu(workerId: String) {
+        val width = 188f
+        val height = 52f
+        val x = pointerWorldX.coerceIn(12f, GameConfig.virtualWidth - width - 12f)
+        val y = pointerWorldY.coerceIn(
+            GameConfig.bankHeight + 12f,
+            GameConfig.virtualHeight - GameConfig.hudHeight - height - 12f
+        )
+        workerContextMenu = WorkerContextMenuState(
+            workerId = workerId,
+            bounds = Rectangle(x, y, width, height),
+            optionBounds = Rectangle(x + 6f, y + 6f, width - 12f, height - 12f)
+        )
+        isContextMenuOptionHovered = true
+    }
+
+    private fun renderPositionFor(placedObject: PlacedShopObject): RenderPosition {
+        val startX = shopFloor.grid.worldXFor(placedObject.position)
+        val startY = shopFloor.grid.worldYFor(placedObject.position)
+        if (placedObject.kind != PlacedShopObjectKind.WORKER || placedObject.movementPath.isEmpty()) {
+            return RenderPosition(startX, startY)
+        }
+
+        val nextTile = placedObject.movementPath.first()
+        val endX = shopFloor.grid.worldXFor(nextTile)
+        val endY = shopFloor.grid.worldYFor(nextTile)
+        val progress = placedObject.movementProgress.coerceIn(0f, 1f)
+        return RenderPosition(
+            worldX = startX + (endX - startX) * progress,
+            worldY = startY + (endY - startY) * progress
+        )
+    }
+
+    private fun startFailureBlink(machineId: String) {
+        failedMachineBlinkId = machineId
+        failedMachineBlinkRemaining = 0.6f
+    }
+
+    private fun updateFailureBlink(delta: Float) {
+        if (failedMachineBlinkRemaining <= 0f) {
+            return
+        }
+
+        failedMachineBlinkRemaining = (failedMachineBlinkRemaining - delta).coerceAtLeast(0f)
+        if (failedMachineBlinkRemaining == 0f) {
+            failedMachineBlinkId = null
+        }
+    }
+
     private fun persistPlacements() {
         currentSave = currentSave.copy(
             activeShift = currentSave.activeShift.copy(
@@ -503,4 +774,15 @@ private data class BankEntry(
 private data class BankEntryKey(
     val kind: PlacedShopObjectKind,
     val catalogId: String
+)
+
+private data class WorkerContextMenuState(
+    val workerId: String,
+    val bounds: Rectangle,
+    val optionBounds: Rectangle
+)
+
+private data class RenderPosition(
+    val worldX: Float,
+    val worldY: Float
 )

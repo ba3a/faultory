@@ -1,6 +1,7 @@
 package com.faultory.core.shop
 
 import com.faultory.core.config.GameConfig
+import java.util.ArrayDeque
 import kotlin.math.floor
 import kotlinx.serialization.Serializable
 
@@ -39,6 +40,50 @@ class ShopGrid(
 
     fun worldYFor(tile: TileCoordinate): Float = tile.y * GameConfig.tileSize
 
+    fun orthogonalNeighbors(tile: TileCoordinate): List<TileCoordinate> {
+        return listOf(
+            TileCoordinate(tile.x - 1, tile.y),
+            TileCoordinate(tile.x + 1, tile.y),
+            TileCoordinate(tile.x, tile.y - 1),
+            TileCoordinate(tile.x, tile.y + 1)
+        ).filter(::isBuildable)
+    }
+
+    fun findPath(
+        start: TileCoordinate,
+        goals: Set<TileCoordinate>,
+        blockedTiles: Set<TileCoordinate>
+    ): List<TileCoordinate>? {
+        if (start in goals) {
+            return emptyList()
+        }
+
+        val queue = ArrayDeque<TileCoordinate>()
+        val previousByTile = mutableMapOf<TileCoordinate, TileCoordinate?>()
+        queue.addLast(start)
+        previousByTile[start] = null
+
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            for (neighbor in orthogonalNeighbors(current)) {
+                if (neighbor in previousByTile) {
+                    continue
+                }
+                if (neighbor in blockedTiles && neighbor !in goals) {
+                    continue
+                }
+
+                previousByTile[neighbor] = current
+                if (neighbor in goals) {
+                    return reconstructPath(neighbor, previousByTile)
+                }
+                queue.addLast(neighbor)
+            }
+        }
+
+        return null
+    }
+
     private fun tilesForBelt(belt: ConveyorBelt): List<TileCoordinate> {
         val tiles = mutableListOf<TileCoordinate>()
         for (index in 0 until belt.checkpoints.lastIndex) {
@@ -76,6 +121,20 @@ class ShopGrid(
             x = floor(worldX / GameConfig.tileSize).toInt(),
             y = floor(worldY / GameConfig.tileSize).toInt()
         )
+    }
+
+    private fun reconstructPath(
+        end: TileCoordinate,
+        previousByTile: Map<TileCoordinate, TileCoordinate?>
+    ): List<TileCoordinate> {
+        val reversedPath = mutableListOf<TileCoordinate>()
+        var current: TileCoordinate? = end
+        while (current != null) {
+            reversedPath += current
+            current = previousByTile[current]
+        }
+        reversedPath.reverse()
+        return reversedPath.drop(1)
     }
 }
 

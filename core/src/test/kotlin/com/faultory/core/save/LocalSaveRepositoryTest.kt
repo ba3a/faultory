@@ -88,10 +88,14 @@ class LocalSaveRepositoryTest {
                 ).activeShift.copy(
                     placedObjects = listOf(
                         PlacedShopObject(
+                            id = "worker-1",
                             catalogId = "line-inspector",
                             kind = PlacedShopObjectKind.WORKER,
                             position = TileCoordinate(6, 9),
-                            workerRole = WorkerRole.QA
+                            workerRole = WorkerRole.QA,
+                            assignedMachineId = "machine-7",
+                            movementPath = listOf(TileCoordinate(7, 9), TileCoordinate(8, 9)),
+                            movementProgress = 0.35f
                         )
                     )
                 )
@@ -112,6 +116,7 @@ class LocalSaveRepositoryTest {
                 ).activeShift.copy(
                     placedObjects = listOf(
                         PlacedShopObject(
+                            id = "machine-7",
                             catalogId = "bench-assembler",
                             kind = PlacedShopObjectKind.MACHINE,
                             position = TileCoordinate(12, 11)
@@ -131,6 +136,8 @@ class LocalSaveRepositoryTest {
             assertEquals(92f, loadedMorningShift.activeShift.targetQualityPercent)
             assertEquals(1, loadedMorningShift.activeShift.placedObjects.size)
             assertEquals(TileCoordinate(6, 9), loadedMorningShift.activeShift.placedObjects.single().position)
+            assertEquals("machine-7", loadedMorningShift.activeShift.placedObjects.single().assignedMachineId)
+            assertEquals(0.35f, loadedMorningShift.activeShift.placedObjects.single().movementProgress)
 
             assertEquals("evening-shift", loadedEveningShift.slotId)
             assertEquals("tutorial-shop", loadedEveningShift.activeShift.shopId)

@@ -50,6 +50,13 @@ data class MachineSpec(
             worker.isSameOrHigherOnUpgradeBranch(rootWorkerId, workersById)
         }
     }
+
+    fun canAcceptOperator(
+        worker: WorkerProfile,
+        workersById: Map<String, WorkerProfile>
+    ): Boolean {
+        return canBeOperatedBy(worker, workersById)
+    }
 }
 
 @Serializable

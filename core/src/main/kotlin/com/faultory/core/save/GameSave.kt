@@ -12,7 +12,7 @@ data class GameSave(
     val activeShift: ShiftSnapshot
 ) {
     companion object {
-        const val CURRENT_VERSION = 2
+        const val CURRENT_VERSION = 3
 
         fun forLevel(
             slotId: String,
