@@ -56,6 +56,7 @@ class ShopFloorAssignmentTest {
 
         val success = assertIs<WorkerAssignmentResult.Success>(assignmentResult)
         assertEquals("machine-1", success.worker.assignedMachineId)
+        assertEquals(0, success.worker.assignedSlotIndex)
         assertEquals(WorkerRole.PRODUCER_OPERATOR, success.worker.workerRole)
         assertEquals(TileCoordinate(7, 10), success.worker.movementPath.last())
 
@@ -97,6 +98,55 @@ class ShopFloorAssignmentTest {
                     catalogId = "bench-assembler",
                     kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(7, 10)
+                )
+            )
+        )
+
+        val assignmentResult = shopFloor.assignWorkerToMachine(
+            workerId = "worker-1",
+            machineId = "machine-1",
+            workersById = workerProfilesById
+        )
+
+        val failure = assertIs<WorkerAssignmentResult.Failure>(assignmentResult)
+        assertEquals(WorkerAssignmentFailureReason.NO_FREE_NEIGHBOR_TILE, failure.reason)
+    }
+
+    @Test
+    fun `assignment fails when the only operator slot is already reserved by another worker`() {
+        val workerProfilesById = mapOf(
+            "line-inspector" to lineInspectorProfile()
+        )
+        val machinesById = mapOf(
+            "bench-assembler" to benchAssemblerSpec()
+        )
+        val shopFloor = ShopFloor(
+            blueprint = simpleBlueprint(),
+            machineSpecsById = machinesById,
+            initialPlacements = listOf(
+                PlacedShopObject(
+                    id = "worker-1",
+                    catalogId = "line-inspector",
+                    kind = PlacedShopObjectKind.WORKER,
+                    position = TileCoordinate(4, 10),
+                    workerRole = WorkerRole.QA
+                ),
+                PlacedShopObject(
+                    id = "worker-2",
+                    catalogId = "line-inspector",
+                    kind = PlacedShopObjectKind.WORKER,
+                    position = TileCoordinate(2, 10),
+                    workerRole = WorkerRole.PRODUCER_OPERATOR,
+                    assignedMachineId = "machine-1",
+                    assignedSlotIndex = 0,
+                    movementPath = listOf(TileCoordinate(6, 10), TileCoordinate(7, 10))
+                ),
+                PlacedShopObject(
+                    id = "machine-1",
+                    catalogId = "bench-assembler",
+                    kind = PlacedShopObjectKind.MACHINE,
+                    position = TileCoordinate(8, 10),
+                    orientation = Orientation.WEST
                 )
             )
         )

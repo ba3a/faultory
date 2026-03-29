@@ -80,11 +80,12 @@ data class MachineSpec(
         return slots
             .asSequence()
             .filter { slot -> type == null || slot.type == type }
-            .map { slot ->
+            .mapIndexed { slotIndex, slot ->
                 val rotatedLocalTile = orientation.rotate(slot.asTileCoordinate())
                 val machineTile = anchorTile + rotatedLocalTile
                 val worldSide = orientation.rotate(slot.side)
                 MachineSlotPosition(
+                    slotIndex = slotIndex,
                     type = slot.type,
                     machineTile = machineTile,
                     accessTile = machineTile + worldSide.step(),

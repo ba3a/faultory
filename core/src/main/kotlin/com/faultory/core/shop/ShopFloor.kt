@@ -183,6 +183,7 @@ class ShopFloor(
 
         val slotPositions = slotPositionsFor(machine, MachineSlotType.OPERATOR)
             .filter { slotPosition ->
+                !isOperatorSlotReserved(machine.id, slotPosition.slotIndex, ignoreWorkerId = worker.id) &&
                 grid.isBuildable(slotPosition.accessTile) &&
                     (slotPosition.accessTile == worker.position || !isOccupied(slotPosition.accessTile, ignoreObjectId = worker.id))
             }
@@ -213,6 +214,7 @@ class ShopFloor(
             orientation = workerOrientation,
             workerRole = machineSpec.requiredOperatorRole(),
             assignedMachineId = machine.id,
+            assignedSlotIndex = destinationSlot?.slotIndex,
             movementPath = path,
             movementProgress = 0f
         )
@@ -256,6 +258,19 @@ class ShopFloor(
             type = MachineSlotType.QA
         ).any { slotPosition ->
             slotPosition.accessTile in grid.beltTiles && !isOccupied(slotPosition.accessTile, ignoreObjectId)
+        }
+    }
+
+    private fun isOperatorSlotReserved(
+        machineId: String,
+        slotIndex: Int,
+        ignoreWorkerId: String? = null
+    ): Boolean {
+        return mutablePlacedObjects.any { placedObject ->
+            placedObject.kind == PlacedShopObjectKind.WORKER &&
+                placedObject.id != ignoreWorkerId &&
+                placedObject.assignedMachineId == machineId &&
+                placedObject.assignedSlotIndex == slotIndex
         }
     }
 
@@ -303,8 +318,12 @@ class ShopFloor(
     private fun orientationAtAssignedSlot(worker: PlacedShopObject): Orientation? {
         val machineId = worker.assignedMachineId ?: return null
         val machine = findObjectById(machineId) ?: return null
+        val slotIndex = worker.assignedSlotIndex
         return slotPositionsFor(machine, MachineSlotType.OPERATOR)
-            .firstOrNull { it.accessTile == worker.position }
+            .firstOrNull { slotPosition ->
+                slotPosition.slotIndex == slotIndex ||
+                    (slotIndex == null && slotPosition.accessTile == worker.position)
+            }
             ?.side
             ?.opposite()
     }

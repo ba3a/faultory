@@ -96,6 +96,7 @@ class LocalSaveRepositoryTest {
                             orientation = Orientation.EAST,
                             workerRole = WorkerRole.QA,
                             assignedMachineId = "machine-7",
+                            assignedSlotIndex = 0,
                             movementPath = listOf(TileCoordinate(7, 9), TileCoordinate(8, 9)),
                             movementProgress = 0.35f
                         )
@@ -140,6 +141,7 @@ class LocalSaveRepositoryTest {
             assertEquals(1, loadedMorningShift.activeShift.placedObjects.size)
             assertEquals(TileCoordinate(6, 9), loadedMorningShift.activeShift.placedObjects.single().position)
             assertEquals("machine-7", loadedMorningShift.activeShift.placedObjects.single().assignedMachineId)
+            assertEquals(0, loadedMorningShift.activeShift.placedObjects.single().assignedSlotIndex)
             assertEquals(0.35f, loadedMorningShift.activeShift.placedObjects.single().movementProgress)
 
             assertEquals("evening-shift", loadedEveningShift.slotId)

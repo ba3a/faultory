@@ -29,6 +29,7 @@ enum class MachineSlotType {
 }
 
 data class MachineSlotPosition(
+    val slotIndex: Int,
     val type: MachineSlotType,
     val machineTile: TileCoordinate,
     val accessTile: TileCoordinate,
