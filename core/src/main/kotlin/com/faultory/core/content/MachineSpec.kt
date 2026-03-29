@@ -1,5 +1,8 @@
 package com.faultory.core.content
 
+import com.faultory.core.shop.Orientation
+import com.faultory.core.shop.TileCoordinate
+import com.faultory.core.shop.plus
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -11,6 +14,8 @@ data class MachineSpec(
     val manuality: Manuality,
     val skin: String,
     val productIds: List<String>,
+    val shape: List<MachineShapeTile> = listOf(MachineShapeTile(0, 0)),
+    val slots: List<MachineSlotSpec> = emptyList(),
     val minimumOperatorWorkerIds: List<String> = emptyList(),
     val installCost: Int,
     val operationDurationSeconds: Float,
@@ -56,6 +61,37 @@ data class MachineSpec(
         workersById: Map<String, WorkerProfile>
     ): Boolean {
         return canBeOperatedBy(worker, workersById)
+    }
+
+    fun occupiedTiles(
+        anchorTile: TileCoordinate,
+        orientation: Orientation
+    ): Set<TileCoordinate> {
+        return shape
+            .map { anchorTile + orientation.rotate(it.asTileCoordinate()) }
+            .toSet()
+    }
+
+    fun slotPositions(
+        anchorTile: TileCoordinate,
+        orientation: Orientation,
+        type: MachineSlotType? = null
+    ): List<MachineSlotPosition> {
+        return slots
+            .asSequence()
+            .filter { slot -> type == null || slot.type == type }
+            .map { slot ->
+                val rotatedLocalTile = orientation.rotate(slot.asTileCoordinate())
+                val machineTile = anchorTile + rotatedLocalTile
+                val worldSide = orientation.rotate(slot.side)
+                MachineSlotPosition(
+                    type = slot.type,
+                    machineTile = machineTile,
+                    accessTile = machineTile + worldSide.step(),
+                    side = worldSide
+                )
+            }
+            .toList()
     }
 }
 

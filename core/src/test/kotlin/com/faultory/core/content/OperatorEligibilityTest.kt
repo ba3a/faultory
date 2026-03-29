@@ -1,6 +1,7 @@
 package com.faultory.core.content
 
 import com.faultory.core.save.FaultoryJson
+import com.faultory.core.shop.Orientation
 import java.nio.file.Path
 import kotlin.io.path.readText
 import kotlin.test.Test
@@ -8,7 +9,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.text.Charsets
-import kotlinx.serialization.decodeFromString
 
 class OperatorEligibilityTest {
     @Test
@@ -33,6 +33,14 @@ class OperatorEligibilityTest {
             manuality = Manuality.HUMAN_OPERATED,
             skin = "machine_human_qa_station",
             productIds = listOf("ceramic-mug"),
+            slots = listOf(
+                MachineSlotSpec(
+                    x = 0,
+                    y = 0,
+                    side = Orientation.NORTH,
+                    type = MachineSlotType.OPERATOR
+                )
+            ),
             minimumOperatorWorkerIds = listOf("producer-only-rookie"),
             installCost = 30,
             operationDurationSeconds = 1.4f,

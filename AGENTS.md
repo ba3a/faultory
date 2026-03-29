@@ -45,7 +45,7 @@ Notes:
 ## Development Workflow (step-by-step, mandatory)
 1. Explore the relevant code and assets before editing. Read the touched packages, loaders, and JSON files first.
 2. Create a short plan that names the files/packages you will change.
-3. Create a new branch with a name describing changes.
+3. Create a new branch with a name describing changes starting from the current commit in master.
 3. Make minimal, focused changes in the correct module. Keep `desktop` thin and prefer changes in `core`.
 4. Run validation after changes:
    `.\gradlew.bat test --console plain`

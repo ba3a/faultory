@@ -9,6 +9,7 @@ data class PlacedShopObject(
     val catalogId: String,
     val kind: PlacedShopObjectKind,
     val position: TileCoordinate,
+    val orientation: Orientation = Orientation.SOUTH,
     val workerRole: WorkerRole? = null,
     val assignedMachineId: String? = null,
     val movementPath: List<TileCoordinate> = emptyList(),

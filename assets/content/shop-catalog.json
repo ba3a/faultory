@@ -147,6 +147,20 @@
         "ceramic-mug",
         "glass-jar"
       ],
+      "shape": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "slots": [
+        {
+          "x": 0,
+          "y": 0,
+          "side": "NORTH",
+          "type": "OPERATOR"
+        }
+      ],
       "minimumOperatorWorkerIds": [
         "line-inspector"
       ],
@@ -172,6 +186,12 @@
         "glass-jar",
         "tea-kettle"
       ],
+      "shape": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
       "installCost": 160,
       "operationDurationSeconds": 1.0,
       "producerProfile": {
@@ -188,6 +208,12 @@
       "productIds": [
         "ceramic-mug",
         "tea-kettle"
+      ],
+      "shape": [
+        {
+          "x": 0,
+          "y": 0
+        }
       ],
       "installCost": 154,
       "operationDurationSeconds": 1.1,
@@ -206,6 +232,24 @@
         "ceramic-mug",
         "glass-jar",
         "tea-kettle"
+      ],
+      "shape": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        }
+      ],
+      "slots": [
+        {
+          "x": 0,
+          "y": 0,
+          "side": "NORTH",
+          "type": "QA"
+        }
       ],
       "installCost": 90,
       "operationDurationSeconds": 0.8,
@@ -229,6 +273,24 @@
         "glass-jar",
         "tea-kettle"
       ],
+      "shape": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        }
+      ],
+      "slots": [
+        {
+          "x": 0,
+          "y": 0,
+          "side": "NORTH",
+          "type": "QA"
+        }
+      ],
       "installCost": 148,
       "operationDurationSeconds": 0.7,
       "qaProfile": {
@@ -247,6 +309,24 @@
         "glass-jar",
         "tea-kettle"
       ],
+      "shape": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 1
+        }
+      ],
+      "slots": [
+        {
+          "x": 0,
+          "y": 1,
+          "side": "NORTH",
+          "type": "QA"
+        }
+      ],
       "installCost": 146,
       "operationDurationSeconds": 0.65,
       "qaProfile": {
@@ -263,6 +343,24 @@
       "productIds": [
         "glass-jar",
         "tea-kettle"
+      ],
+      "shape": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        }
+      ],
+      "slots": [
+        {
+          "x": 1,
+          "y": 0,
+          "side": "NORTH",
+          "type": "QA"
+        }
       ],
       "installCost": 72,
       "operationDurationSeconds": 0.9,

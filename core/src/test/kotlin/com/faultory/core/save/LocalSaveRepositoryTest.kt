@@ -3,6 +3,7 @@ package com.faultory.core.save
 import com.badlogic.gdx.files.FileHandle
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.WorkerRole
+import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.TileCoordinate
@@ -92,6 +93,7 @@ class LocalSaveRepositoryTest {
                             catalogId = "line-inspector",
                             kind = PlacedShopObjectKind.WORKER,
                             position = TileCoordinate(6, 9),
+                            orientation = Orientation.EAST,
                             workerRole = WorkerRole.QA,
                             assignedMachineId = "machine-7",
                             movementPath = listOf(TileCoordinate(7, 9), TileCoordinate(8, 9)),
@@ -119,7 +121,8 @@ class LocalSaveRepositoryTest {
                             id = "machine-7",
                             catalogId = "bench-assembler",
                             kind = PlacedShopObjectKind.MACHINE,
-                            position = TileCoordinate(12, 11)
+                            position = TileCoordinate(12, 11),
+                            orientation = Orientation.WEST
                         )
                     )
                 )
@@ -144,6 +147,7 @@ class LocalSaveRepositoryTest {
             assertEquals(96f, loadedEveningShift.activeShift.targetQualityPercent)
             assertEquals(1, loadedEveningShift.activeShift.placedObjects.size)
             assertEquals("bench-assembler", loadedEveningShift.activeShift.placedObjects.single().catalogId)
+            assertEquals(Orientation.WEST, loadedEveningShift.activeShift.placedObjects.single().orientation)
         } finally {
             tempRoot.toFile().deleteRecursively()
         }

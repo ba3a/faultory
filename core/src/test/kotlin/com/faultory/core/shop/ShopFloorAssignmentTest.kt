@@ -1,85 +1,49 @@
 package com.faultory.core.shop
 
+import com.faultory.core.content.MachineShapeTile
+import com.faultory.core.content.MachineSlotSpec
+import com.faultory.core.content.MachineSlotType
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.MachineType
 import com.faultory.core.content.Manuality
 import com.faultory.core.content.ProducerMachineProfile
+import com.faultory.core.content.QaMachineProfile
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.content.WorkerRoleProfile
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class ShopFloorAssignmentTest {
     @Test
-    fun `assignment finds a path to the machine neighbor and updates worker state`() {
+    fun `assignment finds a path to the operator slot and updates worker state`() {
         val workerProfilesById = mapOf(
-            "line-inspector" to WorkerProfile(
-                id = "line-inspector",
-                displayName = "Line Inspector",
-                level = 1,
-                hireCost = 60,
-                walkSpeed = 200f,
-                skin = "worker_line_inspector",
-                roleProfiles = listOf(
-                    WorkerRoleProfile(
-                        role = WorkerRole.PRODUCER_OPERATOR,
-                        taskDurationSeconds = 1.9f,
-                        defectChance = 0.12f
-                    )
-                )
-            )
+            "line-inspector" to lineInspectorProfile()
         )
         val machinesById = mapOf(
-            "bench-assembler" to MachineSpec(
-                id = "bench-assembler",
-                displayName = "Bench Assembler",
-                level = 1,
-                type = MachineType.PRODUCER,
-                manuality = Manuality.HUMAN_OPERATED,
-                skin = "machine_bench_assembler",
-                productIds = listOf("ceramic-mug"),
-                minimumOperatorWorkerIds = listOf("line-inspector"),
-                installCost = 75,
-                operationDurationSeconds = 1.8f,
-                producerProfile = ProducerMachineProfile(defectChance = 0.18f)
-            )
+            "bench-assembler" to benchAssemblerSpec()
         )
         val shopFloor = ShopFloor(
             blueprint = simpleBlueprint(),
+            machineSpecsById = machinesById,
             initialPlacements = listOf(
                 PlacedShopObject(
                     id = "worker-1",
                     catalogId = "line-inspector",
                     kind = PlacedShopObjectKind.WORKER,
                     position = TileCoordinate(4, 10),
-                    workerRole = WorkerRole.QA
+                    workerRole = WorkerRole.QA,
+                    orientation = Orientation.SOUTH
                 ),
                 PlacedShopObject(
                     id = "machine-1",
                     catalogId = "bench-assembler",
                     kind = PlacedShopObjectKind.MACHINE,
-                    position = TileCoordinate(8, 10)
-                ),
-                PlacedShopObject(
-                    id = "blocker-1",
-                    catalogId = "bench-assembler",
-                    kind = PlacedShopObjectKind.MACHINE,
-                    position = TileCoordinate(8, 9)
-                ),
-                PlacedShopObject(
-                    id = "blocker-2",
-                    catalogId = "bench-assembler",
-                    kind = PlacedShopObjectKind.MACHINE,
-                    position = TileCoordinate(8, 11)
-                ),
-                PlacedShopObject(
-                    id = "blocker-3",
-                    catalogId = "bench-assembler",
-                    kind = PlacedShopObjectKind.MACHINE,
-                    position = TileCoordinate(9, 10)
+                    position = TileCoordinate(8, 10),
+                    orientation = Orientation.WEST
                 )
             )
         )
@@ -87,8 +51,7 @@ class ShopFloorAssignmentTest {
         val assignmentResult = shopFloor.assignWorkerToMachine(
             workerId = "worker-1",
             machineId = "machine-1",
-            workersById = workerProfilesById,
-            machinesById = machinesById
+            workersById = workerProfilesById
         )
 
         val success = assertIs<WorkerAssignmentResult.Success>(assignmentResult)
@@ -99,45 +62,21 @@ class ShopFloorAssignmentTest {
         shopFloor.update(deltaSeconds = 1f, workerProfilesById = workerProfilesById)
         val updatedWorker = shopFloor.findObjectById("worker-1")
         assertEquals(TileCoordinate(7, 10), updatedWorker?.position)
+        assertEquals(Orientation.EAST, updatedWorker?.orientation)
         assertTrue(updatedWorker?.movementPath?.isEmpty() == true)
     }
 
     @Test
-    fun `assignment fails when the machine has no free neighboring tile`() {
+    fun `assignment fails when the operator slot is occupied`() {
         val workerProfilesById = mapOf(
-            "line-inspector" to WorkerProfile(
-                id = "line-inspector",
-                displayName = "Line Inspector",
-                level = 1,
-                hireCost = 60,
-                walkSpeed = 200f,
-                skin = "worker_line_inspector",
-                roleProfiles = listOf(
-                    WorkerRoleProfile(
-                        role = WorkerRole.PRODUCER_OPERATOR,
-                        taskDurationSeconds = 1.9f,
-                        defectChance = 0.12f
-                    )
-                )
-            )
+            "line-inspector" to lineInspectorProfile()
         )
         val machinesById = mapOf(
-            "bench-assembler" to MachineSpec(
-                id = "bench-assembler",
-                displayName = "Bench Assembler",
-                level = 1,
-                type = MachineType.PRODUCER,
-                manuality = Manuality.HUMAN_OPERATED,
-                skin = "machine_bench_assembler",
-                productIds = listOf("ceramic-mug"),
-                minimumOperatorWorkerIds = listOf("line-inspector"),
-                installCost = 75,
-                operationDurationSeconds = 1.8f,
-                producerProfile = ProducerMachineProfile(defectChance = 0.18f)
-            )
+            "bench-assembler" to benchAssemblerSpec()
         )
         val shopFloor = ShopFloor(
             blueprint = simpleBlueprint(),
+            machineSpecsById = machinesById,
             initialPlacements = listOf(
                 PlacedShopObject(
                     id = "worker-1",
@@ -150,24 +89,138 @@ class ShopFloorAssignmentTest {
                     id = "machine-1",
                     catalogId = "bench-assembler",
                     kind = PlacedShopObjectKind.MACHINE,
-                    position = TileCoordinate(8, 10)
+                    position = TileCoordinate(8, 10),
+                    orientation = Orientation.WEST
                 ),
-                PlacedShopObject(id = "blocker-1", catalogId = "bench-assembler", kind = PlacedShopObjectKind.MACHINE, position = TileCoordinate(7, 10)),
-                PlacedShopObject(id = "blocker-2", catalogId = "bench-assembler", kind = PlacedShopObjectKind.MACHINE, position = TileCoordinate(8, 9)),
-                PlacedShopObject(id = "blocker-3", catalogId = "bench-assembler", kind = PlacedShopObjectKind.MACHINE, position = TileCoordinate(8, 11)),
-                PlacedShopObject(id = "blocker-4", catalogId = "bench-assembler", kind = PlacedShopObjectKind.MACHINE, position = TileCoordinate(9, 10))
+                PlacedShopObject(
+                    id = "blocker-1",
+                    catalogId = "bench-assembler",
+                    kind = PlacedShopObjectKind.MACHINE,
+                    position = TileCoordinate(7, 10)
+                )
             )
         )
 
         val assignmentResult = shopFloor.assignWorkerToMachine(
             workerId = "worker-1",
             machineId = "machine-1",
-            workersById = workerProfilesById,
-            machinesById = machinesById
+            workersById = workerProfilesById
         )
 
         val failure = assertIs<WorkerAssignmentResult.Failure>(assignmentResult)
         assertEquals(WorkerAssignmentFailureReason.NO_FREE_NEIGHBOR_TILE, failure.reason)
+    }
+
+    @Test
+    fun `qa machine placement requires a qa slot to face the belt`() {
+        val qaMachine = cameraGateSpec()
+        val shopFloor = ShopFloor(
+            blueprint = qaBlueprint(),
+            machineSpecsById = mapOf(qaMachine.id to qaMachine)
+        )
+
+        val validPlacement = PlacedShopObject(
+            id = "machine-1",
+            catalogId = qaMachine.id,
+            kind = PlacedShopObjectKind.MACHINE,
+            position = TileCoordinate(5, 4),
+            orientation = Orientation.NORTH
+        )
+        val invalidPlacement = validPlacement.copy(id = "machine-2", orientation = Orientation.EAST)
+
+        assertTrue(shopFloor.canPlaceObject(validPlacement))
+        assertFalse(shopFloor.canPlaceObject(invalidPlacement))
+    }
+
+    @Test
+    fun `rotating a qa machine fails when its qa slot no longer faces the belt`() {
+        val qaMachine = cameraGateSpec()
+        val shopFloor = ShopFloor(
+            blueprint = qaBlueprint(),
+            machineSpecsById = mapOf(qaMachine.id to qaMachine),
+            initialPlacements = listOf(
+                PlacedShopObject(
+                    id = "machine-1",
+                    catalogId = qaMachine.id,
+                    kind = PlacedShopObjectKind.MACHINE,
+                    position = TileCoordinate(5, 4),
+                    orientation = Orientation.NORTH
+                )
+            )
+        )
+
+        assertFalse(shopFloor.rotateMachine("machine-1", Orientation.EAST))
+        assertEquals(Orientation.NORTH, shopFloor.findObjectById("machine-1")?.orientation)
+    }
+
+    private fun lineInspectorProfile(): WorkerProfile {
+        return WorkerProfile(
+            id = "line-inspector",
+            displayName = "Line Inspector",
+            level = 1,
+            hireCost = 60,
+            walkSpeed = 200f,
+            skin = "worker_line_inspector",
+            roleProfiles = listOf(
+                WorkerRoleProfile(
+                    role = WorkerRole.PRODUCER_OPERATOR,
+                    taskDurationSeconds = 1.9f,
+                    defectChance = 0.12f
+                )
+            )
+        )
+    }
+
+    private fun benchAssemblerSpec(): MachineSpec {
+        return MachineSpec(
+            id = "bench-assembler",
+            displayName = "Bench Assembler",
+            level = 1,
+            type = MachineType.PRODUCER,
+            manuality = Manuality.HUMAN_OPERATED,
+            skin = "machine_bench_assembler",
+            productIds = listOf("ceramic-mug"),
+            shape = listOf(MachineShapeTile(0, 0)),
+            slots = listOf(
+                MachineSlotSpec(
+                    x = 0,
+                    y = 0,
+                    side = Orientation.NORTH,
+                    type = MachineSlotType.OPERATOR
+                )
+            ),
+            minimumOperatorWorkerIds = listOf("line-inspector"),
+            installCost = 75,
+            operationDurationSeconds = 1.8f,
+            producerProfile = ProducerMachineProfile(defectChance = 0.18f)
+        )
+    }
+
+    private fun cameraGateSpec(): MachineSpec {
+        return MachineSpec(
+            id = "camera-gate",
+            displayName = "Camera Gate",
+            level = 1,
+            type = MachineType.QA,
+            manuality = Manuality.AUTOMATIC,
+            skin = "machine_camera_gate",
+            productIds = listOf("ceramic-mug"),
+            shape = listOf(
+                MachineShapeTile(0, 0),
+                MachineShapeTile(1, 0)
+            ),
+            slots = listOf(
+                MachineSlotSpec(
+                    x = 0,
+                    y = 0,
+                    side = Orientation.NORTH,
+                    type = MachineSlotType.QA
+                )
+            ),
+            installCost = 90,
+            operationDurationSeconds = 0.8f,
+            qaProfile = QaMachineProfile(detectionAccuracy = 0.86f)
+        )
     }
 
     private fun simpleBlueprint(): ShopBlueprint {
@@ -177,6 +230,26 @@ class ShopFloorAssignmentTest {
             qualityThresholdPercent = 90f,
             shiftLengthSeconds = 60f,
             conveyorBelts = emptyList(),
+            machineSlots = emptyList(),
+            workerSpawnPoints = emptyList()
+        )
+    }
+
+    private fun qaBlueprint(): ShopBlueprint {
+        return ShopBlueprint(
+            id = "qa-shop",
+            displayName = "QA Shop",
+            qualityThresholdPercent = 90f,
+            shiftLengthSeconds = 60f,
+            conveyorBelts = listOf(
+                ConveyorBelt(
+                    id = "belt-1",
+                    checkpoints = listOf(
+                        BeltNode(5f * 40f, 5f * 40f),
+                        BeltNode(8f * 40f, 5f * 40f)
+                    )
+                )
+            ),
             machineSlots = emptyList(),
             workerSpawnPoints = emptyList()
         )

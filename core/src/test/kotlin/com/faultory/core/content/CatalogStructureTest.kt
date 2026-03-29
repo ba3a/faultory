@@ -26,6 +26,8 @@ class CatalogStructureTest {
         assertEquals("servo-assembler", producerUpgradeTree.leftUpgradeId)
         assertEquals("precision-assembler", producerUpgradeTree.rightUpgradeId)
         assertTrue(producerMachine.productIds.contains("ceramic-mug"))
+        assertEquals(1, producerMachine.shape.size)
+        assertEquals(MachineSlotType.OPERATOR, producerMachine.slots.single().type)
         assertEquals(0.18f, assertNotNull(producerMachine.producerProfile).defectChance)
 
         val qaMachine = assertNotNull(catalog.machines.firstOrNull { it.id == "camera-gate" })
@@ -36,6 +38,8 @@ class CatalogStructureTest {
         assertEquals("spectral-camera-gate", qaUpgradeTree.leftUpgradeId)
         assertEquals("multi-angle-camera-gate", qaUpgradeTree.rightUpgradeId)
         assertTrue(qaMachine.productIds.contains("tea-kettle"))
+        assertEquals(2, qaMachine.shape.size)
+        assertEquals(MachineSlotType.QA, qaMachine.slots.single().type)
         assertEquals(0.86f, assertNotNull(qaMachine.qaProfile).detectionAccuracy)
 
         val worker = assertNotNull(catalog.workers.firstOrNull { it.id == "line-inspector" })

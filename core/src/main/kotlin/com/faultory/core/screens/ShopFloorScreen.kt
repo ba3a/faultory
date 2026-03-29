@@ -21,6 +21,7 @@ import com.faultory.core.content.ShopCatalog
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.save.GameSave
+import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
@@ -67,6 +68,7 @@ class ShopFloorScreen(
     private var assignmentPendingWorkerId: String? = null
     private var failedMachineBlinkId: String? = null
     private var failedMachineBlinkRemaining = 0f
+    private var machineDragState: MachineDragState? = null
 
     private val inputProcessor = object : InputAdapter() {
         override fun keyDown(keycode: Int): Boolean {
@@ -83,16 +85,30 @@ class ShopFloorScreen(
                 hoveredTile != null ||
                 isBackButtonHovered ||
                 workerContextMenu != null ||
-                assignmentPendingWorkerId != null
+                assignmentPendingWorkerId != null ||
+                machineDragState != null
         }
 
         override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
             updatePointerState(screenX, screenY)
             return when (button) {
-                Input.Buttons.LEFT -> handleLeftClick()
+                Input.Buttons.LEFT -> handleLeftPress()
                 Input.Buttons.RIGHT -> handleRightClick()
                 else -> false
             }
+        }
+
+        override fun touchDragged(screenX: Int, screenY: Int, pointer: Int): Boolean {
+            updatePointerState(screenX, screenY)
+            return machineDragState != null
+        }
+
+        override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
+            updatePointerState(screenX, screenY)
+            if (button != Input.Buttons.LEFT) {
+                return false
+            }
+            return finishMachineDrag()
         }
     }
 
@@ -133,6 +149,50 @@ class ShopFloorScreen(
 
     override fun dispose() {
         shopFloor.dispose()
+    }
+
+    private fun handleLeftPress(): Boolean {
+        if (maybeStartMachineDrag()) {
+            return true
+        }
+        return handleLeftClick()
+    }
+
+    private fun maybeStartMachineDrag(): Boolean {
+        if (selectedBankKey != null || assignmentPendingWorkerId != null || workerContextMenu != null || isBackButtonHovered) {
+            return false
+        }
+
+        val machine = hoveredTile
+            ?.let(shopFloor::objectAt)
+            ?.takeIf { it.kind == PlacedShopObjectKind.MACHINE }
+            ?: return false
+
+        machineDragState = MachineDragState(machine.id, pointerWorldX, pointerWorldY)
+        return true
+    }
+
+    private fun finishMachineDrag(): Boolean {
+        val dragState = machineDragState ?: return false
+        machineDragState = null
+
+        val machine = shopFloor.findObjectById(dragState.machineId) ?: return true
+        val newOrientation = Orientation.fromDrag(
+            deltaX = pointerWorldX - dragState.startWorldX,
+            deltaY = pointerWorldY - dragState.startWorldY,
+            minimumMagnitude = 18f
+        ) ?: return true
+        if (newOrientation == machine.orientation) {
+            return true
+        }
+
+        if (!shopFloor.rotateMachine(machine.id, newOrientation)) {
+            startFailureBlink(machine.id)
+            return true
+        }
+
+        persistPlacements()
+        return true
     }
 
     private fun handleLeftClick(): Boolean {
@@ -179,6 +239,7 @@ class ShopFloorScreen(
 
         selectedBankKey = null
         assignmentPendingWorkerId = null
+        machineDragState = null
         openWorkerContextMenu(worker.id)
         return true
     }
@@ -206,7 +267,7 @@ class ShopFloorScreen(
             return true
         }
 
-        return when (val result = shopFloor.assignWorkerToMachine(workerId, machine.id, workerProfilesById, machineSpecsById)) {
+        return when (val result = shopFloor.assignWorkerToMachine(workerId, machine.id, workerProfilesById)) {
             is WorkerAssignmentResult.Success -> {
                 assignmentPendingWorkerId = null
                 persistPlacements()
@@ -264,21 +325,7 @@ class ShopFloorScreen(
             )
         }
 
-        val previewTile = hoveredTile
-        val selectedKey = selectedBankKey
-        if (previewTile != null && selectedKey != null) {
-            renderer.color = if (canPlace(selectedKey, previewTile)) {
-                Color(0.24f, 0.69f, 0.50f, 0.60f)
-            } else {
-                Color(0.78f, 0.29f, 0.25f, 0.55f)
-            }
-            renderer.rect(
-                shopFloor.grid.worldXFor(previewTile),
-                shopFloor.grid.worldYFor(previewTile),
-                GameConfig.tileSize,
-                GameConfig.tileSize
-            )
-        }
+        drawPlacementPreview(renderer)
 
         for (placedObject in shopFloor.placedObjects) {
             drawPlacedObjectFill(renderer, placedObject)
@@ -330,8 +377,11 @@ class ShopFloorScreen(
             )
         }
 
+        drawPlacementPreviewOutline(renderer)
+
         for (placedObject in shopFloor.placedObjects) {
             drawPlacedObjectOutline(renderer, placedObject)
+            drawOrientationMarker(renderer, placedObject)
         }
 
         drawAssignmentTargetHover(renderer)
@@ -358,8 +408,8 @@ class ShopFloorScreen(
     }
 
     private fun drawPlacedObjectFill(renderer: ShapeRenderer, placedObject: PlacedShopObject) {
-        val renderPosition = renderPositionFor(placedObject)
         if (placedObject.kind == PlacedShopObjectKind.WORKER) {
+            val renderPosition = renderPositionFor(placedObject)
             renderer.color = workerFillColor(placedObject.workerRole)
             renderer.circle(
                 renderPosition.worldX + GameConfig.tileSize / 2f,
@@ -371,17 +421,19 @@ class ShopFloorScreen(
 
         val machine = machineSpecsById[placedObject.catalogId]
         renderer.color = machineFillColor(machine)
-        renderer.rect(
-            renderPosition.worldX + 4f,
-            renderPosition.worldY + 4f,
-            GameConfig.tileSize - 8f,
-            GameConfig.tileSize - 8f
-        )
+        for (tile in shopFloor.occupiedTilesFor(placedObject)) {
+            renderer.rect(
+                shopFloor.grid.worldXFor(tile) + 4f,
+                shopFloor.grid.worldYFor(tile) + 4f,
+                GameConfig.tileSize - 8f,
+                GameConfig.tileSize - 8f
+            )
+        }
     }
 
     private fun drawPlacedObjectOutline(renderer: ShapeRenderer, placedObject: PlacedShopObject) {
-        val renderPosition = renderPositionFor(placedObject)
         if (placedObject.kind == PlacedShopObjectKind.WORKER) {
+            val renderPosition = renderPositionFor(placedObject)
             renderer.color = Color(0.89f, 0.95f, 0.98f, 1f)
             renderer.circle(
                 renderPosition.worldX + GameConfig.tileSize / 2f,
@@ -401,12 +453,14 @@ class ShopFloorScreen(
         }
 
         renderer.color = machineOutlineColor(machineSpecsById[placedObject.catalogId])
-        renderer.rect(
-            renderPosition.worldX + 2f,
-            renderPosition.worldY + 2f,
-            GameConfig.tileSize - 4f,
-            GameConfig.tileSize - 4f
-        )
+        for (tile in shopFloor.occupiedTilesFor(placedObject)) {
+            renderer.rect(
+                shopFloor.grid.worldXFor(tile) + 2f,
+                shopFloor.grid.worldYFor(tile) + 2f,
+                GameConfig.tileSize - 4f,
+                GameConfig.tileSize - 4f
+            )
+        }
     }
 
     private fun drawAssignmentTargetHover(renderer: ShapeRenderer) {
@@ -419,10 +473,15 @@ class ShopFloorScreen(
             ?.takeIf { it.kind == PlacedShopObjectKind.MACHINE }
             ?: return
 
-        val worldX = shopFloor.grid.worldXFor(machine.position)
-        val worldY = shopFloor.grid.worldYFor(machine.position)
         renderer.color = Color(0.98f, 0.88f, 0.61f, 1f)
-        renderer.rect(worldX + 1f, worldY + 1f, GameConfig.tileSize - 2f, GameConfig.tileSize - 2f)
+        for (tile in shopFloor.occupiedTilesFor(machine)) {
+            renderer.rect(
+                shopFloor.grid.worldXFor(tile) + 1f,
+                shopFloor.grid.worldYFor(tile) + 1f,
+                GameConfig.tileSize - 2f,
+                GameConfig.tileSize - 2f
+            )
+        }
     }
 
     private fun drawFailureBlink(renderer: ShapeRenderer) {
@@ -436,11 +495,21 @@ class ShopFloorScreen(
             return
         }
 
-        val worldX = shopFloor.grid.worldXFor(machine.position)
-        val worldY = shopFloor.grid.worldYFor(machine.position)
         renderer.color = Color(0.97f, 0.28f, 0.24f, 1f)
-        renderer.rect(worldX, worldY, GameConfig.tileSize, GameConfig.tileSize)
-        renderer.rect(worldX + 3f, worldY + 3f, GameConfig.tileSize - 6f, GameConfig.tileSize - 6f)
+        for (tile in shopFloor.occupiedTilesFor(machine)) {
+            renderer.rect(
+                shopFloor.grid.worldXFor(tile),
+                shopFloor.grid.worldYFor(tile),
+                GameConfig.tileSize,
+                GameConfig.tileSize
+            )
+            renderer.rect(
+                shopFloor.grid.worldXFor(tile) + 3f,
+                shopFloor.grid.worldYFor(tile) + 3f,
+                GameConfig.tileSize - 6f,
+                GameConfig.tileSize - 6f
+            )
+        }
     }
 
     private fun drawContextMenuFill(renderer: ShapeRenderer) {
@@ -475,6 +544,67 @@ class ShopFloorScreen(
             contextMenu.optionBounds.width,
             contextMenu.optionBounds.height
         )
+    }
+
+    private fun drawPlacementPreview(renderer: ShapeRenderer) {
+        val previewTile = hoveredTile ?: return
+        val selectedKey = selectedBankKey ?: return
+        val previewObject = previewPlacementObject(selectedKey, previewTile) ?: return
+        val isValid = shopFloor.canPlaceObject(previewObject)
+        renderer.color = if (isValid) {
+            Color(0.24f, 0.69f, 0.50f, 0.60f)
+        } else {
+            Color(0.78f, 0.29f, 0.25f, 0.55f)
+        }
+        for (tile in shopFloor.occupiedTilesFor(previewObject)) {
+            renderer.rect(
+                shopFloor.grid.worldXFor(tile),
+                shopFloor.grid.worldYFor(tile),
+                GameConfig.tileSize,
+                GameConfig.tileSize
+            )
+        }
+    }
+
+    private fun drawPlacementPreviewOutline(renderer: ShapeRenderer) {
+        val previewTile = hoveredTile ?: return
+        val selectedKey = selectedBankKey ?: return
+        val previewObject = previewPlacementObject(selectedKey, previewTile) ?: return
+        renderer.color = if (shopFloor.canPlaceObject(previewObject)) {
+            Color(0.99f, 0.90f, 0.62f, 1f)
+        } else {
+            Color(0.97f, 0.57f, 0.50f, 1f)
+        }
+        for (tile in shopFloor.occupiedTilesFor(previewObject)) {
+            renderer.rect(
+                shopFloor.grid.worldXFor(tile) + 1f,
+                shopFloor.grid.worldYFor(tile) + 1f,
+                GameConfig.tileSize - 2f,
+                GameConfig.tileSize - 2f
+            )
+        }
+        drawOrientationMarker(renderer, previewObject)
+    }
+
+    private fun drawOrientationMarker(renderer: ShapeRenderer, placedObject: PlacedShopObject) {
+        val marker = orientationMarkerFor(placedObject)
+        renderer.color = if (placedObject.kind == PlacedShopObjectKind.WORKER) {
+            Color(0.97f, 0.98f, 0.99f, 1f)
+        } else {
+            Color(0.15f, 0.16f, 0.18f, 1f)
+        }
+        renderer.line(marker.centerX, marker.centerY, marker.tipX, marker.tipY)
+
+        val wingLength = 4f
+        when (placedObject.orientation) {
+            Orientation.NORTH, Orientation.SOUTH -> {
+                renderer.line(marker.tipX - wingLength, marker.tipY, marker.tipX + wingLength, marker.tipY)
+            }
+
+            Orientation.EAST, Orientation.WEST -> {
+                renderer.line(marker.tipX, marker.tipY - wingLength, marker.tipX, marker.tipY + wingLength)
+            }
+        }
     }
 
     private fun machineFillColor(machine: MachineSpec?): Color {
@@ -575,9 +705,19 @@ class ShopFloorScreen(
             return "Assigning $assignmentWorker: click a machine to assign, or click anywhere else to cancel."
         }
 
-        val selectedKey = selectedBankKey ?: return "Left click a bank item to place it. Right click a worker to assign it to a machine."
+        val selectedKey = selectedBankKey ?: return "Left click a bank item to place it. Right click a worker to assign. Drag a placed machine to rotate it."
         val entry = bankEntries.firstOrNull { it.key == selectedKey } ?: return ""
-        return "Selected: ${entry.displayName}. QA machines go on the belt; producer machines go on open floor tiles."
+        return when (selectedKey.kind) {
+            PlacedShopObjectKind.WORKER -> "Selected: ${entry.displayName}. Workers use one tile and turn while moving."
+            PlacedShopObjectKind.MACHINE -> {
+                val machine = machineSpecsById[selectedKey.catalogId]
+                if (machine?.type == MachineType.QA) {
+                    "Selected: ${entry.displayName}. QA machines place next to the belt and auto-face it. Drag placed machines to rotate."
+                } else {
+                    "Selected: ${entry.displayName}. Producer machines stay off the belt. Drag placed machines to rotate."
+                }
+            }
+        }
     }
 
     private fun buildBankEntries() {
@@ -644,33 +784,7 @@ class ShopFloorScreen(
 
     private fun attemptPlacement(tile: TileCoordinate): Boolean {
         val selectedKey = selectedBankKey ?: return false
-        if (!canPlace(selectedKey, tile)) {
-            return false
-        }
-
-        val placedObject = when (selectedKey.kind) {
-            PlacedShopObjectKind.WORKER -> {
-                val worker = workerProfilesById[selectedKey.catalogId] ?: return false
-                PlacedShopObject(
-                    id = shopFloor.createObjectId(PlacedShopObjectKind.WORKER),
-                    catalogId = worker.id,
-                    kind = PlacedShopObjectKind.WORKER,
-                    position = tile,
-                    workerRole = defaultRoleFor(worker)
-                )
-            }
-
-            PlacedShopObjectKind.MACHINE -> {
-                val machine = machineSpecsById[selectedKey.catalogId] ?: return false
-                PlacedShopObject(
-                    id = shopFloor.createObjectId(PlacedShopObjectKind.MACHINE),
-                    catalogId = machine.id,
-                    kind = PlacedShopObjectKind.MACHINE,
-                    position = tile
-                )
-            }
-        }
-
+        val placedObject = placeablePlacementObject(selectedKey, tile) ?: return false
         if (!shopFloor.placeObject(placedObject)) {
             return false
         }
@@ -680,25 +794,75 @@ class ShopFloorScreen(
         return true
     }
 
-    private fun canPlace(bankKey: BankEntryKey, tile: TileCoordinate): Boolean {
-        if (!shopFloor.grid.isBuildable(tile) || shopFloor.isOccupied(tile)) {
-            return false
-        }
-
-        if (bankKey.kind == PlacedShopObjectKind.WORKER) {
-            return true
-        }
-
-        val machine = machineSpecsById[bankKey.catalogId] ?: return false
-        return when (machine.type) {
-            MachineType.QA -> tile in shopFloor.grid.beltTiles
-            MachineType.PRODUCER -> tile !in shopFloor.grid.beltTiles
-        }
-    }
-
     private fun defaultRoleFor(worker: WorkerProfile): WorkerRole {
         return worker.profileFor(WorkerRole.QA)?.role
             ?: worker.roleProfiles.first().role
+    }
+
+    private fun previewPlacementObject(
+        bankKey: BankEntryKey,
+        tile: TileCoordinate
+    ): PlacedShopObject? {
+        return resolvedPlacementObject(bankKey, tile, "preview-${bankKey.catalogId}", allowFallback = true)
+    }
+
+    private fun placeablePlacementObject(
+        bankKey: BankEntryKey,
+        tile: TileCoordinate
+    ): PlacedShopObject? {
+        val objectId = shopFloor.createObjectId(bankKey.kind)
+        return resolvedPlacementObject(bankKey, tile, objectId, allowFallback = false)
+    }
+
+    private fun resolvedPlacementObject(
+        bankKey: BankEntryKey,
+        tile: TileCoordinate,
+        objectId: String,
+        allowFallback: Boolean
+    ): PlacedShopObject? {
+        val candidates = placementCandidates(bankKey, tile, objectId)
+        return candidates.firstOrNull(shopFloor::canPlaceObject)
+            ?: if (allowFallback) candidates.firstOrNull() else null
+    }
+
+    private fun placementCandidates(
+        bankKey: BankEntryKey,
+        tile: TileCoordinate,
+        objectId: String
+    ): List<PlacedShopObject> {
+        return when (bankKey.kind) {
+            PlacedShopObjectKind.WORKER -> {
+                val worker = workerProfilesById[bankKey.catalogId] ?: return emptyList()
+                listOf(
+                    PlacedShopObject(
+                        id = objectId,
+                        catalogId = worker.id,
+                        kind = PlacedShopObjectKind.WORKER,
+                        position = tile,
+                        orientation = Orientation.SOUTH,
+                        workerRole = defaultRoleFor(worker)
+                    )
+                )
+            }
+
+            PlacedShopObjectKind.MACHINE -> {
+                val machine = machineSpecsById[bankKey.catalogId] ?: return emptyList()
+                val orientations = if (machine.type == MachineType.QA) {
+                    Orientation.entries
+                } else {
+                    listOf(Orientation.NORTH)
+                }
+                orientations.map { orientation ->
+                    PlacedShopObject(
+                        id = objectId,
+                        catalogId = machine.id,
+                        kind = PlacedShopObjectKind.MACHINE,
+                        position = tile,
+                        orientation = orientation
+                    )
+                }
+            }
+        }
     }
 
     private fun openWorkerContextMenu(workerId: String) {
@@ -732,6 +896,49 @@ class ShopFloorScreen(
             worldX = startX + (endX - startX) * progress,
             worldY = startY + (endY - startY) * progress
         )
+    }
+
+    private fun orientationMarkerFor(placedObject: PlacedShopObject): OrientationMarker {
+        val centerX: Float
+        val centerY: Float
+        val length: Float
+        if (placedObject.kind == PlacedShopObjectKind.WORKER) {
+            val renderPosition = renderPositionFor(placedObject)
+            centerX = renderPosition.worldX + GameConfig.tileSize / 2f
+            centerY = renderPosition.worldY + GameConfig.tileSize / 2f
+            length = 10f
+        } else {
+            val occupiedTiles = shopFloor.occupiedTilesFor(placedObject)
+            centerX = occupiedTiles.map { tile -> shopFloor.grid.worldXFor(tile) + GameConfig.tileSize / 2f }.average().toFloat()
+            centerY = occupiedTiles.map { tile -> shopFloor.grid.worldYFor(tile) + GameConfig.tileSize / 2f }.average().toFloat()
+            length = 18f
+        }
+
+        val tipX: Float
+        val tipY: Float
+        when (placedObject.orientation) {
+            Orientation.NORTH -> {
+                tipX = centerX
+                tipY = centerY + length
+            }
+
+            Orientation.EAST -> {
+                tipX = centerX + length
+                tipY = centerY
+            }
+
+            Orientation.SOUTH -> {
+                tipX = centerX
+                tipY = centerY - length
+            }
+
+            Orientation.WEST -> {
+                tipX = centerX - length
+                tipY = centerY
+            }
+        }
+
+        return OrientationMarker(centerX, centerY, tipX, tipY)
     }
 
     private fun startFailureBlink(machineId: String) {
@@ -785,4 +992,17 @@ private data class WorkerContextMenuState(
 private data class RenderPosition(
     val worldX: Float,
     val worldY: Float
+)
+
+private data class OrientationMarker(
+    val centerX: Float,
+    val centerY: Float,
+    val tipX: Float,
+    val tipY: Float
+)
+
+private data class MachineDragState(
+    val machineId: String,
+    val startWorldX: Float,
+    val startWorldY: Float
 )
