@@ -12,15 +12,15 @@ data class GameSave(
     val slotId: String,
     val createdAtEpochMillis: Long,
     val player: PlayerProgress,
-    val activeShift: ShiftSnapshot
+    val activeShift: ShiftSnapshot,
+    val lastCompletedRun: CompletedRunStats? = null
 ) {
     companion object {
-        const val CURRENT_VERSION = 8
+        const val CURRENT_VERSION = 9
 
         fun forLevel(
             slotId: String,
             shopId: String,
-            targetQualityPercent: Float,
             unlockedWorkerIds: List<String>,
             unlockedMachineIds: List<String>
         ): GameSave {
@@ -32,20 +32,16 @@ data class GameSave(
                     unlockedWorkerIds = unlockedWorkerIds,
                     unlockedMachineIds = unlockedMachineIds
                 ),
-                activeShift = ShiftSnapshot(
-                    shopId = shopId,
-                    dayNumber = 1,
-                    elapsedSeconds = 0f,
-                    targetQualityPercent = targetQualityPercent,
-                    shippedProducts = 0,
-                    faultyProducts = 0,
-                    placedObjects = emptyList(),
-                    activeProducts = emptyList(),
-                    machineProductionStates = emptyList(),
-                    qaInspectionStates = emptyList()
-                )
+                activeShift = ShiftSnapshot.fresh(shopId)
             )
         }
+    }
+
+    fun resetForReplay(shopId: String): GameSave {
+        return copy(
+            createdAtEpochMillis = System.currentTimeMillis(),
+            activeShift = ShiftSnapshot.fresh(shopId)
+        )
     }
 }
 
@@ -61,11 +57,49 @@ data class ShiftSnapshot(
     val shopId: String,
     val dayNumber: Int,
     val elapsedSeconds: Float,
-    val targetQualityPercent: Float,
-    val shippedProducts: Int,
-    val faultyProducts: Int,
+    val deliveredGoodProducts: Int,
+    val deliveredFaultyProducts: Int,
+    val productDeliveryStats: List<ProductDeliveryStats>,
     val placedObjects: List<PlacedShopObject>,
     val activeProducts: List<ShopProduct>,
     val machineProductionStates: List<MachineProductionState>,
     val qaInspectionStates: List<QaInspectionState>
-)
+ ) {
+    companion object {
+        fun fresh(shopId: String): ShiftSnapshot {
+            return ShiftSnapshot(
+                shopId = shopId,
+                dayNumber = 1,
+                elapsedSeconds = 0f,
+                deliveredGoodProducts = 0,
+                deliveredFaultyProducts = 0,
+                productDeliveryStats = emptyList(),
+                placedObjects = emptyList(),
+                activeProducts = emptyList(),
+                machineProductionStates = emptyList(),
+                qaInspectionStates = emptyList()
+            )
+        }
+    }
+}
+
+@Serializable
+data class ProductDeliveryStats(
+    val productId: String,
+    val goodCount: Int = 0,
+    val productionDefectCount: Int = 0,
+    val sabotageCount: Int = 0
+) {
+    val totalCount: Int
+        get() = goodCount + productionDefectCount + sabotageCount
+}
+
+@Serializable
+data class CompletedRunStats(
+    val completedAtEpochMillis: Long,
+    val goodProductsDelivered: Int,
+    val faultyProductsDelivered: Int,
+    val starsEarned: Int,
+    val passed: Boolean,
+    val productDeliveryStats: List<ProductDeliveryStats>
+) 

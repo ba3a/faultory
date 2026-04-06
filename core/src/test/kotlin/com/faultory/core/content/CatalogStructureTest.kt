@@ -63,6 +63,10 @@ class CatalogStructureTest {
         val levelCatalog = FaultoryJson.instance.decodeFromString<LevelCatalog>(rawJson)
 
         val tutorialLevel = assertNotNull(levelCatalog.levels.firstOrNull { it.id == "tutorial-shop" })
+        assertEquals(3, tutorialLevel.starThresholds.oneStar)
+        assertEquals(6, tutorialLevel.starThresholds.twoStar)
+        assertEquals(9, tutorialLevel.starThresholds.threeStar)
+        assertEquals("rush-order-shop", tutorialLevel.recommendedNextLevelId)
         assertTrue(tutorialLevel.availableWorkerIds.contains("line-inspector"))
         assertTrue(tutorialLevel.availableMachineIds.contains("bench-assembler"))
     }

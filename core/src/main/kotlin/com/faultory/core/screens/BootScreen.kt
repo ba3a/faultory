@@ -25,7 +25,6 @@ class BootScreen(
         val save = game.loadOrCreateLevelSave(
             slotId = level.id,
             shopId = shopBlueprint.id,
-            targetQualityPercent = shopBlueprint.qualityThresholdPercent,
             unlockedWorkerIds = level.availableWorkerIds,
             unlockedMachineIds = level.availableMachineIds
         )

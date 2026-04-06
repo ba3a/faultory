@@ -12,11 +12,13 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.faultory.core.FaultoryGame
+import com.faultory.core.assets.AssetPaths
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.MachineType
 import com.faultory.core.content.Manuality
+import com.faultory.core.content.ProductDefinition
 import com.faultory.core.content.ShopCatalog
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
@@ -41,6 +43,7 @@ class ShopFloorScreen(
     private val shopCatalog: ShopCatalog
 ) : ScreenAdapter() {
     private val viewport = FitViewport(GameConfig.virtualWidth, GameConfig.virtualHeight)
+    private val completionModalBounds = Rectangle(300f, 180f, 1000f, 480f)
     private val backButtonBounds = Rectangle(
         GameConfig.virtualWidth - 248f,
         GameConfig.virtualHeight - 70f,
@@ -50,17 +53,24 @@ class ShopFloorScreen(
     private val scratchVector = Vector3()
     private val machineSpecsById = shopCatalog.machines.associateBy { it.id }
     private val workerProfilesById = shopCatalog.workers.associateBy { it.id }
+    private val productDefinitionsById = shopCatalog.products.associateBy { it.id }
     private val titleLayout = GlyphLayout()
     private val hintLayout = GlyphLayout()
     private val bankEntries = mutableListOf<BankEntry>()
     private var currentSave = saveSnapshot
     private val dayDirector = ProductionDayDirector(
         shiftLengthSeconds = shopFloor.blueprint.shiftLengthSeconds,
-        targetQualityPercent = saveSnapshot.activeShift.targetQualityPercent,
+        starThresholds = level.starThresholds,
         initialElapsedSeconds = saveSnapshot.activeShift.elapsedSeconds,
-        initialShippedProducts = saveSnapshot.activeShift.shippedProducts,
-        initialFaultyProducts = saveSnapshot.activeShift.faultyProducts
+        initialDeliveredGoodProducts = saveSnapshot.activeShift.deliveredGoodProducts,
+        initialDeliveredFaultyProducts = saveSnapshot.activeShift.deliveredFaultyProducts,
+        initialProductDeliveryStats = saveSnapshot.activeShift.productDeliveryStats
     )
+    private val nextLevel by lazy {
+        level.recommendedNextLevelId?.let { nextLevelId ->
+            game.levelCatalogLoader.load(AssetPaths.levelCatalog).levels.firstOrNull { it.id == nextLevelId }
+        }
+    }
     private var selectedBankKey: BankEntryKey? = null
     private var hoveredBankKey: BankEntryKey? = null
     private var hoveredTile: TileCoordinate? = null
@@ -69,14 +79,20 @@ class ShopFloorScreen(
     private var pointerWorldY = 0f
     private var workerContextMenu: WorkerContextMenuState? = null
     private var hoveredContextAction: WorkerContextAction? = null
+    private var hoveredCompletionAction: CompletionAction? = null
     private var assignmentPendingWorkerId: String? = null
     private var failedMachineBlinkId: String? = null
     private var failedMachineBlinkRemaining = 0f
     private var machineDragState: MachineDragState? = null
     private var autosaveElapsedSeconds = 0f
+    private var isShiftEnded = false
+    private var persistOnHide = true
 
     private val inputProcessor = object : InputAdapter() {
         override fun keyDown(keycode: Int): Boolean {
+            if (isShiftEnded) {
+                return false
+            }
             if (keycode == Input.Keys.ESCAPE) {
                 returnToLevelSelection()
                 return true
@@ -86,6 +102,9 @@ class ShopFloorScreen(
 
         override fun mouseMoved(screenX: Int, screenY: Int): Boolean {
             updatePointerState(screenX, screenY)
+            if (isShiftEnded) {
+                return hoveredCompletionAction != null
+            }
             return hoveredBankKey != null ||
                 hoveredTile != null ||
                 isBackButtonHovered ||
@@ -96,6 +115,9 @@ class ShopFloorScreen(
 
         override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
             updatePointerState(screenX, screenY)
+            if (isShiftEnded) {
+                return button == Input.Buttons.LEFT && handleCompletionClick()
+            }
             return when (button) {
                 Input.Buttons.LEFT -> handleLeftPress()
                 Input.Buttons.RIGHT -> handleRightClick()
@@ -104,11 +126,17 @@ class ShopFloorScreen(
         }
 
         override fun touchDragged(screenX: Int, screenY: Int, pointer: Int): Boolean {
+            if (isShiftEnded) {
+                return false
+            }
             updatePointerState(screenX, screenY)
             return machineDragState != null
         }
 
         override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
+            if (isShiftEnded) {
+                return false
+            }
             updatePointerState(screenX, screenY)
             if (button != Input.Buttons.LEFT) {
                 return false
@@ -121,27 +149,38 @@ class ShopFloorScreen(
         viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
         buildBankEntries()
         layoutBankEntries()
+        finalizeShiftIfNeeded()
         Gdx.input.inputProcessor = inputProcessor
     }
 
     override fun hide() {
-        persistState()
+        if (persistOnHide) {
+            persistState()
+        }
         if (Gdx.input.inputProcessor === inputProcessor) {
             Gdx.input.inputProcessor = null
         }
     }
 
     override fun render(delta: Float) {
-        shopFloor.update(delta, workerProfilesById)
-        for (shipment in shopFloor.consumeShipmentEvents()) {
-            dayDirector.recordShipment(shipment.isFaulty)
-        }
-        dayDirector.update(delta)
-        updateFailureBlink(delta)
-        autosaveElapsedSeconds += delta
-        if (autosaveElapsedSeconds >= 0.5f) {
-            persistState()
-            autosaveElapsedSeconds = 0f
+        if (!isShiftEnded) {
+            val activeDelta = (shopFloor.blueprint.shiftLengthSeconds - dayDirector.elapsedSeconds)
+                .coerceAtLeast(0f)
+                .coerceAtMost(delta)
+            if (activeDelta > 0f) {
+                shopFloor.update(activeDelta, workerProfilesById)
+                for (shipment in shopFloor.consumeShipmentEvents()) {
+                    dayDirector.recordShipment(shipment.productId, shipment.faultReason)
+                }
+                dayDirector.update(activeDelta)
+                updateFailureBlink(activeDelta)
+                autosaveElapsedSeconds += activeDelta
+                if (autosaveElapsedSeconds >= 0.5f) {
+                    persistState()
+                    autosaveElapsedSeconds = 0f
+                }
+            }
+            finalizeShiftIfNeeded()
         }
 
         ScreenUtils.clear(0.06f, 0.07f, 0.09f, 1f)
@@ -256,6 +295,27 @@ class ShopFloorScreen(
         machineDragState = null
         openWorkerContextMenu(worker.id)
         return true
+    }
+
+    private fun handleCompletionClick(): Boolean {
+        return when (hoveredCompletionAction) {
+            CompletionAction.REPLAY_LEVEL -> {
+                replayLevel()
+                true
+            }
+
+            CompletionAction.NEXT_LEVEL -> {
+                openNextLevel()
+                true
+            }
+
+            CompletionAction.BACK_TO_LEVEL_SELECTION -> {
+                returnToLevelSelection()
+                true
+            }
+
+            null -> false
+        }
     }
 
     private fun handleContextMenuClick(): Boolean {
@@ -378,6 +438,9 @@ class ShopFloorScreen(
         }
 
         drawContextMenuFill(renderer)
+        if (isShiftEnded) {
+            drawCompletionModalFill(renderer)
+        }
         renderer.end()
     }
 
@@ -437,6 +500,9 @@ class ShopFloorScreen(
         }
 
         drawContextMenuOutline(renderer)
+        if (isShiftEnded) {
+            drawCompletionModalOutline(renderer)
+        }
         renderer.end()
     }
 
@@ -613,6 +679,59 @@ class ShopFloorScreen(
         }
     }
 
+    private fun drawCompletionModalFill(renderer: ShapeRenderer) {
+        renderer.color = Color(0.32f, 0.33f, 0.35f, 0.72f)
+        renderer.rect(0f, 0f, GameConfig.virtualWidth, GameConfig.virtualHeight)
+
+        renderer.color = Color(0.11f, 0.13f, 0.15f, 0.98f)
+        renderer.rect(
+            completionModalBounds.x,
+            completionModalBounds.y,
+            completionModalBounds.width,
+            completionModalBounds.height
+        )
+
+        renderer.color = if (dayDirector.hasPassed) {
+            Color(0.18f, 0.44f, 0.29f, 1f)
+        } else {
+            Color(0.48f, 0.19f, 0.18f, 1f)
+        }
+        renderer.rect(
+            completionModalBounds.x,
+            completionModalBounds.y + completionModalBounds.height - 16f,
+            completionModalBounds.width,
+            16f
+        )
+
+        for (button in completionButtons()) {
+            renderer.color = if (hoveredCompletionAction == button.action) {
+                Color(0.27f, 0.34f, 0.40f, 1f)
+            } else {
+                Color(0.18f, 0.22f, 0.27f, 1f)
+            }
+            renderer.rect(button.bounds.x, button.bounds.y, button.bounds.width, button.bounds.height)
+        }
+    }
+
+    private fun drawCompletionModalOutline(renderer: ShapeRenderer) {
+        renderer.color = Color(0.88f, 0.90f, 0.92f, 1f)
+        renderer.rect(
+            completionModalBounds.x,
+            completionModalBounds.y,
+            completionModalBounds.width,
+            completionModalBounds.height
+        )
+
+        for (button in completionButtons()) {
+            renderer.color = if (hoveredCompletionAction == button.action) {
+                Color(0.99f, 0.90f, 0.62f, 1f)
+            } else {
+                Color(0.68f, 0.74f, 0.79f, 1f)
+            }
+            renderer.rect(button.bounds.x, button.bounds.y, button.bounds.width, button.bounds.height)
+        }
+    }
+
     private fun drawPlacementPreview(renderer: ShapeRenderer) {
         val previewTile = hoveredTile ?: return
         val selectedKey = selectedBankKey ?: return
@@ -713,14 +832,14 @@ class ShopFloorScreen(
         font.color = Color(0.76f, 0.80f, 0.84f, 1f)
         hintLayout.setText(
             font,
-            "Quality ${"%.1f".format(dayDirector.currentQualityPercent)}% / ${dayDirector.targetQualityPercent}%   " +
-                "Shipped ${dayDirector.shippedProducts}   Faulty ${dayDirector.faultyProducts}"
+            "Good ${dayDirector.deliveredGoodProducts}   Faulty ${dayDirector.deliveredFaultyProducts}   " +
+                "Stars ${dayDirector.earnedStars}/3"
         )
         font.draw(batch, hintLayout, 32f, GameConfig.virtualHeight - 52f)
 
         hintLayout.setText(
             font,
-            "Shift ${(dayDirector.shiftProgress * 100f).toInt()}%   ${selectedItemText()}"
+            "Shift ${(dayDirector.shiftProgress * 100f).toInt()}%   1* ${level.starThresholds.oneStar}  2* ${level.starThresholds.twoStar}  3* ${level.starThresholds.threeStar}   ${selectedItemText()}"
         )
         font.draw(batch, hintLayout, 32f, GameConfig.virtualHeight - 76f)
 
@@ -767,10 +886,75 @@ class ShopFloorScreen(
             }
         }
 
+        if (isShiftEnded) {
+            drawCompletionModalText(batch, font)
+        }
+
         batch.end()
     }
 
+    private fun drawCompletionModalText(batch: com.badlogic.gdx.graphics.g2d.SpriteBatch, font: com.badlogic.gdx.graphics.g2d.BitmapFont) {
+        val completedRun = currentSave.lastCompletedRun ?: dayDirector.completedRunStats()
+        val modalLeft = completionModalBounds.x + 32f
+        var currentY = completionModalBounds.y + completionModalBounds.height - 34f
+
+        font.color = Color(0.96f, 0.97f, 0.98f, 1f)
+        titleLayout.setText(font, if (completedRun.passed) "Shift Passed" else "Shift Failed")
+        font.draw(batch, titleLayout, modalLeft, currentY)
+
+        currentY -= 28f
+        font.color = Color(0.80f, 0.84f, 0.88f, 1f)
+        hintLayout.setText(font, "Good delivered ${completedRun.goodProductsDelivered}   Faulty delivered ${completedRun.faultyProductsDelivered}   Total ${completedRun.goodProductsDelivered + completedRun.faultyProductsDelivered}")
+        font.draw(batch, hintLayout, modalLeft, currentY)
+
+        currentY -= 28f
+        hintLayout.setText(
+            font,
+            "Thresholds 1* ${level.starThresholds.oneStar}   2* ${level.starThresholds.twoStar}   3* ${level.starThresholds.threeStar}"
+        )
+        font.draw(batch, hintLayout, modalLeft, currentY)
+
+        currentY -= 32f
+        font.color = Color(1f, 0.94f, 0.71f, 1f)
+        titleLayout.setText(font, "Stars ${starMeterText(completedRun.starsEarned)}")
+        font.draw(batch, titleLayout, modalLeft, currentY)
+
+        currentY -= 38f
+        font.color = Color(0.92f, 0.95f, 0.97f, 1f)
+        titleLayout.setText(font, "Delivered product mix")
+        font.draw(batch, titleLayout, modalLeft, currentY)
+
+        currentY -= 30f
+        font.color = Color(0.76f, 0.80f, 0.84f, 1f)
+        for (stats in completedRun.productDeliveryStats.sortedBy { productDisplayName(it.productId) }) {
+            hintLayout.setText(
+                font,
+                "${productDisplayName(stats.productId)}   Good ${stats.goodCount}   Defect ${stats.productionDefectCount}   Sabotage ${stats.sabotageCount}"
+            )
+            font.draw(batch, hintLayout, modalLeft, currentY)
+            currentY -= 24f
+        }
+
+        for (button in completionButtons()) {
+            font.color = if (hoveredCompletionAction == button.action) {
+                Color(1f, 0.94f, 0.71f, 1f)
+            } else {
+                Color(0.93f, 0.95f, 0.97f, 1f)
+            }
+            titleLayout.setText(font, button.label)
+            font.draw(
+                batch,
+                titleLayout,
+                button.bounds.x + 18f,
+                button.bounds.y + button.bounds.height / 2f + 8f
+            )
+        }
+    }
+
     private fun selectedItemText(): String {
+        if (isShiftEnded) {
+            return "Shift complete. Review the results window."
+        }
         val assignmentWorker = assignmentPendingWorkerId
             ?.let(shopFloor::findObjectById)
             ?.let { workerProfilesById[it.catalogId]?.displayName ?: "Worker" }
@@ -791,6 +975,53 @@ class ShopFloorScreen(
                 }
             }
         }
+    }
+
+    private fun completionButtons(): List<CompletionButton> {
+        val actions = buildList {
+            add(CompletionAction.REPLAY_LEVEL)
+            if (nextLevel != null) {
+                add(CompletionAction.NEXT_LEVEL)
+            }
+            add(CompletionAction.BACK_TO_LEVEL_SELECTION)
+        }
+        val buttonWidth = 240f
+        val buttonHeight = 52f
+        val gap = 24f
+        val totalWidth = actions.size * buttonWidth + (actions.size - 1) * gap
+        val startX = completionModalBounds.x + (completionModalBounds.width - totalWidth) / 2f
+        val y = completionModalBounds.y + 32f
+        return actions.mapIndexed { index, action ->
+            CompletionButton(
+                action = action,
+                label = when (action) {
+                    CompletionAction.REPLAY_LEVEL -> "Replay Level"
+                    CompletionAction.NEXT_LEVEL -> "Next Level"
+                    CompletionAction.BACK_TO_LEVEL_SELECTION -> "Back To Level Selection"
+                },
+                bounds = Rectangle(
+                    startX + index * (buttonWidth + gap),
+                    y,
+                    buttonWidth,
+                    buttonHeight
+                )
+            )
+        }
+    }
+
+    private fun starMeterText(starsEarned: Int): String {
+        return buildString {
+            repeat(3) { index ->
+                append(if (index < starsEarned) "[*]" else "[ ]")
+                if (index < 2) {
+                    append(' ')
+                }
+            }
+        }
+    }
+
+    private fun productDisplayName(productId: String): String {
+        return productDefinitionsById[productId]?.displayName ?: productId
     }
 
     private fun buildBankEntries() {
@@ -838,11 +1069,23 @@ class ShopFloorScreen(
         pointerWorldX = scratchVector.x
         pointerWorldY = scratchVector.y
 
+        if (isShiftEnded) {
+            hoveredCompletionAction = completionButtons()
+                .firstOrNull { it.bounds.contains(pointerWorldX, pointerWorldY) }
+                ?.action
+            hoveredContextAction = null
+            isBackButtonHovered = false
+            hoveredBankKey = null
+            hoveredTile = null
+            return
+        }
+
         val contextMenu = workerContextMenu
         hoveredContextAction = contextMenu
             ?.options
             ?.firstOrNull { it.bounds.contains(pointerWorldX, pointerWorldY) }
             ?.action
+        hoveredCompletionAction = null
         val isContextMenuHovered = contextMenu?.bounds?.contains(pointerWorldX, pointerWorldY) == true
 
         isBackButtonHovered = backButtonBounds.contains(pointerWorldX, pointerWorldY)
@@ -1103,12 +1346,31 @@ class ShopFloorScreen(
         }
     }
 
+    private fun finalizeShiftIfNeeded() {
+        if (isShiftEnded || !dayDirector.isShiftComplete) {
+            return
+        }
+
+        isShiftEnded = true
+        selectedBankKey = null
+        hoveredBankKey = null
+        hoveredTile = null
+        isBackButtonHovered = false
+        workerContextMenu = null
+        hoveredContextAction = null
+        assignmentPendingWorkerId = null
+        machineDragState = null
+        currentSave = currentSave.copy(lastCompletedRun = dayDirector.completedRunStats())
+        persistState()
+    }
+
     private fun persistState() {
         currentSave = currentSave.copy(
             activeShift = currentSave.activeShift.copy(
                 elapsedSeconds = dayDirector.elapsedSeconds,
-                shippedProducts = dayDirector.shippedProducts,
-                faultyProducts = dayDirector.faultyProducts,
+                deliveredGoodProducts = dayDirector.deliveredGoodProducts,
+                deliveredFaultyProducts = dayDirector.deliveredFaultyProducts,
+                productDeliveryStats = dayDirector.productDeliveryStats,
                 placedObjects = shopFloor.placedObjects,
                 activeProducts = shopFloor.activeProducts,
                 machineProductionStates = shopFloor.machineProductionStates,
@@ -1116,6 +1378,19 @@ class ShopFloorScreen(
             )
         )
         game.saveRepository.save(currentSave)
+    }
+
+    private fun replayLevel() {
+        currentSave = currentSave.resetForReplay(shopFloor.blueprint.id)
+        game.saveRepository.save(currentSave)
+        persistOnHide = false
+        game.openLevel(level)
+    }
+
+    private fun openNextLevel() {
+        val recommendedLevel = nextLevel ?: return
+        persistState()
+        game.openLevel(recommendedLevel)
     }
 
     private fun returnToLevelSelection() {
@@ -1165,7 +1440,19 @@ private data class MachineDragState(
     val startWorldY: Float
 )
 
+private data class CompletionButton(
+    val action: CompletionAction,
+    val label: String,
+    val bounds: Rectangle
+)
+
 private enum class WorkerContextAction {
     ASSIGN_TO_MACHINE,
     ASSIGN_TO_QA
+}
+
+private enum class CompletionAction {
+    REPLAY_LEVEL,
+    NEXT_LEVEL,
+    BACK_TO_LEVEL_SELECTION
 }

@@ -5,6 +5,12 @@
       "displayName": "Morning Ceramic Run",
       "subtitle": "Balanced starter floor with one main conveyor loop.",
       "shopAssetPath": "shops/tutorial-shop.json",
+      "starThresholds": {
+        "oneStar": 3,
+        "twoStar": 6,
+        "threeStar": 9
+      },
+      "recommendedNextLevelId": "rush-order-shop",
       "availableWorkerIds": [
         "line-inspector",
         "float-tech"
@@ -20,6 +26,11 @@
       "displayName": "Rush Order Bottling",
       "subtitle": "Faster shift with tighter inspection spacing and a higher quality bar.",
       "shopAssetPath": "shops/rush-order-shop.json",
+      "starThresholds": {
+        "oneStar": 4,
+        "twoStar": 8,
+        "threeStar": 12
+      },
       "availableWorkerIds": [
         "line-inspector",
         "float-tech"

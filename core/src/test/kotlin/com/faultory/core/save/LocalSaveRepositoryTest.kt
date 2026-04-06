@@ -21,9 +21,47 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.text.Charsets
 
 class LocalSaveRepositoryTest {
+    @Test
+    fun `reset for replay clears active shift but keeps last completed run`() {
+        val original = GameSave.forLevel(
+            slotId = "tutorial-shop",
+            shopId = "tutorial-shop",
+            unlockedWorkerIds = listOf("line-inspector"),
+            unlockedMachineIds = listOf("bench-assembler")
+        ).copy(
+            activeShift = ShiftSnapshot.fresh("tutorial-shop").copy(
+                elapsedSeconds = 30f,
+                deliveredGoodProducts = 3,
+                deliveredFaultyProducts = 1,
+                productDeliveryStats = listOf(
+                    ProductDeliveryStats(productId = "ceramic-mug", goodCount = 3, sabotageCount = 1)
+                )
+            ),
+            lastCompletedRun = CompletedRunStats(
+                completedAtEpochMillis = 99L,
+                goodProductsDelivered = 5,
+                faultyProductsDelivered = 1,
+                starsEarned = 2,
+                passed = true,
+                productDeliveryStats = listOf(
+                    ProductDeliveryStats(productId = "ceramic-mug", goodCount = 5, productionDefectCount = 1)
+                )
+            )
+        )
+
+        val replayed = original.resetForReplay("tutorial-shop")
+
+        assertEquals(0f, replayed.activeShift.elapsedSeconds)
+        assertEquals(0, replayed.activeShift.deliveredGoodProducts)
+        assertTrue(replayed.activeShift.productDeliveryStats.isEmpty())
+        assertNotNull(replayed.lastCompletedRun)
+        assertEquals(2, replayed.lastCompletedRun.starsEarned)
+    }
+
     @Test
     fun `load wipes saves from an old schema version`() {
         val tempRoot = createTempDirectory("faultory-save-test")
@@ -44,9 +82,8 @@ class LocalSaveRepositoryTest {
                   "activeShift": {
                     "shopId": "tutorial-shop",
                     "dayNumber": 1,
-                    "targetQualityPercent": 92.0,
-                    "shippedProducts": 12,
-                    "faultyProducts": 1
+                    "deliveredGoodProducts": 12,
+                    "deliveredFaultyProducts": 1
                   }
                 }
                 """.trimIndent(),
@@ -81,20 +118,25 @@ class LocalSaveRepositoryTest {
             val morningShiftSave = GameSave.forLevel(
                 slotId = "morning-shift",
                 shopId = "tutorial-shop",
-                targetQualityPercent = 92f,
                 unlockedWorkerIds = listOf("line-inspector"),
                 unlockedMachineIds = listOf("bench-assembler", "camera-gate")
             ).copy(
                 activeShift = GameSave.forLevel(
                     slotId = "morning-shift",
                     shopId = "tutorial-shop",
-                    targetQualityPercent = 92f,
                     unlockedWorkerIds = listOf("line-inspector"),
                     unlockedMachineIds = listOf("bench-assembler", "camera-gate")
                 ).activeShift.copy(
                     elapsedSeconds = 27.5f,
-                    shippedProducts = 3,
-                    faultyProducts = 1,
+                    deliveredGoodProducts = 2,
+                    deliveredFaultyProducts = 1,
+                    productDeliveryStats = listOf(
+                        ProductDeliveryStats(
+                            productId = "ceramic-mug",
+                            goodCount = 2,
+                            sabotageCount = 1
+                        )
+                    ),
                     placedObjects = listOf(
                         PlacedShopObject(
                             id = "worker-1",
@@ -142,19 +184,31 @@ class LocalSaveRepositoryTest {
                             isComplete = false
                         )
                     )
+                ),
+                lastCompletedRun = CompletedRunStats(
+                    completedAtEpochMillis = 456L,
+                    goodProductsDelivered = 4,
+                    faultyProductsDelivered = 1,
+                    starsEarned = 2,
+                    passed = true,
+                    productDeliveryStats = listOf(
+                        ProductDeliveryStats(
+                            productId = "ceramic-mug",
+                            goodCount = 4,
+                            productionDefectCount = 1
+                        )
+                    )
                 )
             )
             val eveningShiftSave = GameSave.forLevel(
                 slotId = "evening-shift",
                 shopId = "tutorial-shop",
-                targetQualityPercent = 96f,
                 unlockedWorkerIds = listOf("float-tech"),
                 unlockedMachineIds = listOf("bench-assembler", "camera-gate")
             ).copy(
                 activeShift = GameSave.forLevel(
                     slotId = "evening-shift",
                     shopId = "tutorial-shop",
-                    targetQualityPercent = 96f,
                     unlockedWorkerIds = listOf("float-tech"),
                     unlockedMachineIds = listOf("bench-assembler", "camera-gate")
                 ).activeShift.copy(
@@ -182,9 +236,10 @@ class LocalSaveRepositoryTest {
             assertEquals("morning-shift", loadedMorningShift.slotId)
             assertEquals("tutorial-shop", loadedMorningShift.activeShift.shopId)
             assertEquals(27.5f, loadedMorningShift.activeShift.elapsedSeconds)
-            assertEquals(92f, loadedMorningShift.activeShift.targetQualityPercent)
-            assertEquals(3, loadedMorningShift.activeShift.shippedProducts)
-            assertEquals(1, loadedMorningShift.activeShift.faultyProducts)
+            assertEquals(2, loadedMorningShift.activeShift.deliveredGoodProducts)
+            assertEquals(1, loadedMorningShift.activeShift.deliveredFaultyProducts)
+            assertEquals(1, loadedMorningShift.activeShift.productDeliveryStats.size)
+            assertEquals(2, loadedMorningShift.activeShift.productDeliveryStats.single().goodCount)
             assertEquals(1, loadedMorningShift.activeShift.placedObjects.size)
             assertEquals(TileCoordinate(6, 9), loadedMorningShift.activeShift.placedObjects.single().position)
             assertEquals("machine-7", loadedMorningShift.activeShift.placedObjects.single().assignedMachineId)
@@ -199,11 +254,13 @@ class LocalSaveRepositoryTest {
             assertEquals(0.8f, loadedMorningShift.activeShift.machineProductionStates.single().progressSeconds)
             assertEquals(1, loadedMorningShift.activeShift.qaInspectionStates.size)
             assertEquals(TileCoordinate(6, 10), loadedMorningShift.activeShift.qaInspectionStates.single().beltTile)
+            assertNotNull(loadedMorningShift.lastCompletedRun)
+            assertEquals(2, loadedMorningShift.lastCompletedRun.starsEarned)
+            assertEquals(4, loadedMorningShift.lastCompletedRun.goodProductsDelivered)
 
             assertEquals("evening-shift", loadedEveningShift.slotId)
             assertEquals("tutorial-shop", loadedEveningShift.activeShift.shopId)
             assertEquals(41f, loadedEveningShift.activeShift.elapsedSeconds)
-            assertEquals(96f, loadedEveningShift.activeShift.targetQualityPercent)
             assertEquals(1, loadedEveningShift.activeShift.placedObjects.size)
             assertEquals("bench-assembler", loadedEveningShift.activeShift.placedObjects.single().catalogId)
             assertEquals(Orientation.WEST, loadedEveningShift.activeShift.placedObjects.single().orientation)

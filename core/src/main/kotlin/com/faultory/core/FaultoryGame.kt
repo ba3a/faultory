@@ -66,7 +66,6 @@ class FaultoryGame : Game() {
     fun loadOrCreateLevelSave(
         slotId: String,
         shopId: String,
-        targetQualityPercent: Float,
         unlockedWorkerIds: List<String>,
         unlockedMachineIds: List<String>
     ): GameSave {
@@ -74,7 +73,6 @@ class FaultoryGame : Game() {
             ?: GameSave.forLevel(
                 slotId = slotId,
                 shopId = shopId,
-                targetQualityPercent = targetQualityPercent,
                 unlockedWorkerIds = unlockedWorkerIds,
                 unlockedMachineIds = unlockedMachineIds
             ).also(saveRepository::save)
