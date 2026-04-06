@@ -13,7 +13,9 @@ data class PlacedShopObject(
     val workerRole: WorkerRole? = null,
     val assignedMachineId: String? = null,
     val assignedSlotIndex: Int? = null,
+    val qaPostTile: TileCoordinate? = null,
     val carriedProductId: String? = null,
+    val faultyInventoryCount: Int = 0,
     val movementPath: List<TileCoordinate> = emptyList(),
     val movementProgress: Float = 0f
 )

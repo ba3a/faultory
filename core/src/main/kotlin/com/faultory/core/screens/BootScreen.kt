@@ -34,7 +34,8 @@ class BootScreen(
             machineSpecsById = shopCatalog.machines.associateBy { it.id },
             initialPlacements = save.activeShift.placedObjects,
             initialProducts = save.activeShift.activeProducts,
-            initialMachineProductionStates = save.activeShift.machineProductionStates
+            initialMachineProductionStates = save.activeShift.machineProductionStates,
+            initialQaInspectionStates = save.activeShift.qaInspectionStates
         )
 
         game.setScreen(ShopFloorScreen(game, level, shopFloor, save, shopCatalog))

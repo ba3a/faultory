@@ -113,10 +113,14 @@ enum class Manuality {
 @Serializable
 data class ProducerMachineProfile(
     val productId: String,
-    val defectChance: Float
+    val defectChance: Float,
+    val faultyProductCapacity: Int = 0
 )
 
 @Serializable
 data class QaMachineProfile(
-    val detectionAccuracy: Float
+    val inspectionDurationSeconds: Float,
+    val detectionAccuracy: Float,
+    val falsePositiveChance: Float = 0f,
+    val faultyProductStrategy: FaultyProductStrategy
 )

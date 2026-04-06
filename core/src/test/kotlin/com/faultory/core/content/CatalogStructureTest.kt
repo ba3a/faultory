@@ -40,7 +40,10 @@ class CatalogStructureTest {
         assertTrue(qaMachine.productIds.contains("tea-kettle"))
         assertEquals(2, qaMachine.shape.size)
         assertEquals(MachineSlotType.QA, qaMachine.slots.single().type)
-        assertEquals(0.86f, assertNotNull(qaMachine.qaProfile).detectionAccuracy)
+        val qaMachineProfile = assertNotNull(qaMachine.qaProfile)
+        assertEquals(0.8f, qaMachineProfile.inspectionDurationSeconds)
+        assertEquals(0.86f, qaMachineProfile.detectionAccuracy)
+        assertEquals(FaultyProductStrategy.DESTROY, qaMachineProfile.faultyProductStrategy)
 
         val worker = assertNotNull(catalog.workers.firstOrNull { it.id == "line-inspector" })
         assertEquals(1, worker.level)
@@ -48,7 +51,10 @@ class CatalogStructureTest {
         assertEquals("line-inspector-lead", workerUpgradeTree.leftUpgradeId)
         assertEquals("line-inspector-rover", workerUpgradeTree.rightUpgradeId)
         assertEquals(0.05f, assertNotNull(worker.profileFor(WorkerRole.PRODUCER_OPERATOR)).sabotageChance)
-        assertNotNull(worker.profileFor(WorkerRole.QA))
+        val workerQaProfile = assertNotNull(worker.profileFor(WorkerRole.QA))
+        assertEquals(1.5f, workerQaProfile.inspectionDurationSeconds)
+        assertEquals(0.84f, workerQaProfile.detectionAccuracy)
+        assertEquals(FaultyProductStrategy.HAND_TO_PRODUCER, workerQaProfile.faultyProductStrategy)
     }
 
     @Test

@@ -5,6 +5,7 @@ import com.faultory.core.content.MachineSlotSpec
 import com.faultory.core.content.MachineSlotType
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.MachineType
+import com.faultory.core.content.FaultyProductStrategy
 import com.faultory.core.content.Manuality
 import com.faultory.core.content.ProducerMachineProfile
 import com.faultory.core.content.QaMachineProfile
@@ -203,6 +204,80 @@ class ShopFloorAssignmentTest {
         assertEquals(Orientation.NORTH, shopFloor.findObjectById("machine-1")?.orientation)
     }
 
+    @Test
+    fun `assigning a worker to qa sends it to the nearest free tile next to the belt`() {
+        val workerProfilesById = mapOf(
+            "line-inspector" to lineInspectorProfile()
+        )
+        val shopFloor = ShopFloor(
+            blueprint = qaBlueprint(),
+            machineSpecsById = emptyMap(),
+            initialPlacements = listOf(
+                PlacedShopObject(
+                    id = "worker-1",
+                    catalogId = "line-inspector",
+                    kind = PlacedShopObjectKind.WORKER,
+                    position = TileCoordinate(2, 4),
+                    workerRole = WorkerRole.PRODUCER_OPERATOR
+                )
+            )
+        )
+
+        val assignmentResult = shopFloor.assignWorkerToQa("worker-1", workerProfilesById)
+
+        val success = assertIs<WorkerAssignmentResult.Success>(assignmentResult)
+        assertEquals(WorkerRole.QA, success.worker.workerRole)
+        assertEquals(TileCoordinate(5, 4), success.worker.qaPostTile)
+        assertEquals(Orientation.EAST, success.worker.orientation)
+        assertEquals(TileCoordinate(5, 4), success.worker.movementPath.last())
+
+        shopFloor.update(deltaSeconds = 1f, workerProfilesById = workerProfilesById)
+        val updatedWorker = shopFloor.findObjectById("worker-1")
+        assertEquals(TileCoordinate(5, 4), updatedWorker?.position)
+        assertEquals(Orientation.NORTH, updatedWorker?.orientation)
+    }
+
+    @Test
+    fun `qa worker can be assigned to a human operated qa machine`() {
+        val workerProfilesById = mapOf(
+            "line-inspector" to lineInspectorProfile()
+        )
+        val machinesById = mapOf(
+            "human-qa-station" to humanQaStationSpec()
+        )
+        val shopFloor = ShopFloor(
+            blueprint = qaBlueprint(),
+            machineSpecsById = machinesById,
+            initialPlacements = listOf(
+                PlacedShopObject(
+                    id = "worker-1",
+                    catalogId = "line-inspector",
+                    kind = PlacedShopObjectKind.WORKER,
+                    position = TileCoordinate(2, 4),
+                    workerRole = WorkerRole.QA
+                ),
+                PlacedShopObject(
+                    id = "machine-1",
+                    catalogId = "human-qa-station",
+                    kind = PlacedShopObjectKind.MACHINE,
+                    position = TileCoordinate(5, 6),
+                    orientation = Orientation.SOUTH
+                )
+            )
+        )
+
+        val assignmentResult = shopFloor.assignWorkerToMachine(
+            workerId = "worker-1",
+            machineId = "machine-1",
+            workersById = workerProfilesById
+        )
+
+        val success = assertIs<WorkerAssignmentResult.Success>(assignmentResult)
+        assertEquals(WorkerRole.QA, success.worker.workerRole)
+        assertEquals("machine-1", success.worker.assignedMachineId)
+        assertEquals(0, success.worker.assignedSlotIndex)
+    }
+
     private fun lineInspectorProfile(): WorkerProfile {
         return WorkerProfile(
             id = "line-inspector",
@@ -217,6 +292,15 @@ class ShopFloorAssignmentTest {
                     taskDurationSeconds = 1.9f,
                     defectChance = 0.12f,
                     sabotageChance = 0.05f
+                ),
+                WorkerRoleProfile(
+                    role = WorkerRole.QA,
+                    taskDurationSeconds = 1.4f,
+                    inspectionDurationSeconds = 1.4f,
+                    detectionAccuracy = 0.84f,
+                    falsePositiveChance = 0.05f,
+                    faultyProductStrategy = FaultyProductStrategy.HAND_TO_PRODUCER,
+                    acceptedProductIds = listOf("ceramic-mug")
                 )
             )
         )
@@ -273,7 +357,48 @@ class ShopFloorAssignmentTest {
             ),
             installCost = 90,
             operationDurationSeconds = 0.8f,
-            qaProfile = QaMachineProfile(detectionAccuracy = 0.86f)
+            qaProfile = QaMachineProfile(
+                inspectionDurationSeconds = 0.8f,
+                detectionAccuracy = 0.86f,
+                falsePositiveChance = 0.03f,
+                faultyProductStrategy = FaultyProductStrategy.DESTROY
+            )
+        )
+    }
+
+    private fun humanQaStationSpec(): MachineSpec {
+        return MachineSpec(
+            id = "human-qa-station",
+            displayName = "Human QA Station",
+            level = 1,
+            type = MachineType.QA,
+            manuality = Manuality.HUMAN_OPERATED,
+            skin = "machine_human_qa_station",
+            productIds = listOf("ceramic-mug"),
+            shape = listOf(MachineShapeTile(0, 0)),
+            slots = listOf(
+                MachineSlotSpec(
+                    x = 0,
+                    y = 0,
+                    side = Orientation.NORTH,
+                    type = MachineSlotType.QA
+                ),
+                MachineSlotSpec(
+                    x = 0,
+                    y = 0,
+                    side = Orientation.SOUTH,
+                    type = MachineSlotType.OPERATOR
+                )
+            ),
+            minimumOperatorWorkerIds = listOf("line-inspector"),
+            installCost = 90,
+            operationDurationSeconds = 0.8f,
+            qaProfile = QaMachineProfile(
+                inspectionDurationSeconds = 0.8f,
+                detectionAccuracy = 0.86f,
+                falsePositiveChance = 0.02f,
+                faultyProductStrategy = FaultyProductStrategy.DESTROY
+            )
         )
     }
 

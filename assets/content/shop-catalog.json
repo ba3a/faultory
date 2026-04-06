@@ -17,9 +17,12 @@
         {
           "role": "QA",
           "taskDurationSeconds": 1.5,
-          "defectChance": 0.16,
           "sabotageChance": 0.0,
-          "coverageRadius": 116.0
+          "inspectionDurationSeconds": 1.5,
+          "detectionAccuracy": 0.84,
+          "falsePositiveChance": 0.05,
+          "faultyProductStrategy": "HAND_TO_PRODUCER",
+          "acceptedProductIds": ["ceramic-mug", "glass-jar", "tea-kettle"]
         }
       ],
       "upgradeTree": {
@@ -44,9 +47,12 @@
         {
           "role": "QA",
           "taskDurationSeconds": 1.2,
-          "defectChance": 0.10,
           "sabotageChance": 0.0,
-          "coverageRadius": 128.0
+          "inspectionDurationSeconds": 1.2,
+          "detectionAccuracy": 0.90,
+          "falsePositiveChance": 0.03,
+          "faultyProductStrategy": "HAND_TO_PRODUCER",
+          "acceptedProductIds": ["ceramic-mug", "glass-jar", "tea-kettle"]
         }
       ]
     },
@@ -67,9 +73,12 @@
         {
           "role": "QA",
           "taskDurationSeconds": 1.1,
-          "defectChance": 0.12,
           "sabotageChance": 0.0,
-          "coverageRadius": 136.0
+          "inspectionDurationSeconds": 1.1,
+          "detectionAccuracy": 0.88,
+          "falsePositiveChance": 0.04,
+          "faultyProductStrategy": "DESTROY",
+          "acceptedProductIds": ["ceramic-mug", "glass-jar", "tea-kettle"]
         }
       ],
       "upgradeTree": {
@@ -94,9 +103,12 @@
         {
           "role": "QA",
           "taskDurationSeconds": 1.3,
-          "defectChance": 0.11,
           "sabotageChance": 0.0,
-          "coverageRadius": 148.0
+          "inspectionDurationSeconds": 1.3,
+          "detectionAccuracy": 0.89,
+          "falsePositiveChance": 0.03,
+          "faultyProductStrategy": "HAND_TO_PRODUCER",
+          "acceptedProductIds": ["ceramic-mug", "glass-jar", "tea-kettle"]
         }
       ]
     },
@@ -117,9 +129,12 @@
         {
           "role": "QA",
           "taskDurationSeconds": 0.9,
-          "defectChance": 0.08,
           "sabotageChance": 0.0,
-          "coverageRadius": 148.0
+          "inspectionDurationSeconds": 0.9,
+          "detectionAccuracy": 0.92,
+          "falsePositiveChance": 0.02,
+          "faultyProductStrategy": "DESTROY",
+          "acceptedProductIds": ["ceramic-mug", "glass-jar", "tea-kettle"]
         }
       ]
     },
@@ -140,9 +155,12 @@
         {
           "role": "QA",
           "taskDurationSeconds": 1.0,
-          "defectChance": 0.09,
           "sabotageChance": 0.0,
-          "coverageRadius": 154.0
+          "inspectionDurationSeconds": 1.0,
+          "detectionAccuracy": 0.91,
+          "falsePositiveChance": 0.02,
+          "faultyProductStrategy": "DESTROY",
+          "acceptedProductIds": ["ceramic-mug", "glass-jar", "tea-kettle"]
         }
       ]
     }
@@ -180,7 +198,8 @@
       },
       "producerProfile": {
         "productId": "ceramic-mug",
-        "defectChance": 0.18
+        "defectChance": 0.18,
+        "faultyProductCapacity": 0
       }
     },
     {
@@ -200,7 +219,8 @@
       "operationDurationSeconds": 1.0,
       "producerProfile": {
         "productId": "glass-jar",
-        "defectChance": 0.08
+        "defectChance": 0.08,
+        "faultyProductCapacity": 3
       }
     },
     {
@@ -220,7 +240,8 @@
       "operationDurationSeconds": 1.1,
       "producerProfile": {
         "productId": "tea-kettle",
-        "defectChance": 0.05
+        "defectChance": 0.05,
+        "faultyProductCapacity": 2
       }
     },
     {
@@ -260,7 +281,10 @@
         "rightUpgradeId": "multi-angle-camera-gate"
       },
       "qaProfile": {
-        "detectionAccuracy": 0.86
+        "inspectionDurationSeconds": 0.8,
+        "detectionAccuracy": 0.86,
+        "falsePositiveChance": 0.03,
+        "faultyProductStrategy": "DESTROY"
       }
     },
     {
@@ -296,7 +320,10 @@
       "installCost": 148,
       "operationDurationSeconds": 0.7,
       "qaProfile": {
-        "detectionAccuracy": 0.92
+        "inspectionDurationSeconds": 0.7,
+        "detectionAccuracy": 0.92,
+        "falsePositiveChance": 0.02,
+        "faultyProductStrategy": "DESTROY"
       }
     },
     {
@@ -332,7 +359,10 @@
       "installCost": 146,
       "operationDurationSeconds": 0.65,
       "qaProfile": {
-        "detectionAccuracy": 0.90
+        "inspectionDurationSeconds": 0.65,
+        "detectionAccuracy": 0.90,
+        "falsePositiveChance": 0.04,
+        "faultyProductStrategy": "PUT_ON_FREE_TILE"
       }
     },
     {
@@ -367,7 +397,10 @@
       "installCost": 72,
       "operationDurationSeconds": 0.9,
       "qaProfile": {
-        "detectionAccuracy": 0.79
+        "inspectionDurationSeconds": 0.9,
+        "detectionAccuracy": 0.79,
+        "falsePositiveChance": 0.03,
+        "faultyProductStrategy": "HAND_TO_PRODUCER"
       }
     }
   ],

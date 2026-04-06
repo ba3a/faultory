@@ -44,7 +44,12 @@ class OperatorEligibilityTest {
             minimumOperatorWorkerIds = listOf("producer-only-rookie"),
             installCost = 30,
             operationDurationSeconds = 1.4f,
-            qaProfile = QaMachineProfile(detectionAccuracy = 0.55f)
+            qaProfile = QaMachineProfile(
+                inspectionDurationSeconds = 1.4f,
+                detectionAccuracy = 0.55f,
+                falsePositiveChance = 0.04f,
+                faultyProductStrategy = FaultyProductStrategy.DESTROY
+            )
         )
         val worker = WorkerProfile(
             id = "producer-only-rookie",

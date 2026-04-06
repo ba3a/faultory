@@ -3,6 +3,7 @@ package com.faultory.core.save
 import com.badlogic.gdx.files.FileHandle
 import com.faultory.core.config.GameConfig
 import com.faultory.core.shop.MachineProductionState
+import com.faultory.core.shop.QaInspectionState
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
@@ -104,6 +105,7 @@ class LocalSaveRepositoryTest {
                             workerRole = WorkerRole.QA,
                             assignedMachineId = "machine-7",
                             assignedSlotIndex = 0,
+                            qaPostTile = TileCoordinate(6, 9),
                             carriedProductId = "product-3",
                             movementPath = listOf(TileCoordinate(7, 9), TileCoordinate(8, 9)),
                             movementProgress = 0.35f
@@ -116,7 +118,9 @@ class LocalSaveRepositoryTest {
                             sourceMachineId = "machine-7",
                             faultReason = ProductFaultReason.SABOTAGE,
                             state = ShopProductState.CARRIED,
-                            carrierWorkerId = "worker-1"
+                            carrierWorkerId = "worker-1",
+                            holderObjectId = "worker-1",
+                            reworkTargetMachineId = "machine-7"
                         )
                     ),
                     machineProductionStates = listOf(
@@ -126,6 +130,15 @@ class LocalSaveRepositoryTest {
                             productId = "glass-jar",
                             faultReason = ProductFaultReason.PRODUCTION_DEFECT,
                             progressSeconds = 0.8f,
+                            isComplete = false
+                        )
+                    ),
+                    qaInspectionStates = listOf(
+                        QaInspectionState(
+                            inspectorObjectId = "worker-1",
+                            productId = "product-3",
+                            beltTile = TileCoordinate(6, 10),
+                            progressSeconds = 0.4f,
                             isComplete = false
                         )
                     )
@@ -152,9 +165,11 @@ class LocalSaveRepositoryTest {
                             catalogId = "bench-assembler",
                             kind = PlacedShopObjectKind.MACHINE,
                             position = TileCoordinate(12, 11),
-                            orientation = Orientation.WEST
+                            orientation = Orientation.WEST,
+                            faultyInventoryCount = 2
                         )
-                    )
+                    ),
+                    qaInspectionStates = emptyList()
                 )
             )
 
@@ -174,12 +189,16 @@ class LocalSaveRepositoryTest {
             assertEquals(TileCoordinate(6, 9), loadedMorningShift.activeShift.placedObjects.single().position)
             assertEquals("machine-7", loadedMorningShift.activeShift.placedObjects.single().assignedMachineId)
             assertEquals(0, loadedMorningShift.activeShift.placedObjects.single().assignedSlotIndex)
+            assertEquals(TileCoordinate(6, 9), loadedMorningShift.activeShift.placedObjects.single().qaPostTile)
             assertEquals("product-3", loadedMorningShift.activeShift.placedObjects.single().carriedProductId)
             assertEquals(0.35f, loadedMorningShift.activeShift.placedObjects.single().movementProgress)
             assertEquals(1, loadedMorningShift.activeShift.activeProducts.size)
             assertEquals(ProductFaultReason.SABOTAGE, loadedMorningShift.activeShift.activeProducts.single().faultReason)
+            assertEquals("worker-1", loadedMorningShift.activeShift.activeProducts.single().holderObjectId)
             assertEquals(1, loadedMorningShift.activeShift.machineProductionStates.size)
             assertEquals(0.8f, loadedMorningShift.activeShift.machineProductionStates.single().progressSeconds)
+            assertEquals(1, loadedMorningShift.activeShift.qaInspectionStates.size)
+            assertEquals(TileCoordinate(6, 10), loadedMorningShift.activeShift.qaInspectionStates.single().beltTile)
 
             assertEquals("evening-shift", loadedEveningShift.slotId)
             assertEquals("tutorial-shop", loadedEveningShift.activeShift.shopId)
@@ -188,6 +207,7 @@ class LocalSaveRepositoryTest {
             assertEquals(1, loadedEveningShift.activeShift.placedObjects.size)
             assertEquals("bench-assembler", loadedEveningShift.activeShift.placedObjects.single().catalogId)
             assertEquals(Orientation.WEST, loadedEveningShift.activeShift.placedObjects.single().orientation)
+            assertEquals(2, loadedEveningShift.activeShift.placedObjects.single().faultyInventoryCount)
         } finally {
             tempRoot.toFile().deleteRecursively()
         }

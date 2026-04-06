@@ -11,7 +11,9 @@ data class ShopProduct(
     val state: ShopProductState,
     val tile: TileCoordinate? = null,
     val beltProgress: Float = 0f,
-    val carrierWorkerId: String? = null
+    val carrierWorkerId: String? = null,
+    val holderObjectId: String? = null,
+    val reworkTargetMachineId: String? = null
 ) {
     val isFaulty: Boolean
         get() = faultReason != null
@@ -38,6 +40,16 @@ data class MachineProductionState(
     val faultReason: ProductFaultReason? = null,
     val progressSeconds: Float = 0f,
     val isComplete: Boolean = false
+)
+
+@Serializable
+data class QaInspectionState(
+    val inspectorObjectId: String,
+    val productId: String,
+    val beltTile: TileCoordinate,
+    val progressSeconds: Float = 0f,
+    val isComplete: Boolean = false,
+    val classifiedAsFaulty: Boolean? = null
 )
 
 data class ShipmentEvent(

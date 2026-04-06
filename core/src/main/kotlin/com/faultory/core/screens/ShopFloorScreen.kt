@@ -68,7 +68,7 @@ class ShopFloorScreen(
     private var pointerWorldX = 0f
     private var pointerWorldY = 0f
     private var workerContextMenu: WorkerContextMenuState? = null
-    private var isContextMenuOptionHovered = false
+    private var hoveredContextAction: WorkerContextAction? = null
     private var assignmentPendingWorkerId: String? = null
     private var failedMachineBlinkId: String? = null
     private var failedMachineBlinkRemaining = 0f
@@ -245,7 +245,7 @@ class ShopFloorScreen(
             ?.takeIf { it.kind == PlacedShopObjectKind.WORKER }
         val hadContextMenu = workerContextMenu != null
         workerContextMenu = null
-        isContextMenuOptionHovered = false
+        hoveredContextAction = null
 
         if (worker == null) {
             return hadContextMenu
@@ -260,13 +260,26 @@ class ShopFloorScreen(
 
     private fun handleContextMenuClick(): Boolean {
         val contextMenu = workerContextMenu ?: return false
+        val selectedAction = hoveredContextAction
         workerContextMenu = null
-        return if (isContextMenuOptionHovered) {
-            assignmentPendingWorkerId = contextMenu.workerId
-            selectedBankKey = null
-            true
-        } else {
-            true
+        hoveredContextAction = null
+        return when (selectedAction) {
+            WorkerContextAction.ASSIGN_TO_MACHINE -> {
+                assignmentPendingWorkerId = contextMenu.workerId
+                selectedBankKey = null
+                true
+            }
+
+            WorkerContextAction.ASSIGN_TO_QA -> {
+                selectedBankKey = null
+                when (shopFloor.assignWorkerToQa(contextMenu.workerId, workerProfilesById)) {
+                    is WorkerAssignmentResult.Success -> persistState()
+                    is WorkerAssignmentResult.Failure -> {}
+                }
+                true
+            }
+
+            null -> true
         }
     }
 
@@ -566,34 +579,38 @@ class ShopFloorScreen(
         val contextMenu = workerContextMenu ?: return
         renderer.color = Color(0.14f, 0.16f, 0.19f, 0.98f)
         renderer.rect(contextMenu.bounds.x, contextMenu.bounds.y, contextMenu.bounds.width, contextMenu.bounds.height)
-        renderer.color = if (isContextMenuOptionHovered) {
-            Color(0.28f, 0.34f, 0.40f, 1f)
-        } else {
-            Color(0.19f, 0.23f, 0.28f, 1f)
+        for (option in contextMenu.options) {
+            renderer.color = if (hoveredContextAction == option.action) {
+                Color(0.28f, 0.34f, 0.40f, 1f)
+            } else {
+                Color(0.19f, 0.23f, 0.28f, 1f)
+            }
+            renderer.rect(
+                option.bounds.x,
+                option.bounds.y,
+                option.bounds.width,
+                option.bounds.height
+            )
         }
-        renderer.rect(
-            contextMenu.optionBounds.x,
-            contextMenu.optionBounds.y,
-            contextMenu.optionBounds.width,
-            contextMenu.optionBounds.height
-        )
     }
 
     private fun drawContextMenuOutline(renderer: ShapeRenderer) {
         val contextMenu = workerContextMenu ?: return
         renderer.color = Color(0.55f, 0.61f, 0.66f, 1f)
         renderer.rect(contextMenu.bounds.x, contextMenu.bounds.y, contextMenu.bounds.width, contextMenu.bounds.height)
-        renderer.color = if (isContextMenuOptionHovered) {
-            Color(0.99f, 0.90f, 0.62f, 1f)
-        } else {
-            Color(0.68f, 0.74f, 0.79f, 1f)
+        for (option in contextMenu.options) {
+            renderer.color = if (hoveredContextAction == option.action) {
+                Color(0.99f, 0.90f, 0.62f, 1f)
+            } else {
+                Color(0.68f, 0.74f, 0.79f, 1f)
+            }
+            renderer.rect(
+                option.bounds.x,
+                option.bounds.y,
+                option.bounds.width,
+                option.bounds.height
+            )
         }
-        renderer.rect(
-            contextMenu.optionBounds.x,
-            contextMenu.optionBounds.y,
-            contextMenu.optionBounds.width,
-            contextMenu.optionBounds.height
-        )
     }
 
     private fun drawPlacementPreview(renderer: ShapeRenderer) {
@@ -734,18 +751,20 @@ class ShopFloorScreen(
 
         val contextMenu = workerContextMenu
         if (contextMenu != null) {
-            font.color = if (isContextMenuOptionHovered) {
-                Color(1f, 0.94f, 0.71f, 1f)
-            } else {
-                Color(0.92f, 0.95f, 0.97f, 1f)
+            for (option in contextMenu.options) {
+                font.color = if (hoveredContextAction == option.action) {
+                    Color(1f, 0.94f, 0.71f, 1f)
+                } else {
+                    Color(0.92f, 0.95f, 0.97f, 1f)
+                }
+                titleLayout.setText(font, option.label)
+                font.draw(
+                    batch,
+                    titleLayout,
+                    option.bounds.x + 12f,
+                    option.bounds.y + option.bounds.height - 12f
+                )
             }
-            titleLayout.setText(font, "Assign To Machine")
-            font.draw(
-                batch,
-                titleLayout,
-                contextMenu.optionBounds.x + 12f,
-                contextMenu.optionBounds.y + contextMenu.optionBounds.height - 12f
-            )
         }
 
         batch.end()
@@ -820,7 +839,10 @@ class ShopFloorScreen(
         pointerWorldY = scratchVector.y
 
         val contextMenu = workerContextMenu
-        isContextMenuOptionHovered = contextMenu?.optionBounds?.contains(pointerWorldX, pointerWorldY) == true
+        hoveredContextAction = contextMenu
+            ?.options
+            ?.firstOrNull { it.bounds.contains(pointerWorldX, pointerWorldY) }
+            ?.action
         val isContextMenuHovered = contextMenu?.bounds?.contains(pointerWorldX, pointerWorldY) == true
 
         isBackButtonHovered = backButtonBounds.contains(pointerWorldX, pointerWorldY)
@@ -920,8 +942,27 @@ class ShopFloorScreen(
     }
 
     private fun openWorkerContextMenu(workerId: String) {
+        val worker = shopFloor.findObjectById(workerId) ?: return
+        val workerProfile = workerProfilesById[worker.catalogId] ?: return
+        val actions = buildList {
+            add(WorkerContextAction.ASSIGN_TO_MACHINE)
+            val qaRole = workerProfile.profileFor(WorkerRole.QA)
+            if (qaRole?.inspectionDurationSeconds != null &&
+                qaRole.detectionAccuracy != null &&
+                qaRole.faultyProductStrategy != null
+            ) {
+                add(WorkerContextAction.ASSIGN_TO_QA)
+            }
+        }
+        if (actions.isEmpty()) {
+            return
+        }
+
         val width = 188f
-        val height = 52f
+        val optionHeight = 38f
+        val optionGap = 6f
+        val padding = 6f
+        val height = padding * 2f + actions.size * optionHeight + (actions.size - 1) * optionGap
         val x = pointerWorldX.coerceIn(12f, GameConfig.virtualWidth - width - 12f)
         val y = pointerWorldY.coerceIn(
             GameConfig.bankHeight + 12f,
@@ -930,9 +971,23 @@ class ShopFloorScreen(
         workerContextMenu = WorkerContextMenuState(
             workerId = workerId,
             bounds = Rectangle(x, y, width, height),
-            optionBounds = Rectangle(x + 6f, y + 6f, width - 12f, height - 12f)
+            options = actions.mapIndexed { index, action ->
+                WorkerContextMenuOption(
+                    action = action,
+                    label = when (action) {
+                        WorkerContextAction.ASSIGN_TO_MACHINE -> "Assign To Machine"
+                        WorkerContextAction.ASSIGN_TO_QA -> "Assign To QA"
+                    },
+                    bounds = Rectangle(
+                        x + padding,
+                        y + height - padding - optionHeight - index * (optionHeight + optionGap),
+                        width - padding * 2f,
+                        optionHeight
+                    )
+                )
+            }
         )
-        isContextMenuOptionHovered = true
+        hoveredContextAction = workerContextMenu?.options?.firstOrNull()?.action
     }
 
     private fun renderPositionFor(placedObject: PlacedShopObject): RenderPosition {
@@ -955,15 +1010,28 @@ class ShopFloorScreen(
     private fun renderPositionFor(product: ShopProduct): RenderPosition? {
         return when (product.state) {
             ShopProductState.CARRIED -> {
-                val carrier = product.carrierWorkerId
+                val holder = (product.holderObjectId ?: product.carrierWorkerId)
                     ?.let(shopFloor::findObjectById)
-                    ?.takeIf { it.kind == PlacedShopObjectKind.WORKER }
                     ?: return null
-                val carrierPosition = renderPositionFor(carrier)
-                RenderPosition(
-                    worldX = carrierPosition.worldX + 8f,
-                    worldY = carrierPosition.worldY + 8f
-                )
+                when (holder.kind) {
+                    PlacedShopObjectKind.WORKER -> {
+                        val holderPosition = renderPositionFor(holder)
+                        RenderPosition(
+                            worldX = holderPosition.worldX + 8f,
+                            worldY = holderPosition.worldY + 8f
+                        )
+                    }
+
+                    PlacedShopObjectKind.MACHINE -> {
+                        val occupiedTiles = shopFloor.occupiedTilesFor(holder)
+                        val centerX = occupiedTiles.map { tile -> shopFloor.grid.worldXFor(tile) + GameConfig.tileSize / 2f }.average().toFloat()
+                        val centerY = occupiedTiles.map { tile -> shopFloor.grid.worldYFor(tile) + GameConfig.tileSize / 2f }.average().toFloat()
+                        RenderPosition(
+                            worldX = centerX - GameConfig.tileSize / 2f,
+                            worldY = centerY - GameConfig.tileSize / 2f
+                        )
+                    }
+                }
             }
 
             ShopProductState.ON_BELT, ShopProductState.ON_FLOOR -> {
@@ -1043,7 +1111,8 @@ class ShopFloorScreen(
                 faultyProducts = dayDirector.faultyProducts,
                 placedObjects = shopFloor.placedObjects,
                 activeProducts = shopFloor.activeProducts,
-                machineProductionStates = shopFloor.machineProductionStates
+                machineProductionStates = shopFloor.machineProductionStates,
+                qaInspectionStates = shopFloor.qaInspectionStates
             )
         )
         game.saveRepository.save(currentSave)
@@ -1069,7 +1138,13 @@ private data class BankEntryKey(
 private data class WorkerContextMenuState(
     val workerId: String,
     val bounds: Rectangle,
-    val optionBounds: Rectangle
+    val options: List<WorkerContextMenuOption>
+)
+
+private data class WorkerContextMenuOption(
+    val action: WorkerContextAction,
+    val label: String,
+    val bounds: Rectangle
 )
 
 private data class RenderPosition(
@@ -1089,3 +1164,8 @@ private data class MachineDragState(
     val startWorldX: Float,
     val startWorldY: Float
 )
+
+private enum class WorkerContextAction {
+    ASSIGN_TO_MACHINE,
+    ASSIGN_TO_QA
+}

@@ -2,6 +2,7 @@ package com.faultory.core.save
 
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.MachineProductionState
+import com.faultory.core.shop.QaInspectionState
 import com.faultory.core.shop.ShopProduct
 import kotlinx.serialization.Serializable
 
@@ -14,7 +15,7 @@ data class GameSave(
     val activeShift: ShiftSnapshot
 ) {
     companion object {
-        const val CURRENT_VERSION = 7
+        const val CURRENT_VERSION = 8
 
         fun forLevel(
             slotId: String,
@@ -40,7 +41,8 @@ data class GameSave(
                     faultyProducts = 0,
                     placedObjects = emptyList(),
                     activeProducts = emptyList(),
-                    machineProductionStates = emptyList()
+                    machineProductionStates = emptyList(),
+                    qaInspectionStates = emptyList()
                 )
             )
         }
@@ -64,5 +66,6 @@ data class ShiftSnapshot(
     val faultyProducts: Int,
     val placedObjects: List<PlacedShopObject>,
     val activeProducts: List<ShopProduct>,
-    val machineProductionStates: List<MachineProductionState>
+    val machineProductionStates: List<MachineProductionState>,
+    val qaInspectionStates: List<QaInspectionState>
 )

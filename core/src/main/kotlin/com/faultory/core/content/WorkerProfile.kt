@@ -52,9 +52,13 @@ data class WorkerProfile(
 data class WorkerRoleProfile(
     val role: WorkerRole,
     val taskDurationSeconds: Float,
-    val defectChance: Float,
+    val defectChance: Float? = null,
     val sabotageChance: Float = 0f,
-    val coverageRadius: Float? = null
+    val inspectionDurationSeconds: Float? = null,
+    val detectionAccuracy: Float? = null,
+    val falsePositiveChance: Float = 0f,
+    val faultyProductStrategy: FaultyProductStrategy? = null,
+    val acceptedProductIds: List<String> = emptyList()
 )
 
 @Serializable
