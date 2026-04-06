@@ -215,7 +215,8 @@ class ShopFloorAssignmentTest {
                 WorkerRoleProfile(
                     role = WorkerRole.PRODUCER_OPERATOR,
                     taskDurationSeconds = 1.9f,
-                    defectChance = 0.12f
+                    defectChance = 0.12f,
+                    sabotageChance = 0.05f
                 )
             )
         )
@@ -242,7 +243,10 @@ class ShopFloorAssignmentTest {
             minimumOperatorWorkerIds = listOf("line-inspector"),
             installCost = 75,
             operationDurationSeconds = 1.8f,
-            producerProfile = ProducerMachineProfile(defectChance = 0.18f)
+            producerProfile = ProducerMachineProfile(
+                productId = "ceramic-mug",
+                defectChance = 0.18f
+            )
         )
     }
 

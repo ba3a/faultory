@@ -11,12 +11,14 @@
         {
           "role": "PRODUCER_OPERATOR",
           "taskDurationSeconds": 1.9,
-          "defectChance": 0.12
+          "defectChance": 0.12,
+          "sabotageChance": 0.05
         },
         {
           "role": "QA",
           "taskDurationSeconds": 1.5,
           "defectChance": 0.16,
+          "sabotageChance": 0.0,
           "coverageRadius": 116.0
         }
       ],
@@ -36,12 +38,14 @@
         {
           "role": "PRODUCER_OPERATOR",
           "taskDurationSeconds": 1.7,
-          "defectChance": 0.09
+          "defectChance": 0.09,
+          "sabotageChance": 0.03
         },
         {
           "role": "QA",
           "taskDurationSeconds": 1.2,
           "defectChance": 0.10,
+          "sabotageChance": 0.0,
           "coverageRadius": 128.0
         }
       ]
@@ -57,12 +61,14 @@
         {
           "role": "PRODUCER_OPERATOR",
           "taskDurationSeconds": 1.4,
-          "defectChance": 0.09
+          "defectChance": 0.09,
+          "sabotageChance": 0.03
         },
         {
           "role": "QA",
           "taskDurationSeconds": 1.1,
           "defectChance": 0.12,
+          "sabotageChance": 0.0,
           "coverageRadius": 136.0
         }
       ],
@@ -82,12 +88,14 @@
         {
           "role": "PRODUCER_OPERATOR",
           "taskDurationSeconds": 1.5,
-          "defectChance": 0.10
+          "defectChance": 0.10,
+          "sabotageChance": 0.04
         },
         {
           "role": "QA",
           "taskDurationSeconds": 1.3,
           "defectChance": 0.11,
+          "sabotageChance": 0.0,
           "coverageRadius": 148.0
         }
       ]
@@ -103,12 +111,14 @@
         {
           "role": "PRODUCER_OPERATOR",
           "taskDurationSeconds": 1.2,
-          "defectChance": 0.06
+          "defectChance": 0.06,
+          "sabotageChance": 0.02
         },
         {
           "role": "QA",
           "taskDurationSeconds": 0.9,
           "defectChance": 0.08,
+          "sabotageChance": 0.0,
           "coverageRadius": 148.0
         }
       ]
@@ -124,12 +134,14 @@
         {
           "role": "PRODUCER_OPERATOR",
           "taskDurationSeconds": 1.1,
-          "defectChance": 0.07
+          "defectChance": 0.07,
+          "sabotageChance": 0.02
         },
         {
           "role": "QA",
           "taskDurationSeconds": 1.0,
           "defectChance": 0.09,
+          "sabotageChance": 0.0,
           "coverageRadius": 154.0
         }
       ]
@@ -143,10 +155,6 @@
       "type": "PRODUCER",
       "manuality": "HUMAN_OPERATED",
       "skin": "machine_bench_assembler",
-      "productIds": [
-        "ceramic-mug",
-        "glass-jar"
-      ],
       "shape": [
         {
           "x": 0,
@@ -171,6 +179,7 @@
         "rightUpgradeId": "precision-assembler"
       },
       "producerProfile": {
+        "productId": "ceramic-mug",
         "defectChance": 0.18
       }
     },
@@ -181,11 +190,6 @@
       "type": "PRODUCER",
       "manuality": "AUTOMATIC",
       "skin": "machine_servo_assembler",
-      "productIds": [
-        "ceramic-mug",
-        "glass-jar",
-        "tea-kettle"
-      ],
       "shape": [
         {
           "x": 0,
@@ -195,6 +199,7 @@
       "installCost": 160,
       "operationDurationSeconds": 1.0,
       "producerProfile": {
+        "productId": "glass-jar",
         "defectChance": 0.08
       }
     },
@@ -205,10 +210,6 @@
       "type": "PRODUCER",
       "manuality": "AUTOMATIC",
       "skin": "machine_precision_assembler",
-      "productIds": [
-        "ceramic-mug",
-        "tea-kettle"
-      ],
       "shape": [
         {
           "x": 0,
@@ -218,6 +219,7 @@
       "installCost": 154,
       "operationDurationSeconds": 1.1,
       "producerProfile": {
+        "productId": "tea-kettle",
         "defectChance": 0.05
       }
     },
@@ -373,19 +375,16 @@
     {
       "id": "ceramic-mug",
       "displayName": "Ceramic Mug",
-      "baseFaultChance": 0.16,
       "saleValue": 22
     },
     {
       "id": "glass-jar",
       "displayName": "Glass Jar",
-      "baseFaultChance": 0.11,
       "saleValue": 18
     },
     {
       "id": "tea-kettle",
       "displayName": "Tea Kettle",
-      "baseFaultChance": 0.09,
       "saleValue": 35
     }
   ]

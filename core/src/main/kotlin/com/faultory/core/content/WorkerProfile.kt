@@ -53,6 +53,7 @@ data class WorkerRoleProfile(
     val role: WorkerRole,
     val taskDurationSeconds: Float,
     val defectChance: Float,
+    val sabotageChance: Float = 0f,
     val coverageRadius: Float? = null
 )
 

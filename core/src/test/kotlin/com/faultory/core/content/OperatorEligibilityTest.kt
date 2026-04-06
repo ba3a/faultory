@@ -57,7 +57,8 @@ class OperatorEligibilityTest {
                 WorkerRoleProfile(
                     role = WorkerRole.PRODUCER_OPERATOR,
                     taskDurationSeconds = 1.8f,
-                    defectChance = 0.16f
+                    defectChance = 0.16f,
+                    sabotageChance = 0.04f
                 )
             )
         )

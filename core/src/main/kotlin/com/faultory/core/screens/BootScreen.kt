@@ -32,7 +32,9 @@ class BootScreen(
         val shopFloor = ShopFloor(
             blueprint = shopBlueprint,
             machineSpecsById = shopCatalog.machines.associateBy { it.id },
-            initialPlacements = save.activeShift.placedObjects
+            initialPlacements = save.activeShift.placedObjects,
+            initialProducts = save.activeShift.activeProducts,
+            initialMachineProductionStates = save.activeShift.machineProductionStates
         )
 
         game.setScreen(ShopFloorScreen(game, level, shopFloor, save, shopCatalog))

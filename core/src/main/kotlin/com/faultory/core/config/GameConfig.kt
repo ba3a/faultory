@@ -9,6 +9,7 @@ object GameConfig {
     const val hudHeight = 100f
     const val bankHeight = 160f
     const val tileSize = 40f
+    const val conveyorSpeedTilesPerSecond = 2.5f
     const val targetFps = 60
     const val saveDirectoryName = "saves"
 }

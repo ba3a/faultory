@@ -3,10 +3,11 @@ package com.faultory.core.systems
 class ProductionDayDirector(
     private val shiftLengthSeconds: Float,
     val targetQualityPercent: Float,
+    initialElapsedSeconds: Float,
     initialShippedProducts: Int,
     initialFaultyProducts: Int
 ) {
-    var elapsedSeconds: Float = 0f
+    var elapsedSeconds: Float = initialElapsedSeconds
         private set
 
     var shippedProducts: Int = initialShippedProducts
@@ -30,5 +31,12 @@ class ProductionDayDirector(
 
     fun update(deltaSeconds: Float) {
         elapsedSeconds = (elapsedSeconds + deltaSeconds).coerceAtMost(shiftLengthSeconds)
+    }
+
+    fun recordShipment(isFaulty: Boolean) {
+        shippedProducts += 1
+        if (isFaulty) {
+            faultyProducts += 1
+        }
     }
 }

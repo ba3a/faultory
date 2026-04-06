@@ -13,7 +13,7 @@ data class MachineSpec(
     val type: MachineType,
     val manuality: Manuality,
     val skin: String,
-    val productIds: List<String>,
+    val productIds: List<String> = emptyList(),
     val shape: List<MachineShapeTile> = listOf(MachineShapeTile(0, 0)),
     val slots: List<MachineSlotSpec> = emptyList(),
     val minimumOperatorWorkerIds: List<String> = emptyList(),
@@ -63,6 +63,8 @@ data class MachineSpec(
         return canBeOperatedBy(worker, workersById)
     }
 
+    fun producedProductId(): String? = producerProfile?.productId
+
     fun occupiedTiles(
         anchorTile: TileCoordinate,
         orientation: Orientation
@@ -110,6 +112,7 @@ enum class Manuality {
 
 @Serializable
 data class ProducerMachineProfile(
+    val productId: String,
     val defectChance: Float
 )
 

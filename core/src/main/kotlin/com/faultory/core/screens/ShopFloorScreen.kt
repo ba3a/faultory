@@ -24,7 +24,10 @@ import com.faultory.core.save.GameSave
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
+import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.ShopFloor
+import com.faultory.core.shop.ShopProduct
+import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
 import com.faultory.core.shop.WorkerAssignmentFailureReason
 import com.faultory.core.shop.WorkerAssignmentResult
@@ -54,6 +57,7 @@ class ShopFloorScreen(
     private val dayDirector = ProductionDayDirector(
         shiftLengthSeconds = shopFloor.blueprint.shiftLengthSeconds,
         targetQualityPercent = saveSnapshot.activeShift.targetQualityPercent,
+        initialElapsedSeconds = saveSnapshot.activeShift.elapsedSeconds,
         initialShippedProducts = saveSnapshot.activeShift.shippedProducts,
         initialFaultyProducts = saveSnapshot.activeShift.faultyProducts
     )
@@ -69,6 +73,7 @@ class ShopFloorScreen(
     private var failedMachineBlinkId: String? = null
     private var failedMachineBlinkRemaining = 0f
     private var machineDragState: MachineDragState? = null
+    private var autosaveElapsedSeconds = 0f
 
     private val inputProcessor = object : InputAdapter() {
         override fun keyDown(keycode: Int): Boolean {
@@ -120,6 +125,7 @@ class ShopFloorScreen(
     }
 
     override fun hide() {
+        persistState()
         if (Gdx.input.inputProcessor === inputProcessor) {
             Gdx.input.inputProcessor = null
         }
@@ -127,8 +133,16 @@ class ShopFloorScreen(
 
     override fun render(delta: Float) {
         shopFloor.update(delta, workerProfilesById)
+        for (shipment in shopFloor.consumeShipmentEvents()) {
+            dayDirector.recordShipment(shipment.isFaulty)
+        }
         dayDirector.update(delta)
         updateFailureBlink(delta)
+        autosaveElapsedSeconds += delta
+        if (autosaveElapsedSeconds >= 0.5f) {
+            persistState()
+            autosaveElapsedSeconds = 0f
+        }
 
         ScreenUtils.clear(0.06f, 0.07f, 0.09f, 1f)
         viewport.apply()
@@ -191,7 +205,7 @@ class ShopFloorScreen(
             return true
         }
 
-        persistPlacements()
+        persistState()
         return true
     }
 
@@ -270,7 +284,7 @@ class ShopFloorScreen(
         return when (val result = shopFloor.assignWorkerToMachine(workerId, machine.id, workerProfilesById)) {
             is WorkerAssignmentResult.Success -> {
                 assignmentPendingWorkerId = null
-                persistPlacements()
+                persistState()
                 true
             }
 
@@ -330,6 +344,9 @@ class ShopFloorScreen(
         for (placedObject in shopFloor.placedObjects) {
             drawPlacedObjectFill(renderer, placedObject)
         }
+        for (product in shopFloor.activeProducts) {
+            drawProductFill(renderer, product)
+        }
 
         for (entry in bankEntries) {
             renderer.color = when {
@@ -382,6 +399,9 @@ class ShopFloorScreen(
         for (placedObject in shopFloor.placedObjects) {
             drawPlacedObjectOutline(renderer, placedObject)
             drawOrientationMarker(renderer, placedObject)
+        }
+        for (product in shopFloor.activeProducts) {
+            drawProductOutline(renderer, product)
         }
 
         drawAssignmentTargetHover(renderer)
@@ -461,6 +481,36 @@ class ShopFloorScreen(
                 GameConfig.tileSize - 4f
             )
         }
+    }
+
+    private fun drawProductFill(renderer: ShapeRenderer, product: ShopProduct) {
+        val renderPosition = renderPositionFor(product) ?: return
+        renderer.color = when (product.faultReason) {
+            ProductFaultReason.SABOTAGE -> Color(0.90f, 0.24f, 0.28f, 1f)
+            ProductFaultReason.PRODUCTION_DEFECT -> Color(0.83f, 0.46f, 0.20f, 1f)
+            null -> Color(0.86f, 0.89f, 0.74f, 1f)
+        }
+        renderer.rect(
+            renderPosition.worldX + 12f,
+            renderPosition.worldY + 12f,
+            GameConfig.tileSize - 24f,
+            GameConfig.tileSize - 24f
+        )
+    }
+
+    private fun drawProductOutline(renderer: ShapeRenderer, product: ShopProduct) {
+        val renderPosition = renderPositionFor(product) ?: return
+        renderer.color = when (product.state) {
+            ShopProductState.ON_BELT -> Color(0.97f, 0.97f, 0.86f, 1f)
+            ShopProductState.ON_FLOOR -> Color(0.91f, 0.94f, 0.97f, 1f)
+            ShopProductState.CARRIED -> Color(0.99f, 0.90f, 0.62f, 1f)
+        }
+        renderer.rect(
+            renderPosition.worldX + 10f,
+            renderPosition.worldY + 10f,
+            GameConfig.tileSize - 20f,
+            GameConfig.tileSize - 20f
+        )
     }
 
     private fun drawAssignmentTargetHover(renderer: ShapeRenderer) {
@@ -646,11 +696,15 @@ class ShopFloorScreen(
         font.color = Color(0.76f, 0.80f, 0.84f, 1f)
         hintLayout.setText(
             font,
-            "Quality ${"%.1f".format(dayDirector.currentQualityPercent)}% / ${dayDirector.targetQualityPercent}%"
+            "Quality ${"%.1f".format(dayDirector.currentQualityPercent)}% / ${dayDirector.targetQualityPercent}%   " +
+                "Shipped ${dayDirector.shippedProducts}   Faulty ${dayDirector.faultyProducts}"
         )
         font.draw(batch, hintLayout, 32f, GameConfig.virtualHeight - 52f)
 
-        hintLayout.setText(font, selectedItemText())
+        hintLayout.setText(
+            font,
+            "Shift ${(dayDirector.shiftProgress * 100f).toInt()}%   ${selectedItemText()}"
+        )
         font.draw(batch, hintLayout, 32f, GameConfig.virtualHeight - 76f)
 
         font.color = if (isBackButtonHovered) {
@@ -789,7 +843,7 @@ class ShopFloorScreen(
             return false
         }
 
-        persistPlacements()
+        persistState()
         selectedBankKey = null
         return true
     }
@@ -898,6 +952,30 @@ class ShopFloorScreen(
         )
     }
 
+    private fun renderPositionFor(product: ShopProduct): RenderPosition? {
+        return when (product.state) {
+            ShopProductState.CARRIED -> {
+                val carrier = product.carrierWorkerId
+                    ?.let(shopFloor::findObjectById)
+                    ?.takeIf { it.kind == PlacedShopObjectKind.WORKER }
+                    ?: return null
+                val carrierPosition = renderPositionFor(carrier)
+                RenderPosition(
+                    worldX = carrierPosition.worldX + 8f,
+                    worldY = carrierPosition.worldY + 8f
+                )
+            }
+
+            ShopProductState.ON_BELT, ShopProductState.ON_FLOOR -> {
+                val tile = product.tile ?: return null
+                RenderPosition(
+                    worldX = shopFloor.grid.worldXFor(tile),
+                    worldY = shopFloor.grid.worldYFor(tile)
+                )
+            }
+        }
+    }
+
     private fun orientationMarkerFor(placedObject: PlacedShopObject): OrientationMarker {
         val centerX: Float
         val centerY: Float
@@ -957,17 +1035,22 @@ class ShopFloorScreen(
         }
     }
 
-    private fun persistPlacements() {
+    private fun persistState() {
         currentSave = currentSave.copy(
             activeShift = currentSave.activeShift.copy(
-                placedObjects = shopFloor.placedObjects
+                elapsedSeconds = dayDirector.elapsedSeconds,
+                shippedProducts = dayDirector.shippedProducts,
+                faultyProducts = dayDirector.faultyProducts,
+                placedObjects = shopFloor.placedObjects,
+                activeProducts = shopFloor.activeProducts,
+                machineProductionStates = shopFloor.machineProductionStates
             )
         )
         game.saveRepository.save(currentSave)
     }
 
     private fun returnToLevelSelection() {
-        persistPlacements()
+        persistState()
         game.openLevelSelection()
     }
 }

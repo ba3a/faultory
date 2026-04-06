@@ -2,10 +2,14 @@ package com.faultory.core.save
 
 import com.badlogic.gdx.files.FileHandle
 import com.faultory.core.config.GameConfig
+import com.faultory.core.shop.MachineProductionState
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
+import com.faultory.core.shop.ProductFaultReason
+import com.faultory.core.shop.ShopProduct
+import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
@@ -87,6 +91,9 @@ class LocalSaveRepositoryTest {
                     unlockedWorkerIds = listOf("line-inspector"),
                     unlockedMachineIds = listOf("bench-assembler", "camera-gate")
                 ).activeShift.copy(
+                    elapsedSeconds = 27.5f,
+                    shippedProducts = 3,
+                    faultyProducts = 1,
                     placedObjects = listOf(
                         PlacedShopObject(
                             id = "worker-1",
@@ -97,8 +104,29 @@ class LocalSaveRepositoryTest {
                             workerRole = WorkerRole.QA,
                             assignedMachineId = "machine-7",
                             assignedSlotIndex = 0,
+                            carriedProductId = "product-3",
                             movementPath = listOf(TileCoordinate(7, 9), TileCoordinate(8, 9)),
                             movementProgress = 0.35f
+                        )
+                    ),
+                    activeProducts = listOf(
+                        ShopProduct(
+                            id = "product-3",
+                            productId = "ceramic-mug",
+                            sourceMachineId = "machine-7",
+                            faultReason = ProductFaultReason.SABOTAGE,
+                            state = ShopProductState.CARRIED,
+                            carrierWorkerId = "worker-1"
+                        )
+                    ),
+                    machineProductionStates = listOf(
+                        MachineProductionState(
+                            machineId = "machine-9",
+                            productInstanceId = "product-4",
+                            productId = "glass-jar",
+                            faultReason = ProductFaultReason.PRODUCTION_DEFECT,
+                            progressSeconds = 0.8f,
+                            isComplete = false
                         )
                     )
                 )
@@ -117,6 +145,7 @@ class LocalSaveRepositoryTest {
                     unlockedWorkerIds = listOf("float-tech"),
                     unlockedMachineIds = listOf("bench-assembler", "camera-gate")
                 ).activeShift.copy(
+                    elapsedSeconds = 41f,
                     placedObjects = listOf(
                         PlacedShopObject(
                             id = "machine-7",
@@ -137,15 +166,24 @@ class LocalSaveRepositoryTest {
 
             assertEquals("morning-shift", loadedMorningShift.slotId)
             assertEquals("tutorial-shop", loadedMorningShift.activeShift.shopId)
+            assertEquals(27.5f, loadedMorningShift.activeShift.elapsedSeconds)
             assertEquals(92f, loadedMorningShift.activeShift.targetQualityPercent)
+            assertEquals(3, loadedMorningShift.activeShift.shippedProducts)
+            assertEquals(1, loadedMorningShift.activeShift.faultyProducts)
             assertEquals(1, loadedMorningShift.activeShift.placedObjects.size)
             assertEquals(TileCoordinate(6, 9), loadedMorningShift.activeShift.placedObjects.single().position)
             assertEquals("machine-7", loadedMorningShift.activeShift.placedObjects.single().assignedMachineId)
             assertEquals(0, loadedMorningShift.activeShift.placedObjects.single().assignedSlotIndex)
+            assertEquals("product-3", loadedMorningShift.activeShift.placedObjects.single().carriedProductId)
             assertEquals(0.35f, loadedMorningShift.activeShift.placedObjects.single().movementProgress)
+            assertEquals(1, loadedMorningShift.activeShift.activeProducts.size)
+            assertEquals(ProductFaultReason.SABOTAGE, loadedMorningShift.activeShift.activeProducts.single().faultReason)
+            assertEquals(1, loadedMorningShift.activeShift.machineProductionStates.size)
+            assertEquals(0.8f, loadedMorningShift.activeShift.machineProductionStates.single().progressSeconds)
 
             assertEquals("evening-shift", loadedEveningShift.slotId)
             assertEquals("tutorial-shop", loadedEveningShift.activeShift.shopId)
+            assertEquals(41f, loadedEveningShift.activeShift.elapsedSeconds)
             assertEquals(96f, loadedEveningShift.activeShift.targetQualityPercent)
             assertEquals(1, loadedEveningShift.activeShift.placedObjects.size)
             assertEquals("bench-assembler", loadedEveningShift.activeShift.placedObjects.single().catalogId)
