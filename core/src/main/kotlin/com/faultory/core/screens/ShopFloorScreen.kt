@@ -11,7 +11,6 @@ import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.faultory.core.FaultoryGame
-import com.faultory.core.assets.AssetPaths
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.MachineType
@@ -19,7 +18,10 @@ import com.faultory.core.content.ShopCatalog
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.screens.shopfloor.CatalogLookup
+import com.faultory.core.screens.shopfloor.FailureBlinkController
+import com.faultory.core.screens.shopfloor.MachineDragController
 import com.faultory.core.screens.shopfloor.PointerState
+import com.faultory.core.screens.shopfloor.ShiftLifecycleController
 import com.faultory.core.screens.shopfloor.ShopFloorPalette
 import com.faultory.core.save.GameSave
 import com.faultory.core.shop.Orientation
@@ -32,7 +34,6 @@ import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
 import com.faultory.core.shop.WorkerAssignmentFailureReason
 import com.faultory.core.shop.WorkerAssignmentResult
-import com.faultory.core.systems.ProductionDayDirector
 
 class ShopFloorScreen(
     private val game: FaultoryGame,
@@ -57,20 +58,13 @@ class ShopFloorScreen(
     private val titleLayout = GlyphLayout()
     private val hintLayout = GlyphLayout()
     private val bankEntries = mutableListOf<BankEntry>()
-    private var currentSave = saveSnapshot
-    private val dayDirector = ProductionDayDirector(
-        shiftLengthSeconds = shopFloor.blueprint.shiftLengthSeconds,
-        starThresholds = level.starThresholds,
-        initialElapsedSeconds = saveSnapshot.activeShift.elapsedSeconds,
-        initialDeliveredGoodProducts = saveSnapshot.activeShift.deliveredGoodProducts,
-        initialDeliveredFaultyProducts = saveSnapshot.activeShift.deliveredFaultyProducts,
-        initialProductDeliveryStats = saveSnapshot.activeShift.productDeliveryStats
+    private val shiftLifecycle = ShiftLifecycleController(
+        game = game,
+        level = level,
+        shopFloor = shopFloor,
+        workerProfilesById = workerProfilesById,
+        initialSave = saveSnapshot
     )
-    private val nextLevel by lazy {
-        level.recommendedNextLevelId?.let { nextLevelId ->
-            game.levelCatalogLoader.load(AssetPaths.levelCatalog).levels.firstOrNull { it.id == nextLevelId }
-        }
-    }
     private var selectedBankKey: BankEntryKey? = null
     private var hoveredBankKey: BankEntryKey? = null
     private var hoveredTile: TileCoordinate? = null
@@ -79,20 +73,21 @@ class ShopFloorScreen(
     private var hoveredContextAction: WorkerContextAction? = null
     private var hoveredCompletionAction: CompletionAction? = null
     private var assignmentPendingWorkerId: String? = null
-    private var failedMachineBlinkId: String? = null
-    private var failedMachineBlinkRemaining = 0f
-    private var machineDragState: MachineDragState? = null
-    private var autosaveElapsedSeconds = 0f
-    private var isShiftEnded = false
-    private var persistOnHide = true
+    private val failureBlink = FailureBlinkController()
+    private val machineDrag = MachineDragController(
+        shopFloor = shopFloor,
+        pointerState = pointerState,
+        failureBlink = failureBlink,
+        shiftLifecycle = shiftLifecycle
+    )
 
     private val inputProcessor = object : InputAdapter() {
         override fun keyDown(keycode: Int): Boolean {
-            if (isShiftEnded) {
+            if (shiftLifecycle.isShiftEnded) {
                 return false
             }
             if (keycode == Input.Keys.ESCAPE) {
-                returnToLevelSelection()
+                shiftLifecycle.returnToLevelSelection()
                 return true
             }
             return false
@@ -100,7 +95,7 @@ class ShopFloorScreen(
 
         override fun mouseMoved(screenX: Int, screenY: Int): Boolean {
             updatePointerState(screenX, screenY)
-            if (isShiftEnded) {
+            if (shiftLifecycle.isShiftEnded) {
                 return hoveredCompletionAction != null
             }
             return hoveredBankKey != null ||
@@ -108,12 +103,12 @@ class ShopFloorScreen(
                 isBackButtonHovered ||
                 workerContextMenu != null ||
                 assignmentPendingWorkerId != null ||
-                machineDragState != null
+                machineDrag.isDragging
         }
 
         override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
             updatePointerState(screenX, screenY)
-            if (isShiftEnded) {
+            if (shiftLifecycle.isShiftEnded) {
                 return button == Input.Buttons.LEFT && handleCompletionClick()
             }
             return when (button) {
@@ -124,22 +119,22 @@ class ShopFloorScreen(
         }
 
         override fun touchDragged(screenX: Int, screenY: Int, pointer: Int): Boolean {
-            if (isShiftEnded) {
+            if (shiftLifecycle.isShiftEnded) {
                 return false
             }
             updatePointerState(screenX, screenY)
-            return machineDragState != null
+            return machineDrag.isDragging
         }
 
         override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
-            if (isShiftEnded) {
+            if (shiftLifecycle.isShiftEnded) {
                 return false
             }
             updatePointerState(screenX, screenY)
             if (button != Input.Buttons.LEFT) {
                 return false
             }
-            return finishMachineDrag()
+            return machineDrag.finish()
         }
     }
 
@@ -147,38 +142,28 @@ class ShopFloorScreen(
         viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
         buildBankEntries()
         layoutBankEntries()
-        finalizeShiftIfNeeded()
+        if (shiftLifecycle.finalizeIfNeeded()) {
+            clearInteractionStateForShiftEnd()
+        }
         Gdx.input.inputProcessor = inputProcessor
     }
 
     override fun hide() {
-        if (persistOnHide) {
-            persistState()
-        }
+        shiftLifecycle.persistIfNeededOnHide()
         if (Gdx.input.inputProcessor === inputProcessor) {
             Gdx.input.inputProcessor = null
         }
     }
 
     override fun render(delta: Float) {
-        if (!isShiftEnded) {
-            val activeDelta = (shopFloor.blueprint.shiftLengthSeconds - dayDirector.elapsedSeconds)
-                .coerceAtLeast(0f)
-                .coerceAtMost(delta)
+        if (!shiftLifecycle.isShiftEnded) {
+            val activeDelta = shiftLifecycle.tick(delta)
             if (activeDelta > 0f) {
-                shopFloor.update(activeDelta, workerProfilesById)
-                for (shipment in shopFloor.consumeShipmentEvents()) {
-                    dayDirector.recordShipment(shipment.productId, shipment.faultReason)
-                }
-                dayDirector.update(activeDelta)
-                updateFailureBlink(activeDelta)
-                autosaveElapsedSeconds += activeDelta
-                if (autosaveElapsedSeconds >= 0.5f) {
-                    persistState()
-                    autosaveElapsedSeconds = 0f
-                }
+                failureBlink.update(activeDelta)
             }
-            finalizeShiftIfNeeded()
+            if (shiftLifecycle.finalizeIfNeeded()) {
+                clearInteractionStateForShiftEnd()
+            }
         }
 
         ScreenUtils.clear(0.06f, 0.07f, 0.09f, 1f)
@@ -203,52 +188,22 @@ class ShopFloorScreen(
     }
 
     private fun handleLeftPress(): Boolean {
-        if (maybeStartMachineDrag()) {
+        if (canStartMachineDrag() && machineDrag.tryStart(hoveredTile)) {
             return true
         }
         return handleLeftClick()
     }
 
-    private fun maybeStartMachineDrag(): Boolean {
-        if (selectedBankKey != null || assignmentPendingWorkerId != null || workerContextMenu != null || isBackButtonHovered) {
-            return false
-        }
-
-        val machine = hoveredTile
-            ?.let(shopFloor::objectAt)
-            ?.takeIf { it.kind == PlacedShopObjectKind.MACHINE }
-            ?: return false
-
-        machineDragState = MachineDragState(machine.id, pointerState.worldX, pointerState.worldY)
-        return true
-    }
-
-    private fun finishMachineDrag(): Boolean {
-        val dragState = machineDragState ?: return false
-        machineDragState = null
-
-        val machine = shopFloor.findObjectById(dragState.machineId) ?: return true
-        val newOrientation = Orientation.fromDrag(
-            deltaX = pointerState.worldX - dragState.startWorldX,
-            deltaY = pointerState.worldY - dragState.startWorldY,
-            minimumMagnitude = 18f
-        ) ?: return true
-        if (newOrientation == machine.orientation) {
-            return true
-        }
-
-        if (!shopFloor.rotateMachine(machine.id, newOrientation)) {
-            startFailureBlink(machine.id)
-            return true
-        }
-
-        persistState()
-        return true
+    private fun canStartMachineDrag(): Boolean {
+        return selectedBankKey == null &&
+            assignmentPendingWorkerId == null &&
+            workerContextMenu == null &&
+            !isBackButtonHovered
     }
 
     private fun handleLeftClick(): Boolean {
         if (isBackButtonHovered) {
-            returnToLevelSelection()
+            shiftLifecycle.returnToLevelSelection()
             return true
         }
 
@@ -290,7 +245,7 @@ class ShopFloorScreen(
 
         selectedBankKey = null
         assignmentPendingWorkerId = null
-        machineDragState = null
+        machineDrag.cancel()
         openWorkerContextMenu(worker.id)
         return true
     }
@@ -298,17 +253,17 @@ class ShopFloorScreen(
     private fun handleCompletionClick(): Boolean {
         return when (hoveredCompletionAction) {
             CompletionAction.REPLAY_LEVEL -> {
-                replayLevel()
+                shiftLifecycle.replayLevel()
                 true
             }
 
             CompletionAction.NEXT_LEVEL -> {
-                openNextLevel()
+                shiftLifecycle.openNextLevel()
                 true
             }
 
             CompletionAction.BACK_TO_LEVEL_SELECTION -> {
-                returnToLevelSelection()
+                shiftLifecycle.returnToLevelSelection()
                 true
             }
 
@@ -331,7 +286,7 @@ class ShopFloorScreen(
             WorkerContextAction.ASSIGN_TO_QA -> {
                 selectedBankKey = null
                 when (shopFloor.assignWorkerToQa(contextMenu.workerId, workerProfilesById)) {
-                    is WorkerAssignmentResult.Success -> persistState()
+                    is WorkerAssignmentResult.Success -> shiftLifecycle.persist()
                     is WorkerAssignmentResult.Failure -> {}
                 }
                 true
@@ -355,7 +310,7 @@ class ShopFloorScreen(
         return when (val result = shopFloor.assignWorkerToMachine(workerId, machine.id, workerProfilesById)) {
             is WorkerAssignmentResult.Success -> {
                 assignmentPendingWorkerId = null
-                persistState()
+                shiftLifecycle.persist()
                 true
             }
 
@@ -367,7 +322,7 @@ class ShopFloorScreen(
                         WorkerAssignmentFailureReason.MACHINE_NOT_FOUND
                     )
                 ) {
-                    startFailureBlink(machine.id)
+                    failureBlink.start(machine.id)
                 }
                 true
             }
@@ -436,7 +391,7 @@ class ShopFloorScreen(
         }
 
         drawContextMenuFill(renderer)
-        if (isShiftEnded) {
+        if (shiftLifecycle.isShiftEnded) {
             drawCompletionModalFill(renderer)
         }
         renderer.end()
@@ -498,7 +453,7 @@ class ShopFloorScreen(
         }
 
         drawContextMenuOutline(renderer)
-        if (isShiftEnded) {
+        if (shiftLifecycle.isShiftEnded) {
             drawCompletionModalOutline(renderer)
         }
         renderer.end()
@@ -612,15 +567,11 @@ class ShopFloorScreen(
     }
 
     private fun drawFailureBlink(renderer: ShapeRenderer) {
-        val machineId = failedMachineBlinkId ?: return
-        if (failedMachineBlinkRemaining <= 0f) {
+        if (!failureBlink.isVisibleFrame()) {
             return
         }
-
+        val machineId = failureBlink.machineId ?: return
         val machine = shopFloor.findObjectById(machineId) ?: return
-        if (((failedMachineBlinkRemaining * 12f).toInt() and 1) == 0) {
-            return
-        }
 
         renderer.color = Color(0.97f, 0.28f, 0.24f, 1f)
         for (tile in shopFloor.occupiedTilesFor(machine)) {
@@ -689,7 +640,7 @@ class ShopFloorScreen(
             completionModalBounds.height
         )
 
-        renderer.color = if (dayDirector.hasPassed) {
+        renderer.color = if (shiftLifecycle.dayDirector.hasPassed) {
             Color(0.18f, 0.44f, 0.29f, 1f)
         } else {
             Color(0.48f, 0.19f, 0.18f, 1f)
@@ -804,14 +755,14 @@ class ShopFloorScreen(
         font.color = Color(0.76f, 0.80f, 0.84f, 1f)
         hintLayout.setText(
             font,
-            "Good ${dayDirector.deliveredGoodProducts}   Faulty ${dayDirector.deliveredFaultyProducts}   " +
-                "Stars ${dayDirector.earnedStars}/3"
+            "Good ${shiftLifecycle.dayDirector.deliveredGoodProducts}   Faulty ${shiftLifecycle.dayDirector.deliveredFaultyProducts}   " +
+                "Stars ${shiftLifecycle.dayDirector.earnedStars}/3"
         )
         font.draw(batch, hintLayout, 32f, GameConfig.virtualHeight - 52f)
 
         hintLayout.setText(
             font,
-            "Shift ${(dayDirector.shiftProgress * 100f).toInt()}%   1* ${level.starThresholds.oneStar}  2* ${level.starThresholds.twoStar}  3* ${level.starThresholds.threeStar}   ${selectedItemText()}"
+            "Shift ${(shiftLifecycle.dayDirector.shiftProgress * 100f).toInt()}%   1* ${level.starThresholds.oneStar}  2* ${level.starThresholds.twoStar}  3* ${level.starThresholds.threeStar}   ${selectedItemText()}"
         )
         font.draw(batch, hintLayout, 32f, GameConfig.virtualHeight - 76f)
 
@@ -858,7 +809,7 @@ class ShopFloorScreen(
             }
         }
 
-        if (isShiftEnded) {
+        if (shiftLifecycle.isShiftEnded) {
             drawCompletionModalText(batch, font)
         }
 
@@ -866,7 +817,7 @@ class ShopFloorScreen(
     }
 
     private fun drawCompletionModalText(batch: com.badlogic.gdx.graphics.g2d.SpriteBatch, font: com.badlogic.gdx.graphics.g2d.BitmapFont) {
-        val completedRun = currentSave.lastCompletedRun ?: dayDirector.completedRunStats()
+        val completedRun = shiftLifecycle.currentSave.lastCompletedRun ?: shiftLifecycle.dayDirector.completedRunStats()
         val modalLeft = completionModalBounds.x + 32f
         var currentY = completionModalBounds.y + completionModalBounds.height - 34f
 
@@ -924,7 +875,7 @@ class ShopFloorScreen(
     }
 
     private fun selectedItemText(): String {
-        if (isShiftEnded) {
+        if (shiftLifecycle.isShiftEnded) {
             return "Shift complete. Review the results window."
         }
         val assignmentWorker = assignmentPendingWorkerId
@@ -952,7 +903,7 @@ class ShopFloorScreen(
     private fun completionButtons(): List<CompletionButton> {
         val actions = buildList {
             add(CompletionAction.REPLAY_LEVEL)
-            if (nextLevel != null) {
+            if (shiftLifecycle.nextLevel != null) {
                 add(CompletionAction.NEXT_LEVEL)
             }
             add(CompletionAction.BACK_TO_LEVEL_SELECTION)
@@ -1038,7 +989,7 @@ class ShopFloorScreen(
     private fun updatePointerState(screenX: Int, screenY: Int) {
         pointerState.update(screenX, screenY)
 
-        if (isShiftEnded) {
+        if (shiftLifecycle.isShiftEnded) {
             hoveredCompletionAction = completionButtons()
                 .firstOrNull { it.bounds.contains(pointerState.worldX, pointerState.worldY) }
                 ?.action
@@ -1077,7 +1028,7 @@ class ShopFloorScreen(
             return false
         }
 
-        persistState()
+        shiftLifecycle.persist()
         selectedBankKey = null
         return true
     }
@@ -1299,28 +1250,7 @@ class ShopFloorScreen(
         return OrientationMarker(centerX, centerY, tipX, tipY)
     }
 
-    private fun startFailureBlink(machineId: String) {
-        failedMachineBlinkId = machineId
-        failedMachineBlinkRemaining = 0.6f
-    }
-
-    private fun updateFailureBlink(delta: Float) {
-        if (failedMachineBlinkRemaining <= 0f) {
-            return
-        }
-
-        failedMachineBlinkRemaining = (failedMachineBlinkRemaining - delta).coerceAtLeast(0f)
-        if (failedMachineBlinkRemaining == 0f) {
-            failedMachineBlinkId = null
-        }
-    }
-
-    private fun finalizeShiftIfNeeded() {
-        if (isShiftEnded || !dayDirector.isShiftComplete) {
-            return
-        }
-
-        isShiftEnded = true
+    private fun clearInteractionStateForShiftEnd() {
         selectedBankKey = null
         hoveredBankKey = null
         hoveredTile = null
@@ -1328,43 +1258,7 @@ class ShopFloorScreen(
         workerContextMenu = null
         hoveredContextAction = null
         assignmentPendingWorkerId = null
-        machineDragState = null
-        currentSave = currentSave.copy(lastCompletedRun = dayDirector.completedRunStats())
-        persistState()
-    }
-
-    private fun persistState() {
-        currentSave = currentSave.copy(
-            activeShift = currentSave.activeShift.copy(
-                elapsedSeconds = dayDirector.elapsedSeconds,
-                deliveredGoodProducts = dayDirector.deliveredGoodProducts,
-                deliveredFaultyProducts = dayDirector.deliveredFaultyProducts,
-                productDeliveryStats = dayDirector.productDeliveryStats,
-                placedObjects = shopFloor.placedObjects,
-                activeProducts = shopFloor.activeProducts,
-                machineProductionStates = shopFloor.machineProductionStates,
-                qaInspectionStates = shopFloor.qaInspectionStates
-            )
-        )
-        game.saveRepository.save(currentSave)
-    }
-
-    private fun replayLevel() {
-        currentSave = currentSave.resetForReplay(shopFloor.blueprint.id)
-        game.saveRepository.save(currentSave)
-        persistOnHide = false
-        game.openLevel(level)
-    }
-
-    private fun openNextLevel() {
-        val recommendedLevel = nextLevel ?: return
-        persistState()
-        game.openLevel(recommendedLevel)
-    }
-
-    private fun returnToLevelSelection() {
-        persistState()
-        game.openLevelSelection()
+        machineDrag.cancel()
     }
 }
 
@@ -1401,12 +1295,6 @@ private data class OrientationMarker(
     val centerY: Float,
     val tipX: Float,
     val tipY: Float
-)
-
-private data class MachineDragState(
-    val machineId: String,
-    val startWorldX: Float,
-    val startWorldY: Float
 )
 
 private data class CompletionButton(
