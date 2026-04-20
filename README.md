@@ -22,13 +22,6 @@ Desktop-only factory-quality scaffold built with Kotlin, LibGDX, and `kotlinx.se
 - `./gradlew :desktop:run`
 - `./gradlew build`
 
-## Next architecture decisions
-
-### MVP carry-overs (game design)
-- What happens after a faulty product is detected: reject, rework, or just mark
-- How worker routing and assignment should work on the shop floor
-- Whether each shop runs one conveyor line or multiple concurrent product lines
-
 ### Structural debt to address before scaling
 - **Split `ShopFloorScreen` (1 459 lines)** into at least three parts: a renderer, an input handler, and a UI-state coordinator. The current class mixes rendering, input, save scheduling, game orchestration, and all intermediate UI state.
 - **Save migration strategy.** `JsonSaveCodec.isCompatibleVersion` does an exact-version check; any bump silently drops the save. Define whether to auto-wipe, prompt the user, or implement a migration chain before `CURRENT_VERSION` stabilises.

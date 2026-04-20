@@ -8,20 +8,19 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Rectangle
-import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.faultory.core.FaultoryGame
 import com.faultory.core.assets.AssetPaths
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelDefinition
-import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.MachineType
-import com.faultory.core.content.Manuality
-import com.faultory.core.content.ProductDefinition
 import com.faultory.core.content.ShopCatalog
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
+import com.faultory.core.screens.shopfloor.CatalogLookup
+import com.faultory.core.screens.shopfloor.PointerState
+import com.faultory.core.screens.shopfloor.ShopFloorPalette
 import com.faultory.core.save.GameSave
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
@@ -50,10 +49,11 @@ class ShopFloorScreen(
         216f,
         40f
     )
-    private val scratchVector = Vector3()
-    private val machineSpecsById = shopCatalog.machines.associateBy { it.id }
-    private val workerProfilesById = shopCatalog.workers.associateBy { it.id }
-    private val productDefinitionsById = shopCatalog.products.associateBy { it.id }
+    private val pointerState = PointerState(viewport)
+    private val catalogLookup = CatalogLookup(shopCatalog)
+    private val machineSpecsById = catalogLookup.machineSpecsById
+    private val workerProfilesById = catalogLookup.workerProfilesById
+    private val productDefinitionsById = catalogLookup.productDefinitionsById
     private val titleLayout = GlyphLayout()
     private val hintLayout = GlyphLayout()
     private val bankEntries = mutableListOf<BankEntry>()
@@ -75,8 +75,6 @@ class ShopFloorScreen(
     private var hoveredBankKey: BankEntryKey? = null
     private var hoveredTile: TileCoordinate? = null
     private var isBackButtonHovered = false
-    private var pointerWorldX = 0f
-    private var pointerWorldY = 0f
     private var workerContextMenu: WorkerContextMenuState? = null
     private var hoveredContextAction: WorkerContextAction? = null
     private var hoveredCompletionAction: CompletionAction? = null
@@ -221,7 +219,7 @@ class ShopFloorScreen(
             ?.takeIf { it.kind == PlacedShopObjectKind.MACHINE }
             ?: return false
 
-        machineDragState = MachineDragState(machine.id, pointerWorldX, pointerWorldY)
+        machineDragState = MachineDragState(machine.id, pointerState.worldX, pointerState.worldY)
         return true
     }
 
@@ -231,8 +229,8 @@ class ShopFloorScreen(
 
         val machine = shopFloor.findObjectById(dragState.machineId) ?: return true
         val newOrientation = Orientation.fromDrag(
-            deltaX = pointerWorldX - dragState.startWorldX,
-            deltaY = pointerWorldY - dragState.startWorldY,
+            deltaX = pointerState.worldX - dragState.startWorldX,
+            deltaY = pointerState.worldY - dragState.startWorldY,
             minimumMagnitude = 18f
         ) ?: return true
         if (newOrientation == machine.orientation) {
@@ -509,7 +507,7 @@ class ShopFloorScreen(
     private fun drawPlacedObjectFill(renderer: ShapeRenderer, placedObject: PlacedShopObject) {
         if (placedObject.kind == PlacedShopObjectKind.WORKER) {
             val renderPosition = renderPositionFor(placedObject)
-            renderer.color = workerFillColor(placedObject.workerRole)
+            renderer.color = ShopFloorPalette.workerFill(placedObject.workerRole)
             renderer.circle(
                 renderPosition.worldX + GameConfig.tileSize / 2f,
                 renderPosition.worldY + GameConfig.tileSize / 2f,
@@ -519,7 +517,7 @@ class ShopFloorScreen(
         }
 
         val machine = machineSpecsById[placedObject.catalogId]
-        renderer.color = machineFillColor(machine)
+        renderer.color = ShopFloorPalette.machineFill(machine)
         for (tile in shopFloor.occupiedTilesFor(placedObject)) {
             renderer.rect(
                 shopFloor.grid.worldXFor(tile) + 4f,
@@ -551,7 +549,7 @@ class ShopFloorScreen(
             return
         }
 
-        renderer.color = machineOutlineColor(machineSpecsById[placedObject.catalogId])
+        renderer.color = ShopFloorPalette.machineOutline(machineSpecsById[placedObject.catalogId])
         for (tile in shopFloor.occupiedTilesFor(placedObject)) {
             renderer.rect(
                 shopFloor.grid.worldXFor(tile) + 2f,
@@ -790,32 +788,6 @@ class ShopFloorScreen(
             Orientation.EAST, Orientation.WEST -> {
                 renderer.line(marker.tipX, marker.tipY - wingLength, marker.tipX, marker.tipY + wingLength)
             }
-        }
-    }
-
-    private fun machineFillColor(machine: MachineSpec?): Color {
-        return when {
-            machine == null -> Color(0.29f, 0.31f, 0.34f, 1f)
-            machine.type == MachineType.PRODUCER && machine.manuality == Manuality.HUMAN_OPERATED -> Color(0.74f, 0.45f, 0.24f, 1f)
-            machine.type == MachineType.PRODUCER && machine.manuality == Manuality.AUTOMATIC -> Color(0.80f, 0.64f, 0.22f, 1f)
-            machine.type == MachineType.QA && machine.manuality == Manuality.HUMAN_OPERATED -> Color(0.29f, 0.49f, 0.68f, 1f)
-            else -> Color(0.20f, 0.62f, 0.64f, 1f)
-        }
-    }
-
-    private fun machineOutlineColor(machine: MachineSpec?): Color {
-        return when {
-            machine == null -> Color(0.58f, 0.62f, 0.66f, 1f)
-            machine.type == MachineType.PRODUCER -> Color(0.98f, 0.79f, 0.40f, 1f)
-            else -> Color(0.67f, 0.87f, 0.90f, 1f)
-        }
-    }
-
-    private fun workerFillColor(role: WorkerRole?): Color {
-        return when (role) {
-            WorkerRole.PRODUCER_OPERATOR -> Color(0.86f, 0.56f, 0.30f, 1f)
-            WorkerRole.QA -> Color(0.22f, 0.69f, 0.82f, 1f)
-            null -> Color(0.66f, 0.69f, 0.73f, 1f)
         }
     }
 
@@ -1064,14 +1036,11 @@ class ShopFloorScreen(
     }
 
     private fun updatePointerState(screenX: Int, screenY: Int) {
-        scratchVector.set(screenX.toFloat(), screenY.toFloat(), 0f)
-        viewport.unproject(scratchVector)
-        pointerWorldX = scratchVector.x
-        pointerWorldY = scratchVector.y
+        pointerState.update(screenX, screenY)
 
         if (isShiftEnded) {
             hoveredCompletionAction = completionButtons()
-                .firstOrNull { it.bounds.contains(pointerWorldX, pointerWorldY) }
+                .firstOrNull { it.bounds.contains(pointerState.worldX, pointerState.worldY) }
                 ?.action
             hoveredContextAction = null
             isBackButtonHovered = false
@@ -1083,19 +1052,19 @@ class ShopFloorScreen(
         val contextMenu = workerContextMenu
         hoveredContextAction = contextMenu
             ?.options
-            ?.firstOrNull { it.bounds.contains(pointerWorldX, pointerWorldY) }
+            ?.firstOrNull { it.bounds.contains(pointerState.worldX, pointerState.worldY) }
             ?.action
         hoveredCompletionAction = null
-        val isContextMenuHovered = contextMenu?.bounds?.contains(pointerWorldX, pointerWorldY) == true
+        val isContextMenuHovered = contextMenu?.bounds?.contains(pointerState.worldX, pointerState.worldY) == true
 
-        isBackButtonHovered = backButtonBounds.contains(pointerWorldX, pointerWorldY)
+        isBackButtonHovered = backButtonBounds.contains(pointerState.worldX, pointerState.worldY)
         hoveredBankKey = if (!isBackButtonHovered && !isContextMenuHovered) {
-            bankEntries.firstOrNull { it.bounds.contains(pointerWorldX, pointerWorldY) }?.key
+            bankEntries.firstOrNull { it.bounds.contains(pointerState.worldX, pointerState.worldY) }?.key
         } else {
             null
         }
         hoveredTile = if (hoveredBankKey == null && !isBackButtonHovered && !isContextMenuHovered) {
-            shopFloor.grid.tileAt(pointerWorldX, pointerWorldY)
+            shopFloor.grid.tileAt(pointerState.worldX, pointerState.worldY)
         } else {
             null
         }
@@ -1206,8 +1175,8 @@ class ShopFloorScreen(
         val optionGap = 6f
         val padding = 6f
         val height = padding * 2f + actions.size * optionHeight + (actions.size - 1) * optionGap
-        val x = pointerWorldX.coerceIn(12f, GameConfig.virtualWidth - width - 12f)
-        val y = pointerWorldY.coerceIn(
+        val x = pointerState.worldX.coerceIn(12f, GameConfig.virtualWidth - width - 12f)
+        val y = pointerState.worldY.coerceIn(
             GameConfig.bankHeight + 12f,
             GameConfig.virtualHeight - GameConfig.hudHeight - height - 12f
         )
