@@ -15,14 +15,16 @@ import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.MachineType
 import com.faultory.core.content.ShopCatalog
-import com.faultory.core.content.WorkerProfile
-import com.faultory.core.content.WorkerRole
+import com.faultory.core.screens.shopfloor.BankPanel
 import com.faultory.core.screens.shopfloor.CatalogLookup
 import com.faultory.core.screens.shopfloor.FailureBlinkController
 import com.faultory.core.screens.shopfloor.MachineDragController
+import com.faultory.core.screens.shopfloor.PlacementController
 import com.faultory.core.screens.shopfloor.PointerState
 import com.faultory.core.screens.shopfloor.ShiftLifecycleController
 import com.faultory.core.screens.shopfloor.ShopFloorPalette
+import com.faultory.core.screens.shopfloor.WorkerAssignmentController
+import com.faultory.core.screens.shopfloor.WorkerContextAction
 import com.faultory.core.save.GameSave
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
@@ -32,8 +34,6 @@ import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
-import com.faultory.core.shop.WorkerAssignmentFailureReason
-import com.faultory.core.shop.WorkerAssignmentResult
 
 class ShopFloorScreen(
     private val game: FaultoryGame,
@@ -52,27 +52,16 @@ class ShopFloorScreen(
     )
     private val pointerState = PointerState(viewport)
     private val catalogLookup = CatalogLookup(shopCatalog)
-    private val machineSpecsById = catalogLookup.machineSpecsById
-    private val workerProfilesById = catalogLookup.workerProfilesById
-    private val productDefinitionsById = catalogLookup.productDefinitionsById
     private val titleLayout = GlyphLayout()
     private val hintLayout = GlyphLayout()
-    private val bankEntries = mutableListOf<BankEntry>()
     private val shiftLifecycle = ShiftLifecycleController(
         game = game,
         level = level,
         shopFloor = shopFloor,
-        workerProfilesById = workerProfilesById,
+        workerProfilesById = catalogLookup.workerProfilesById,
         initialSave = saveSnapshot
     )
-    private var selectedBankKey: BankEntryKey? = null
-    private var hoveredBankKey: BankEntryKey? = null
-    private var hoveredTile: TileCoordinate? = null
-    private var isBackButtonHovered = false
-    private var workerContextMenu: WorkerContextMenuState? = null
-    private var hoveredContextAction: WorkerContextAction? = null
-    private var hoveredCompletionAction: CompletionAction? = null
-    private var assignmentPendingWorkerId: String? = null
+    private val bankPanel = BankPanel(catalogLookup)
     private val failureBlink = FailureBlinkController()
     private val machineDrag = MachineDragController(
         shopFloor = shopFloor,
@@ -80,6 +69,23 @@ class ShopFloorScreen(
         failureBlink = failureBlink,
         shiftLifecycle = shiftLifecycle
     )
+    private val workerAssignment = WorkerAssignmentController(
+        shopFloor = shopFloor,
+        pointerState = pointerState,
+        catalogLookup = catalogLookup,
+        bankPanel = bankPanel,
+        failureBlink = failureBlink,
+        shiftLifecycle = shiftLifecycle
+    )
+    private val placement = PlacementController(
+        shopFloor = shopFloor,
+        catalogLookup = catalogLookup,
+        bankPanel = bankPanel,
+        shiftLifecycle = shiftLifecycle
+    )
+    private var hoveredTile: TileCoordinate? = null
+    private var isBackButtonHovered = false
+    private var hoveredCompletionAction: CompletionAction? = null
 
     private val inputProcessor = object : InputAdapter() {
         override fun keyDown(keycode: Int): Boolean {
@@ -98,11 +104,11 @@ class ShopFloorScreen(
             if (shiftLifecycle.isShiftEnded) {
                 return hoveredCompletionAction != null
             }
-            return hoveredBankKey != null ||
+            return bankPanel.hoveredKey != null ||
                 hoveredTile != null ||
                 isBackButtonHovered ||
-                workerContextMenu != null ||
-                assignmentPendingWorkerId != null ||
+                workerAssignment.isContextMenuOpen ||
+                workerAssignment.hasPendingAssignment ||
                 machineDrag.isDragging
         }
 
@@ -140,8 +146,8 @@ class ShopFloorScreen(
 
     override fun show() {
         viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
-        buildBankEntries()
-        layoutBankEntries()
+        bankPanel.rebuild(level)
+        bankPanel.layout()
         if (shiftLifecycle.finalizeIfNeeded()) {
             clearInteractionStateForShiftEnd()
         }
@@ -180,7 +186,7 @@ class ShopFloorScreen(
 
     override fun resize(width: Int, height: Int) {
         viewport.update(width, height, true)
-        layoutBankEntries()
+        bankPanel.layout()
     }
 
     override fun dispose() {
@@ -195,9 +201,9 @@ class ShopFloorScreen(
     }
 
     private fun canStartMachineDrag(): Boolean {
-        return selectedBankKey == null &&
-            assignmentPendingWorkerId == null &&
-            workerContextMenu == null &&
+        return bankPanel.selectedKey == null &&
+            !workerAssignment.hasPendingAssignment &&
+            !workerAssignment.isContextMenuOpen &&
             !isBackButtonHovered
     }
 
@@ -207,46 +213,39 @@ class ShopFloorScreen(
             return true
         }
 
-        if (handleContextMenuClick()) {
+        if (workerAssignment.handleContextMenuClick()) {
             return true
         }
 
-        if (handleAssignmentClick()) {
+        if (workerAssignment.handleAssignmentClick(hoveredTile)) {
             return true
         }
 
-        val bankKey = hoveredBankKey
+        val bankKey = bankPanel.hoveredKey
         if (bankKey != null) {
-            assignmentPendingWorkerId = null
-            workerContextMenu = null
-            selectedBankKey = if (selectedBankKey == bankKey) {
-                null
-            } else {
-                bankKey
-            }
+            workerAssignment.clear()
+            bankPanel.toggleSelect(bankKey)
             return true
         }
 
         val tile = hoveredTile ?: return false
-        return attemptPlacement(tile)
+        return placement.attemptPlacement(tile)
     }
 
     private fun handleRightClick(): Boolean {
         val worker = hoveredTile
             ?.let(shopFloor::objectAt)
             ?.takeIf { it.kind == PlacedShopObjectKind.WORKER }
-        val hadContextMenu = workerContextMenu != null
-        workerContextMenu = null
-        hoveredContextAction = null
+        val hadContextMenu = workerAssignment.closeContextMenuIfOpen()
 
         if (worker == null) {
             return hadContextMenu
         }
 
-        selectedBankKey = null
-        assignmentPendingWorkerId = null
+        bankPanel.clearSelection()
+        workerAssignment.cancelPendingAssignment()
         machineDrag.cancel()
-        openWorkerContextMenu(worker.id)
+        workerAssignment.openContextMenuFor(worker.id)
         return true
     }
 
@@ -268,64 +267,6 @@ class ShopFloorScreen(
             }
 
             null -> false
-        }
-    }
-
-    private fun handleContextMenuClick(): Boolean {
-        val contextMenu = workerContextMenu ?: return false
-        val selectedAction = hoveredContextAction
-        workerContextMenu = null
-        hoveredContextAction = null
-        return when (selectedAction) {
-            WorkerContextAction.ASSIGN_TO_MACHINE -> {
-                assignmentPendingWorkerId = contextMenu.workerId
-                selectedBankKey = null
-                true
-            }
-
-            WorkerContextAction.ASSIGN_TO_QA -> {
-                selectedBankKey = null
-                when (shopFloor.assignWorkerToQa(contextMenu.workerId, workerProfilesById)) {
-                    is WorkerAssignmentResult.Success -> shiftLifecycle.persist()
-                    is WorkerAssignmentResult.Failure -> {}
-                }
-                true
-            }
-
-            null -> true
-        }
-    }
-
-    private fun handleAssignmentClick(): Boolean {
-        val workerId = assignmentPendingWorkerId ?: return false
-        val machine = hoveredTile
-            ?.let(shopFloor::objectAt)
-            ?.takeIf { it.kind == PlacedShopObjectKind.MACHINE }
-
-        if (machine == null) {
-            assignmentPendingWorkerId = null
-            return true
-        }
-
-        return when (val result = shopFloor.assignWorkerToMachine(workerId, machine.id, workerProfilesById)) {
-            is WorkerAssignmentResult.Success -> {
-                assignmentPendingWorkerId = null
-                shiftLifecycle.persist()
-                true
-            }
-
-            is WorkerAssignmentResult.Failure -> {
-                if (result.reason in setOf(
-                        WorkerAssignmentFailureReason.INELIGIBLE_OPERATOR,
-                        WorkerAssignmentFailureReason.NO_FREE_NEIGHBOR_TILE,
-                        WorkerAssignmentFailureReason.NO_PATH,
-                        WorkerAssignmentFailureReason.MACHINE_NOT_FOUND
-                    )
-                ) {
-                    failureBlink.start(machine.id)
-                }
-                true
-            }
         }
     }
 
@@ -374,10 +315,10 @@ class ShopFloorScreen(
             drawProductFill(renderer, product)
         }
 
-        for (entry in bankEntries) {
+        for (entry in bankPanel.entries) {
             renderer.color = when {
-                entry.key == selectedBankKey -> Color(0.31f, 0.56f, 0.63f, 1f)
-                entry.key == hoveredBankKey -> Color(0.24f, 0.29f, 0.34f, 1f)
+                entry.key == bankPanel.selectedKey -> Color(0.31f, 0.56f, 0.63f, 1f)
+                entry.key == bankPanel.hoveredKey -> Color(0.24f, 0.29f, 0.34f, 1f)
                 else -> Color(0.18f, 0.21f, 0.25f, 1f)
             }
             renderer.rect(entry.bounds.x, entry.bounds.y, entry.bounds.width, entry.bounds.height)
@@ -443,8 +384,8 @@ class ShopFloorScreen(
         }
         renderer.rect(backButtonBounds.x, backButtonBounds.y, backButtonBounds.width, backButtonBounds.height)
 
-        for (entry in bankEntries) {
-            renderer.color = if (entry.key == selectedBankKey) {
+        for (entry in bankPanel.entries) {
+            renderer.color = if (entry.key == bankPanel.selectedKey) {
                 Color(0.99f, 0.90f, 0.62f, 1f)
             } else {
                 Color(0.44f, 0.49f, 0.54f, 1f)
@@ -471,7 +412,7 @@ class ShopFloorScreen(
             return
         }
 
-        val machine = machineSpecsById[placedObject.catalogId]
+        val machine = catalogLookup.machineSpecsById[placedObject.catalogId]
         renderer.color = ShopFloorPalette.machineFill(machine)
         for (tile in shopFloor.occupiedTilesFor(placedObject)) {
             renderer.rect(
@@ -493,7 +434,7 @@ class ShopFloorScreen(
                 14f
             )
 
-            if (placedObject.id == assignmentPendingWorkerId) {
+            if (placedObject.id == workerAssignment.assignmentPendingWorkerId) {
                 renderer.color = Color(0.99f, 0.90f, 0.62f, 1f)
                 renderer.circle(
                     renderPosition.worldX + GameConfig.tileSize / 2f,
@@ -504,7 +445,7 @@ class ShopFloorScreen(
             return
         }
 
-        renderer.color = ShopFloorPalette.machineOutline(machineSpecsById[placedObject.catalogId])
+        renderer.color = ShopFloorPalette.machineOutline(catalogLookup.machineSpecsById[placedObject.catalogId])
         for (tile in shopFloor.occupiedTilesFor(placedObject)) {
             renderer.rect(
                 shopFloor.grid.worldXFor(tile) + 2f,
@@ -546,7 +487,7 @@ class ShopFloorScreen(
     }
 
     private fun drawAssignmentTargetHover(renderer: ShapeRenderer) {
-        if (assignmentPendingWorkerId == null) {
+        if (!workerAssignment.hasPendingAssignment) {
             return
         }
 
@@ -591,11 +532,11 @@ class ShopFloorScreen(
     }
 
     private fun drawContextMenuFill(renderer: ShapeRenderer) {
-        val contextMenu = workerContextMenu ?: return
+        val contextMenu = workerAssignment.contextMenu ?: return
         renderer.color = Color(0.14f, 0.16f, 0.19f, 0.98f)
         renderer.rect(contextMenu.bounds.x, contextMenu.bounds.y, contextMenu.bounds.width, contextMenu.bounds.height)
         for (option in contextMenu.options) {
-            renderer.color = if (hoveredContextAction == option.action) {
+            renderer.color = if (workerAssignment.hoveredContextAction == option.action) {
                 Color(0.28f, 0.34f, 0.40f, 1f)
             } else {
                 Color(0.19f, 0.23f, 0.28f, 1f)
@@ -610,11 +551,11 @@ class ShopFloorScreen(
     }
 
     private fun drawContextMenuOutline(renderer: ShapeRenderer) {
-        val contextMenu = workerContextMenu ?: return
+        val contextMenu = workerAssignment.contextMenu ?: return
         renderer.color = Color(0.55f, 0.61f, 0.66f, 1f)
         renderer.rect(contextMenu.bounds.x, contextMenu.bounds.y, contextMenu.bounds.width, contextMenu.bounds.height)
         for (option in contextMenu.options) {
-            renderer.color = if (hoveredContextAction == option.action) {
+            renderer.color = if (workerAssignment.hoveredContextAction == option.action) {
                 Color(0.99f, 0.90f, 0.62f, 1f)
             } else {
                 Color(0.68f, 0.74f, 0.79f, 1f)
@@ -683,8 +624,7 @@ class ShopFloorScreen(
 
     private fun drawPlacementPreview(renderer: ShapeRenderer) {
         val previewTile = hoveredTile ?: return
-        val selectedKey = selectedBankKey ?: return
-        val previewObject = previewPlacementObject(selectedKey, previewTile) ?: return
+        val previewObject = placement.previewPlacementObject(previewTile) ?: return
         val isValid = shopFloor.canPlaceObject(previewObject)
         renderer.color = if (isValid) {
             Color(0.24f, 0.69f, 0.50f, 0.60f)
@@ -703,8 +643,7 @@ class ShopFloorScreen(
 
     private fun drawPlacementPreviewOutline(renderer: ShapeRenderer) {
         val previewTile = hoveredTile ?: return
-        val selectedKey = selectedBankKey ?: return
-        val previewObject = previewPlacementObject(selectedKey, previewTile) ?: return
+        val previewObject = placement.previewPlacementObject(previewTile) ?: return
         renderer.color = if (shopFloor.canPlaceObject(previewObject)) {
             Color(0.99f, 0.90f, 0.62f, 1f)
         } else {
@@ -781,7 +720,7 @@ class ShopFloorScreen(
         titleLayout.setText(font, "Machines")
         font.draw(batch, titleLayout, GameConfig.virtualWidth / 2f + 40f, GameConfig.bankHeight - 18f)
 
-        for (entry in bankEntries) {
+        for (entry in bankPanel.entries) {
             font.color = Color(0.95f, 0.96f, 0.97f, 1f)
             titleLayout.setText(font, entry.displayName)
             font.draw(batch, titleLayout, entry.bounds.x + 12f, entry.bounds.y + entry.bounds.height - 20f)
@@ -791,10 +730,10 @@ class ShopFloorScreen(
             font.draw(batch, hintLayout, entry.bounds.x + 12f, entry.bounds.y + 24f)
         }
 
-        val contextMenu = workerContextMenu
+        val contextMenu = workerAssignment.contextMenu
         if (contextMenu != null) {
             for (option in contextMenu.options) {
-                font.color = if (hoveredContextAction == option.action) {
+                font.color = if (workerAssignment.hoveredContextAction == option.action) {
                     Color(1f, 0.94f, 0.71f, 1f)
                 } else {
                     Color(0.92f, 0.95f, 0.97f, 1f)
@@ -878,19 +817,19 @@ class ShopFloorScreen(
         if (shiftLifecycle.isShiftEnded) {
             return "Shift complete. Review the results window."
         }
-        val assignmentWorker = assignmentPendingWorkerId
+        val assignmentWorker = workerAssignment.assignmentPendingWorkerId
             ?.let(shopFloor::findObjectById)
-            ?.let { workerProfilesById[it.catalogId]?.displayName ?: "Worker" }
+            ?.let { catalogLookup.workerProfilesById[it.catalogId]?.displayName ?: "Worker" }
         if (assignmentWorker != null) {
             return "Assigning $assignmentWorker: click a machine to assign, or click anywhere else to cancel."
         }
 
-        val selectedKey = selectedBankKey ?: return "Left click a bank item to place it. Right click a worker to assign. Drag a placed machine to rotate it."
-        val entry = bankEntries.firstOrNull { it.key == selectedKey } ?: return ""
-        return when (selectedKey.kind) {
+        val entry = bankPanel.selectedEntry()
+            ?: return "Left click a bank item to place it. Right click a worker to assign. Drag a placed machine to rotate it."
+        return when (entry.key.kind) {
             PlacedShopObjectKind.WORKER -> "Selected: ${entry.displayName}. Workers use one tile and turn while moving."
             PlacedShopObjectKind.MACHINE -> {
-                val machine = machineSpecsById[selectedKey.catalogId]
+                val machine = catalogLookup.machineSpecsById[entry.key.catalogId]
                 if (machine?.type == MachineType.QA) {
                     "Selected: ${entry.displayName}. QA machines place next to the belt and auto-face it. Drag placed machines to rotate."
                 } else {
@@ -944,46 +883,7 @@ class ShopFloorScreen(
     }
 
     private fun productDisplayName(productId: String): String {
-        return productDefinitionsById[productId]?.displayName ?: productId
-    }
-
-    private fun buildBankEntries() {
-        bankEntries.clear()
-
-        for (workerId in level.availableWorkerIds) {
-            val worker = workerProfilesById[workerId] ?: continue
-            bankEntries += BankEntry(
-                key = BankEntryKey(PlacedShopObjectKind.WORKER, worker.id),
-                displayName = worker.displayName
-            )
-        }
-
-        for (machineId in level.availableMachineIds) {
-            val machine = machineSpecsById[machineId] ?: continue
-            bankEntries += BankEntry(
-                key = BankEntryKey(PlacedShopObjectKind.MACHINE, machine.id),
-                displayName = machine.displayName
-            )
-        }
-    }
-
-    private fun layoutBankEntries() {
-        val workerEntries = bankEntries.filter { it.key.kind == PlacedShopObjectKind.WORKER }
-        val machineEntries = bankEntries.filter { it.key.kind == PlacedShopObjectKind.MACHINE }
-        layoutBankSection(workerEntries, 40f, 24f)
-        layoutBankSection(machineEntries, GameConfig.virtualWidth / 2f + 40f, 24f)
-    }
-
-    private fun layoutBankSection(entries: List<BankEntry>, startX: Float, startY: Float) {
-        val cardWidth = 150f
-        val cardHeight = 92f
-        val gap = 16f
-        var currentX = startX
-
-        for (entry in entries) {
-            entry.bounds.set(currentX, startY, cardWidth, cardHeight)
-            currentX += cardWidth + gap
-        }
+        return catalogLookup.productDefinitionsById[productId]?.displayName ?: productId
     }
 
     private fun updatePointerState(screenX: Int, screenY: Int) {
@@ -993,164 +893,27 @@ class ShopFloorScreen(
             hoveredCompletionAction = completionButtons()
                 .firstOrNull { it.bounds.contains(pointerState.worldX, pointerState.worldY) }
                 ?.action
-            hoveredContextAction = null
+            workerAssignment.clearHover()
             isBackButtonHovered = false
-            hoveredBankKey = null
+            bankPanel.clearHover()
             hoveredTile = null
             return
         }
 
-        val contextMenu = workerContextMenu
-        hoveredContextAction = contextMenu
-            ?.options
-            ?.firstOrNull { it.bounds.contains(pointerState.worldX, pointerState.worldY) }
-            ?.action
+        val isContextMenuHovered = workerAssignment.updateHover(pointerState.worldX, pointerState.worldY)
         hoveredCompletionAction = null
-        val isContextMenuHovered = contextMenu?.bounds?.contains(pointerState.worldX, pointerState.worldY) == true
 
         isBackButtonHovered = backButtonBounds.contains(pointerState.worldX, pointerState.worldY)
-        hoveredBankKey = if (!isBackButtonHovered && !isContextMenuHovered) {
-            bankEntries.firstOrNull { it.bounds.contains(pointerState.worldX, pointerState.worldY) }?.key
-        } else {
-            null
-        }
-        hoveredTile = if (hoveredBankKey == null && !isBackButtonHovered && !isContextMenuHovered) {
+        bankPanel.updateHover(
+            pointerState.worldX,
+            pointerState.worldY,
+            enabled = !isBackButtonHovered && !isContextMenuHovered
+        )
+        hoveredTile = if (bankPanel.hoveredKey == null && !isBackButtonHovered && !isContextMenuHovered) {
             shopFloor.grid.tileAt(pointerState.worldX, pointerState.worldY)
         } else {
             null
         }
-    }
-
-    private fun attemptPlacement(tile: TileCoordinate): Boolean {
-        val selectedKey = selectedBankKey ?: return false
-        val placedObject = placeablePlacementObject(selectedKey, tile) ?: return false
-        if (!shopFloor.placeObject(placedObject)) {
-            return false
-        }
-
-        shiftLifecycle.persist()
-        selectedBankKey = null
-        return true
-    }
-
-    private fun defaultRoleFor(worker: WorkerProfile): WorkerRole {
-        return worker.profileFor(WorkerRole.QA)?.role
-            ?: worker.roleProfiles.first().role
-    }
-
-    private fun previewPlacementObject(
-        bankKey: BankEntryKey,
-        tile: TileCoordinate
-    ): PlacedShopObject? {
-        return resolvedPlacementObject(bankKey, tile, "preview-${bankKey.catalogId}", allowFallback = true)
-    }
-
-    private fun placeablePlacementObject(
-        bankKey: BankEntryKey,
-        tile: TileCoordinate
-    ): PlacedShopObject? {
-        val objectId = shopFloor.createObjectId(bankKey.kind)
-        return resolvedPlacementObject(bankKey, tile, objectId, allowFallback = false)
-    }
-
-    private fun resolvedPlacementObject(
-        bankKey: BankEntryKey,
-        tile: TileCoordinate,
-        objectId: String,
-        allowFallback: Boolean
-    ): PlacedShopObject? {
-        val candidates = placementCandidates(bankKey, tile, objectId)
-        return candidates.firstOrNull(shopFloor::canPlaceObject)
-            ?: if (allowFallback) candidates.firstOrNull() else null
-    }
-
-    private fun placementCandidates(
-        bankKey: BankEntryKey,
-        tile: TileCoordinate,
-        objectId: String
-    ): List<PlacedShopObject> {
-        return when (bankKey.kind) {
-            PlacedShopObjectKind.WORKER -> {
-                val worker = workerProfilesById[bankKey.catalogId] ?: return emptyList()
-                listOf(
-                    PlacedShopObject(
-                        id = objectId,
-                        catalogId = worker.id,
-                        kind = PlacedShopObjectKind.WORKER,
-                        position = tile,
-                        orientation = Orientation.SOUTH,
-                        workerRole = defaultRoleFor(worker)
-                    )
-                )
-            }
-
-            PlacedShopObjectKind.MACHINE -> {
-                val machine = machineSpecsById[bankKey.catalogId] ?: return emptyList()
-                val orientations = if (machine.type == MachineType.QA) {
-                    Orientation.entries
-                } else {
-                    listOf(Orientation.NORTH)
-                }
-                orientations.map { orientation ->
-                    PlacedShopObject(
-                        id = objectId,
-                        catalogId = machine.id,
-                        kind = PlacedShopObjectKind.MACHINE,
-                        position = tile,
-                        orientation = orientation
-                    )
-                }
-            }
-        }
-    }
-
-    private fun openWorkerContextMenu(workerId: String) {
-        val worker = shopFloor.findObjectById(workerId) ?: return
-        val workerProfile = workerProfilesById[worker.catalogId] ?: return
-        val actions = buildList {
-            add(WorkerContextAction.ASSIGN_TO_MACHINE)
-            val qaRole = workerProfile.profileFor(WorkerRole.QA)
-            if (qaRole?.inspectionDurationSeconds != null &&
-                qaRole.detectionAccuracy != null &&
-                qaRole.faultyProductStrategy != null
-            ) {
-                add(WorkerContextAction.ASSIGN_TO_QA)
-            }
-        }
-        if (actions.isEmpty()) {
-            return
-        }
-
-        val width = 188f
-        val optionHeight = 38f
-        val optionGap = 6f
-        val padding = 6f
-        val height = padding * 2f + actions.size * optionHeight + (actions.size - 1) * optionGap
-        val x = pointerState.worldX.coerceIn(12f, GameConfig.virtualWidth - width - 12f)
-        val y = pointerState.worldY.coerceIn(
-            GameConfig.bankHeight + 12f,
-            GameConfig.virtualHeight - GameConfig.hudHeight - height - 12f
-        )
-        workerContextMenu = WorkerContextMenuState(
-            workerId = workerId,
-            bounds = Rectangle(x, y, width, height),
-            options = actions.mapIndexed { index, action ->
-                WorkerContextMenuOption(
-                    action = action,
-                    label = when (action) {
-                        WorkerContextAction.ASSIGN_TO_MACHINE -> "Assign To Machine"
-                        WorkerContextAction.ASSIGN_TO_QA -> "Assign To QA"
-                    },
-                    bounds = Rectangle(
-                        x + padding,
-                        y + height - padding - optionHeight - index * (optionHeight + optionGap),
-                        width - padding * 2f,
-                        optionHeight
-                    )
-                )
-            }
-        )
-        hoveredContextAction = workerContextMenu?.options?.firstOrNull()?.action
     }
 
     private fun renderPositionFor(placedObject: PlacedShopObject): RenderPosition {
@@ -1251,39 +1014,14 @@ class ShopFloorScreen(
     }
 
     private fun clearInteractionStateForShiftEnd() {
-        selectedBankKey = null
-        hoveredBankKey = null
+        bankPanel.clearSelection()
+        bankPanel.clearHover()
         hoveredTile = null
         isBackButtonHovered = false
-        workerContextMenu = null
-        hoveredContextAction = null
-        assignmentPendingWorkerId = null
+        workerAssignment.clear()
         machineDrag.cancel()
     }
 }
-
-private data class BankEntry(
-    val key: BankEntryKey,
-    val displayName: String,
-    val bounds: Rectangle = Rectangle()
-)
-
-private data class BankEntryKey(
-    val kind: PlacedShopObjectKind,
-    val catalogId: String
-)
-
-private data class WorkerContextMenuState(
-    val workerId: String,
-    val bounds: Rectangle,
-    val options: List<WorkerContextMenuOption>
-)
-
-private data class WorkerContextMenuOption(
-    val action: WorkerContextAction,
-    val label: String,
-    val bounds: Rectangle
-)
 
 private data class RenderPosition(
     val worldX: Float,
@@ -1302,11 +1040,6 @@ private data class CompletionButton(
     val label: String,
     val bounds: Rectangle
 )
-
-private enum class WorkerContextAction {
-    ASSIGN_TO_MACHINE,
-    ASSIGN_TO_QA
-}
 
 private enum class CompletionAction {
     REPLAY_LEVEL,
