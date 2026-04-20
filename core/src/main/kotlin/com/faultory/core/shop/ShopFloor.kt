@@ -10,7 +10,6 @@ import com.faultory.core.content.MachineType
 import com.faultory.core.content.Manuality
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
-import com.faultory.core.shop.physics.ShopPhysics
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -21,8 +20,7 @@ class ShopFloor(
     initialProducts: List<ShopProduct> = emptyList(),
     initialMachineProductionStates: List<MachineProductionState> = emptyList(),
     initialQaInspectionStates: List<QaInspectionState> = emptyList(),
-    private val random: Random = Random.Default,
-    private val physics: ShopPhysics = ShopPhysics()
+    private val random: Random = Random.Default
 ) : Disposable {
     val grid = ShopGrid(blueprint)
 
@@ -62,7 +60,6 @@ class ShopFloor(
         workerProfilesById: Map<String, WorkerProfile>
     ) {
         elapsedSeconds += deltaSeconds
-        physics.step(deltaSeconds)
 
         updateWorkerMovement(deltaSeconds, workerProfilesById)
         resolveWorkerObjectives()

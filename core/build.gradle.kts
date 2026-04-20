@@ -5,7 +5,6 @@ plugins {
 
 dependencies {
     implementation(libs.gdxCore)
-    implementation(libs.jbox2dLibrary)
     implementation(libs.kotlinxSerializationJson)
     testImplementation(kotlin("test"))
 }

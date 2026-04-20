@@ -1,6 +1,6 @@
 # faultory
 
-Desktop-only factory-quality scaffold built with Kotlin, LibGDX, JBox2D, and `kotlinx.serialization` for JSON saves.
+Desktop-only factory-quality scaffold built with Kotlin, LibGDX, and `kotlinx.serialization` for JSON saves.
 
 ## Modules
 
@@ -12,7 +12,7 @@ Desktop-only factory-quality scaffold built with Kotlin, LibGDX, JBox2D, and `ko
 
 - `FaultoryGame` bootstraps the runtime and creates a starter save slot.
 - `BootScreen` loads prototype content and switches into a placeholder shop-floor screen.
-- `ShopFloor` wraps a JBox2D-backed simulation shell for future worker and product movement.
+- `ShopFloor` coordinates grid-based worker and product movement on the shop floor.
 - Save files are encoded as JSON and written outside the repo:
   - Windows: `%APPDATA%\Faultory\saves`
   - Fallback: `~/.faultory/saves`
@@ -31,7 +31,6 @@ Desktop-only factory-quality scaffold built with Kotlin, LibGDX, JBox2D, and `ko
 
 ### Structural debt to address before scaling
 - **Split `ShopFloorScreen` (1 459 lines)** into at least three parts: a renderer, an input handler, and a UI-state coordinator. The current class mixes rendering, input, save scheduling, game orchestration, and all intermediate UI state.
-- **Remove JBox2D or commit to it.** `ShopPhysics` wraps a gravity-free Box2D world that does nothing for grid-based tile movement. Either give the physics engine a real role (collision, ragdoll, projectiles) or remove the dependency and the wrapper entirely.
 - **Save migration strategy.** `JsonSaveCodec.isCompatibleVersion` does an exact-version check; any bump silently drops the save. Define whether to auto-wipe, prompt the user, or implement a migration chain before `CURRENT_VERSION` stabilises.
 - **Reduce auto-save frequency.** Flushing to disk every 0.5 s (120 writes/min) is unnecessary for a desktop game. A 5–10 s interval or save-on-pause/exit is sufficient.
 - **Eliminate dual elapsed-time tracking.** `ShopFloor.elapsedSeconds` and `ProductionDayDirector`'s own timer are kept in parallel and can drift. One authoritative clock should drive both.
