@@ -21,6 +21,7 @@ Desktop-only factory-quality scaffold built with Kotlin, LibGDX, and `kotlinx.se
 
 - `./gradlew :desktop:run`
 - `./gradlew build`
+- `./gradlew :editor:run`
 
 ### Structural debt to address before scaling
 - **Save migration strategy.** `JsonSaveCodec.isCompatibleVersion` does an exact-version check; any bump silently drops the save. Define whether to auto-wipe, prompt the user, or implement a migration chain before `CURRENT_VERSION` stabilises.
