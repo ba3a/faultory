@@ -2,6 +2,7 @@ package com.faultory.core.screens.shopfloor
 
 import com.faultory.core.FaultoryGame
 import com.faultory.core.assets.AssetPaths
+import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.WorkerProfile
@@ -58,7 +59,7 @@ class ShiftLifecycleController(
         }
         dayDirector.update(activeDelta)
         autosaveElapsedSeconds += activeDelta
-        if (autosaveElapsedSeconds >= 0.5f) {
+        if (autosaveElapsedSeconds >= GameConfig.autosaveIntervalSeconds) {
             persist()
             autosaveElapsedSeconds = 0f
         }

@@ -114,6 +114,10 @@ class ShopFloorScreen(
         }
     }
 
+    override fun pause() {
+        shiftLifecycle.persistIfNeededOnHide()
+    }
+
     override fun render(delta: Float) {
         if (!shiftLifecycle.isShiftEnded) {
             val activeDelta = shiftLifecycle.tick(delta)

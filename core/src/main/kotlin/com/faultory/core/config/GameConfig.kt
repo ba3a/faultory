@@ -12,4 +12,5 @@ object GameConfig {
     const val conveyorSpeedTilesPerSecond = 2.5f
     const val targetFps = 60
     const val saveDirectoryName = "saves"
+    const val autosaveIntervalSeconds = 5f
 }
