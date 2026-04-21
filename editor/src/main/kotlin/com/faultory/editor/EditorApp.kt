@@ -1,12 +1,17 @@
 package com.faultory.editor
 
-import com.badlogic.gdx.ApplicationAdapter
-import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.Game
+import com.faultory.editor.screens.EditorScreen
+import com.kotcrab.vis.ui.VisUI
 
-class EditorApp : ApplicationAdapter() {
-    override fun render() {
-        Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1f)
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
+class EditorApp : Game() {
+    override fun create() {
+        VisUI.load()
+        setScreen(EditorScreen())
+    }
+
+    override fun dispose() {
+        super.dispose()
+        VisUI.dispose()
     }
 }
