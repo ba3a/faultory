@@ -133,15 +133,15 @@ class ShopFloorScreen(
         viewport.apply()
         viewport.camera.update()
 
-        val shapeRenderer = game.shapeRenderer
+        val shapeRenderer = game.renderContext.shapeRenderer
         shapeRenderer.projectionMatrix = viewport.camera.combined
-        game.spriteBatch.projectionMatrix = viewport.camera.combined
+        game.renderContext.spriteBatch.projectionMatrix = viewport.camera.combined
 
         view.render(
             ShopFloorRenderContext(
                 shapeRenderer = shapeRenderer,
-                spriteBatch = game.spriteBatch,
-                font = game.uiFont,
+                spriteBatch = game.renderContext.spriteBatch,
+                font = game.renderContext.uiFont,
                 titleLayout = titleLayout,
                 hintLayout = hintLayout,
                 viewport = viewport

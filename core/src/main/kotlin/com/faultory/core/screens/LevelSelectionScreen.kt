@@ -108,7 +108,7 @@ class LevelSelectionScreen(
         viewport.apply()
         viewport.camera.update()
 
-        val renderer = game.shapeRenderer
+        val renderer = game.renderContext.shapeRenderer
         renderer.projectionMatrix = viewport.camera.combined
 
         drawShapes(renderer)
@@ -155,8 +155,8 @@ class LevelSelectionScreen(
     }
 
     private fun drawText() {
-        val batch = game.spriteBatch
-        val font = game.uiFont
+        val batch = game.renderContext.spriteBatch
+        val font = game.renderContext.uiFont
         batch.projectionMatrix = viewport.camera.combined
 
         batch.begin()

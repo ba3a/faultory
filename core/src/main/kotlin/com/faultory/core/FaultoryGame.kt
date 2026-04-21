@@ -12,6 +12,7 @@ import com.faultory.core.content.LevelCatalogAssetLoader
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.ShopCatalog
 import com.faultory.core.content.ShopCatalogAssetLoader
+import com.faultory.core.render.RenderContext
 import com.faultory.core.save.GameSave
 import com.faultory.core.save.LocalSaveRepository
 import com.faultory.core.save.SaveRepository
@@ -21,13 +22,7 @@ import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopBlueprintAssetLoader
 
 class FaultoryGame : Game() {
-    lateinit var spriteBatch: SpriteBatch
-        private set
-
-    lateinit var uiFont: BitmapFont
-        private set
-
-    lateinit var shapeRenderer: ShapeRenderer
+    lateinit var renderContext: RenderContext
         private set
 
     lateinit var saveRepository: SaveRepository
@@ -37,9 +32,11 @@ class FaultoryGame : Game() {
         private set
 
     override fun create() {
-        spriteBatch = SpriteBatch()
-        uiFont = BitmapFont()
-        shapeRenderer = ShapeRenderer()
+        renderContext = RenderContext(
+            spriteBatch = SpriteBatch(),
+            uiFont = BitmapFont(),
+            shapeRenderer = ShapeRenderer()
+        )
         saveRepository = LocalSaveRepository()
 
         assetManager = AssetManager(InternalFileHandleResolver()).apply {
@@ -55,9 +52,7 @@ class FaultoryGame : Game() {
 
     override fun dispose() {
         super.dispose()
-        spriteBatch.dispose()
-        uiFont.dispose()
-        shapeRenderer.dispose()
+        renderContext.dispose()
         assetManager.dispose()
     }
 

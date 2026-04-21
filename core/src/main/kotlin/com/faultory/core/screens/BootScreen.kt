@@ -68,7 +68,7 @@ class BootScreen(
 
     private fun drawProgress(progress: Float) {
         viewport.apply()
-        val renderer = game.shapeRenderer
+        val renderer = game.renderContext.shapeRenderer
         renderer.projectionMatrix = viewport.camera.combined
 
         val barWidth = 480f
