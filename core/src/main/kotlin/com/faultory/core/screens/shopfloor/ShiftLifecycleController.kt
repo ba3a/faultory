@@ -1,9 +1,7 @@
 package com.faultory.core.screens.shopfloor
 
 import com.faultory.core.FaultoryGame
-import com.faultory.core.assets.AssetPaths
 import com.faultory.core.config.GameConfig
-import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.save.GameSave
@@ -13,6 +11,7 @@ import com.faultory.core.systems.ProductionDayDirector
 class ShiftLifecycleController(
     private val game: FaultoryGame,
     private val level: LevelDefinition,
+    val nextLevel: LevelDefinition?,
     private val shopFloor: ShopFloor,
     private val workerProfilesById: Map<String, WorkerProfile>,
     initialSave: GameSave
@@ -34,13 +33,6 @@ class ShiftLifecycleController(
 
     private var autosaveElapsedSeconds = 0f
     private var persistOnHide = true
-
-    val nextLevel: LevelDefinition? by lazy {
-        level.recommendedNextLevelId?.let { nextLevelId ->
-            game.assetManager.get(AssetPaths.levelCatalog, LevelCatalog::class.java)
-                .levels.firstOrNull { it.id == nextLevelId }
-        }
-    }
 
     fun tick(delta: Float): Float {
         if (isShiftEnded) {

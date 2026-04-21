@@ -9,6 +9,7 @@ import com.badlogic.gdx.utils.viewport.FitViewport
 import com.faultory.core.FaultoryGame
 import com.faultory.core.assets.AssetPaths
 import com.faultory.core.config.GameConfig
+import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.ShopCatalog
 import com.faultory.core.shop.ShopBlueprint
@@ -47,6 +48,10 @@ class BootScreen(
 
     private fun startLevel(level: LevelDefinition) {
         val shopCatalog = game.assetManager.get(AssetPaths.shopCatalog, ShopCatalog::class.java)
+        val levelCatalog = game.assetManager.get(AssetPaths.levelCatalog, LevelCatalog::class.java)
+        val nextLevel = level.recommendedNextLevelId?.let { nextId ->
+            levelCatalog.levels.firstOrNull { it.id == nextId }
+        }
         val shopBlueprint = game.assetManager.get(level.shopAssetPath, ShopBlueprint::class.java)
         val save = game.loadOrCreateLevelSave(
             slotId = level.id,
@@ -63,7 +68,7 @@ class BootScreen(
             initialQaInspectionStates = save.activeShift.qaInspectionStates
         )
 
-        game.setScreen(ShopFloorScreen(game, level, shopFloor, save, shopCatalog))
+        game.setScreen(ShopFloorScreen(game, level, nextLevel, shopFloor, save, shopCatalog))
     }
 
     private fun drawProgress(progress: Float) {

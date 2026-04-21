@@ -35,6 +35,7 @@ import com.faultory.core.shop.ShopFloor
 class ShopFloorScreen(
     private val game: FaultoryGame,
     private val level: LevelDefinition,
+    private val nextLevel: LevelDefinition?,
     private val shopFloor: ShopFloor,
     saveSnapshot: GameSave,
     shopCatalog: ShopCatalog
@@ -47,6 +48,7 @@ class ShopFloorScreen(
     private val shiftLifecycle = ShiftLifecycleController(
         game = game,
         level = level,
+        nextLevel = nextLevel,
         shopFloor = shopFloor,
         workerProfilesById = catalogLookup.workerProfilesById,
         initialSave = saveSnapshot
