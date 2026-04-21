@@ -24,5 +24,4 @@ Desktop-only factory-quality scaffold built with Kotlin, LibGDX, and `kotlinx.se
 
 ### Structural debt to address before scaling
 - **Save migration strategy.** `JsonSaveCodec.isCompatibleVersion` does an exact-version check; any bump silently drops the save. Define whether to auto-wipe, prompt the user, or implement a migration chain before `CURRENT_VERSION` stabilises.
-- **Remove redundant `resolveWorkerObjectives()` calls.** It is called four times inside a single `ShopFloor.update()` tick (after each sub-system). A single call at the end of the tick is correct; the repeated calls mask ordering issues that should be fixed directly.
 - **Pass the resolved `LevelDefinition?` through `ShopFloorScreen`.** `ShiftLifecycleController.nextLevel` now hits the cached `AssetManager` catalog (O(1)), but threading the resolved value in from `BootScreen` would remove the lookup entirely.

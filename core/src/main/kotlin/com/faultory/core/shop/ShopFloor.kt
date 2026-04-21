@@ -57,11 +57,8 @@ class ShopFloor(
         workerProfilesById: Map<String, WorkerProfile>
     ) {
         updateWorkerMovement(deltaSeconds, workerProfilesById)
-        resolveWorkerObjectives()
         updateMachineProduction(deltaSeconds, workerProfilesById)
-        resolveWorkerObjectives()
         updateQaInspections(deltaSeconds, workerProfilesById)
-        resolveWorkerObjectives()
         updateConveyor(deltaSeconds)
         resolveWorkerObjectives()
     }
