@@ -10,7 +10,9 @@ dependencies {
     implementation(libs.gdxCore)
     implementation(libs.gdxBackendLwjgl3)
     implementation(libs.visUi)
+    implementation(libs.kotlinxSerializationJson)
     runtimeOnly("com.badlogicgames.gdx:gdx-platform:${libs.versions.gdx.get()}:natives-desktop")
+    testImplementation(kotlin("test"))
 }
 
 application {
