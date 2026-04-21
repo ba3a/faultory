@@ -24,9 +24,6 @@ class ShopFloor(
 ) : Disposable {
     val grid = ShopGrid(blueprint)
 
-    var elapsedSeconds: Float = 0f
-        private set
-
     private val mutablePlacedObjects = initialPlacements.toMutableList()
     private val mutableActiveProducts = initialProducts.toMutableList()
     private val mutableMachineProductionStates = initialMachineProductionStates.toMutableList()
@@ -59,8 +56,6 @@ class ShopFloor(
         deltaSeconds: Float,
         workerProfilesById: Map<String, WorkerProfile>
     ) {
-        elapsedSeconds += deltaSeconds
-
         updateWorkerMovement(deltaSeconds, workerProfilesById)
         resolveWorkerObjectives()
         updateMachineProduction(deltaSeconds, workerProfilesById)
