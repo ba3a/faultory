@@ -2,6 +2,7 @@ package com.faultory.core.screens.shopfloor
 
 import com.faultory.core.FaultoryGame
 import com.faultory.core.assets.AssetPaths
+import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.save.GameSave
@@ -35,7 +36,8 @@ class ShiftLifecycleController(
 
     val nextLevel: LevelDefinition? by lazy {
         level.recommendedNextLevelId?.let { nextLevelId ->
-            game.levelCatalogLoader.load(AssetPaths.levelCatalog).levels.firstOrNull { it.id == nextLevelId }
+            game.assetManager.get(AssetPaths.levelCatalog, LevelCatalog::class.java)
+                .levels.firstOrNull { it.id == nextLevelId }
         }
     }
 

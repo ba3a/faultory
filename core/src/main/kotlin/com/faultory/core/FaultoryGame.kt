@@ -1,18 +1,24 @@
 package com.faultory.core
 
 import com.badlogic.gdx.Game
+import com.badlogic.gdx.assets.AssetManager
+import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
-import com.faultory.core.content.JsonLevelCatalogLoader
-import com.faultory.core.content.JsonShopCatalogLoader
+import com.faultory.core.assets.AssetPaths
+import com.faultory.core.content.LevelCatalog
+import com.faultory.core.content.LevelCatalogAssetLoader
 import com.faultory.core.content.LevelDefinition
+import com.faultory.core.content.ShopCatalog
+import com.faultory.core.content.ShopCatalogAssetLoader
 import com.faultory.core.save.GameSave
 import com.faultory.core.save.LocalSaveRepository
 import com.faultory.core.save.SaveRepository
 import com.faultory.core.screens.BootScreen
 import com.faultory.core.screens.LevelSelectionScreen
-import com.faultory.core.shop.JsonShopBlueprintLoader
+import com.faultory.core.shop.ShopBlueprint
+import com.faultory.core.shop.ShopBlueprintAssetLoader
 
 class FaultoryGame : Game() {
     lateinit var spriteBatch: SpriteBatch
@@ -27,13 +33,7 @@ class FaultoryGame : Game() {
     lateinit var saveRepository: SaveRepository
         private set
 
-    lateinit var shopBlueprintLoader: JsonShopBlueprintLoader
-        private set
-
-    lateinit var shopCatalogLoader: JsonShopCatalogLoader
-        private set
-
-    lateinit var levelCatalogLoader: JsonLevelCatalogLoader
+    lateinit var assetManager: AssetManager
         private set
 
     override fun create() {
@@ -41,11 +41,16 @@ class FaultoryGame : Game() {
         uiFont = BitmapFont()
         shapeRenderer = ShapeRenderer()
         saveRepository = LocalSaveRepository()
-        shopBlueprintLoader = JsonShopBlueprintLoader()
-        shopCatalogLoader = JsonShopCatalogLoader()
-        levelCatalogLoader = JsonLevelCatalogLoader()
 
-        openLevelSelection()
+        assetManager = AssetManager(InternalFileHandleResolver()).apply {
+            setLoader(ShopCatalog::class.java, ShopCatalogAssetLoader(fileHandleResolver))
+            setLoader(LevelCatalog::class.java, LevelCatalogAssetLoader(fileHandleResolver))
+            setLoader(ShopBlueprint::class.java, ShopBlueprintAssetLoader(fileHandleResolver))
+            load(AssetPaths.levelCatalog, LevelCatalog::class.java)
+            load(AssetPaths.shopCatalog, ShopCatalog::class.java)
+        }
+
+        setScreen(BootScreen(this))
     }
 
     override fun dispose() {
@@ -53,6 +58,7 @@ class FaultoryGame : Game() {
         spriteBatch.dispose()
         uiFont.dispose()
         shapeRenderer.dispose()
+        assetManager.dispose()
     }
 
     fun openLevelSelection() {
@@ -60,6 +66,7 @@ class FaultoryGame : Game() {
     }
 
     fun openLevel(level: LevelDefinition) {
+        assetManager.load(level.shopAssetPath, ShopBlueprint::class.java)
         setScreen(BootScreen(this, level))
     }
 

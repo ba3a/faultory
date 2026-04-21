@@ -31,8 +31,8 @@ Package-by-responsibility under `core/src/main/kotlin/com/faultory/core`:
 |---|---|
 | `core.assets` | Asset path constants (`AssetPaths`) |
 | `core.config` | Global runtime constants (`GameConfig`) |
-| `core.content` | JSON-backed catalog/content models (`@Serializable data class`) |
-| `core.shop` | Shop/level layout models (`@Serializable data class`) |
+| `core.content` | JSON-backed catalog/content models (`@Serializable data class`) and their `AssetManager` loaders (`*AssetLoader`) |
+| `core.shop` | Shop/level layout models (`@Serializable data class`) and `ShopBlueprintAssetLoader` |
 | `core.screens` | LibGDX screen classes (names end in `Screen`) |
 | `core.systems` | Time-step and simulation coordinators (noun names, e.g. `ProductionDayDirector`) |
 | `core.save` | Save models, codecs, `SaveRepository` / `LocalSaveRepository` |
@@ -41,19 +41,20 @@ Data flow:
 
 ```
 DesktopLauncher → FaultoryGame.create()
-  → SaveRepository + JSON loaders initialized
-  → BootScreen loads assets/ JSON + bootstrap save
-  → creates ShopFloor + ShopFloorScreen
+  → SaveRepository + AssetManager (with ShopCatalog/LevelCatalog/ShopBlueprint loaders) initialized; level + shop catalogs queued
+  → BootScreen polls assetManager.update() and renders a progress bar until assets are resident
+  → initial boot: transitions to LevelSelectionScreen (which reads via assetManager.get)
+  → pre-level boot: retrieves cached catalogs + blueprint, builds ShopFloor + ShopFloorScreen
   → ShopFloorScreen.render() updates ShopFloor + ProductionDayDirector
 ```
 
-Naming patterns: data models are nouns (`ShopCatalog`, `ShiftSnapshot`); loaders are explicit (`JsonShopCatalogLoader`); singleton config holders use `object` (`GameConfig`, `AssetPaths`, `FaultoryJson`).
+Naming patterns: data models are nouns (`ShopCatalog`, `ShiftSnapshot`); `AssetManager` loaders are named `<Type>AssetLoader`; singleton config holders use `object` (`GameConfig`, `AssetPaths`, `FaultoryJson`).
 
 ## Adding New Features
 
 1. Add/extend domain model in `core.content`, `core.shop`, `core.systems`, or `core.save`.
 2. If asset-backed: add/update JSON in `assets/` and wire path in `AssetPaths`.
-3. If loading changes: update the matching `Json...Loader`.
+3. If loading changes: update the matching `*AssetLoader` (register it in `FaultoryGame.create`).
 4. If startup-affected: wire through `FaultoryGame` and `BootScreen`.
 5. If rendering/gameplay-affected: update or add a screen in `core.screens`.
 

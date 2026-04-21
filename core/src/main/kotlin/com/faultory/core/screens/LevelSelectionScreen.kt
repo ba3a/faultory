@@ -79,7 +79,7 @@ class LevelSelectionScreen(
 
     override fun show() {
         viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
-        levelCatalog = game.levelCatalogLoader.load(AssetPaths.levelCatalog)
+        levelCatalog = game.assetManager.get(AssetPaths.levelCatalog, LevelCatalog::class.java)
         cardBounds.clear()
         layoutCards(levelCatalog.levels)
         selectedIndex = if (levelCatalog.levels.isEmpty()) {
