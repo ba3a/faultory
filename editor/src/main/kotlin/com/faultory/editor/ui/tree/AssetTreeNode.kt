@@ -4,8 +4,9 @@ import com.badlogic.gdx.scenes.scene2d.ui.Tree
 import com.kotcrab.vis.ui.widget.VisLabel
 
 class AssetTreeNode(
-    label: String,
+    val label: String,
     val selection: AssetSelection?,
+    val isLink: Boolean = false,
 ) : Tree.Node<AssetTreeNode, AssetSelection, VisLabel>(VisLabel(label)) {
 
     init {

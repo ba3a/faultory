@@ -1,5 +1,7 @@
 package com.faultory.editor.ui.tree
 
+import com.faultory.core.content.BinaryUpgradeTree
+import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.ShopCatalog
 
 object TreeNodeFactories {
@@ -9,6 +11,26 @@ object TreeNodeFactories {
         itemsNode.add(buildWorkersNode(catalog))
         itemsNode.add(buildMachinesNode(catalog))
         return itemsNode
+    }
+
+    fun buildScenesNode(levelCatalog: LevelCatalog): AssetTreeNode {
+        val scenesNode = AssetTreeNode(label = "Scenes", selection = null)
+        levelCatalog.levels
+            .sortedBy { it.id }
+            .forEach { level ->
+                val levelNode = AssetTreeNode(
+                    label = "${level.id} — ${level.displayName}",
+                    selection = AssetSelection.Level(level.id),
+                )
+                levelNode.add(
+                    AssetTreeNode(
+                        label = "Blueprint: ${level.shopAssetPath}",
+                        selection = AssetSelection.Blueprint(level.shopAssetPath),
+                    )
+                )
+                scenesNode.add(levelNode)
+            }
+        return scenesNode
     }
 
     private fun buildProductsNode(catalog: ShopCatalog): AssetTreeNode {
@@ -31,12 +53,14 @@ object TreeNodeFactories {
         catalog.workers
             .sortedBy { it.id }
             .forEach { worker ->
-                node.add(
-                    AssetTreeNode(
-                        label = worker.id,
-                        selection = AssetSelection.Worker(worker.id),
-                    )
+                val workerNode = AssetTreeNode(
+                    label = worker.id,
+                    selection = AssetSelection.Worker(worker.id),
                 )
+                addUpgradeLinks(workerNode, worker.upgradeTree) { upgradeId ->
+                    AssetSelection.Worker(upgradeId)
+                }
+                node.add(workerNode)
             }
         return node
     }
@@ -46,13 +70,32 @@ object TreeNodeFactories {
         catalog.machines
             .sortedBy { it.id }
             .forEach { machine ->
-                node.add(
-                    AssetTreeNode(
-                        label = machine.id,
-                        selection = AssetSelection.Machine(machine.id),
-                    )
+                val machineNode = AssetTreeNode(
+                    label = machine.id,
+                    selection = AssetSelection.Machine(machine.id),
                 )
+                addUpgradeLinks(machineNode, machine.upgradeTree) { upgradeId ->
+                    AssetSelection.Machine(upgradeId)
+                }
+                node.add(machineNode)
             }
         return node
+    }
+
+    private fun addUpgradeLinks(
+        parent: AssetTreeNode,
+        upgradeTree: BinaryUpgradeTree?,
+        toSelection: (String) -> AssetSelection,
+    ) {
+        if (upgradeTree == null) return
+        upgradeTree.upgradeIds().forEach { upgradeId ->
+            parent.add(
+                AssetTreeNode(
+                    label = "↪ $upgradeId",
+                    selection = toSelection(upgradeId),
+                    isLink = true,
+                )
+            )
+        }
     }
 }
