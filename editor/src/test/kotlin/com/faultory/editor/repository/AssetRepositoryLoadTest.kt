@@ -3,8 +3,11 @@ package com.faultory.editor.repository
 import com.faultory.core.content.MachineType
 import com.faultory.core.content.Manuality
 import com.faultory.core.content.WorkerRole
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
+import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -65,5 +68,55 @@ class AssetRepositoryLoadTest {
         val swapped = repo.shopCatalog.copy(products = emptyList())
         repo.shopCatalog = swapped
         assertTrue(repo.shopCatalog.products.isEmpty())
+    }
+
+    @Test
+    fun `writeAll round-trips catalogs and blueprints through disk`() {
+        val tempRoot = copyFixturesToTempDir()
+        try {
+            val repo = AssetRepository(tempRoot)
+
+            val mutatedProduct = repo.shopCatalog.products.single().copy(displayName = "Glazed Mug", saleValue = 99)
+            repo.shopCatalog = repo.shopCatalog.copy(products = listOf(mutatedProduct))
+
+            val mutatedLevel = repo.levelCatalog.levels.single().copy(subtitle = "Edited in editor")
+            repo.levelCatalog = repo.levelCatalog.copy(levels = listOf(mutatedLevel))
+
+            val blueprintKey = repo.blueprints.keys.single()
+            val mutatedBlueprint = repo.blueprints.getValue(blueprintKey).copy(displayName = "Tutorial (edited)")
+            repo.blueprints[blueprintKey] = mutatedBlueprint
+
+            repo.writeAll()
+
+            val reloaded = AssetRepository(tempRoot)
+
+            assertEquals(repo.shopCatalog, reloaded.shopCatalog)
+            assertEquals(repo.levelCatalog, reloaded.levelCatalog)
+            assertEquals(repo.blueprints.toMap(), reloaded.blueprints.toMap())
+            assertEquals("Glazed Mug", reloaded.shopCatalog.products.single().displayName)
+            assertEquals(99, reloaded.shopCatalog.products.single().saleValue)
+            assertEquals("Edited in editor", reloaded.levelCatalog.levels.single().subtitle)
+            assertEquals("Tutorial (edited)", reloaded.blueprints.getValue(blueprintKey).displayName)
+        } finally {
+            tempRoot.toFile().deleteRecursively()
+        }
+    }
+
+    private fun copyFixturesToTempDir(): Path {
+        val source = fixtureRoot()
+        val dest = createTempDirectory("asset-repo-write-")
+        Files.walk(source).use { stream ->
+            stream.forEach { src ->
+                val rel = source.relativize(src)
+                val target = dest.resolve(rel.toString())
+                if (Files.isDirectory(src)) {
+                    Files.createDirectories(target)
+                } else {
+                    Files.createDirectories(target.parent)
+                    Files.copy(src, target, StandardCopyOption.REPLACE_EXISTING)
+                }
+            }
+        }
+        return dest
     }
 }

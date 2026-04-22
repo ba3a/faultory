@@ -3,7 +3,9 @@ package com.faultory.editor.repository
 import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.ShopCatalog
 import com.faultory.core.shop.ShopBlueprint
+import com.faultory.editor.util.AtomicJsonWriter
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.extension
@@ -14,6 +16,33 @@ class AssetRepository(val rootPath: Path) {
     var shopCatalog: ShopCatalog = readShopCatalog()
     var levelCatalog: LevelCatalog = readLevelCatalog()
     var blueprints: MutableMap<String, ShopBlueprint> = readBlueprints()
+
+    fun writeAll() {
+        writeShopCatalog()
+        writeLevelCatalog()
+        writeBlueprints()
+    }
+
+    private fun writeShopCatalog() {
+        val path = rootPath.resolve(AssetPaths.shopCatalog)
+        Files.createDirectories(path.parent)
+        AtomicJsonWriter.write(path, EditorJson.instance.encodeToString(shopCatalog))
+    }
+
+    private fun writeLevelCatalog() {
+        val path = rootPath.resolve(AssetPaths.levelCatalog)
+        Files.createDirectories(path.parent)
+        AtomicJsonWriter.write(path, EditorJson.instance.encodeToString(levelCatalog))
+    }
+
+    private fun writeBlueprints() {
+        val dir = rootPath.resolve(AssetPaths.shopsDir)
+        Files.createDirectories(dir)
+        for ((key, blueprint) in blueprints) {
+            val path = rootPath.resolve(key)
+            AtomicJsonWriter.write(path, EditorJson.instance.encodeToString(blueprint))
+        }
+    }
 
     private fun readShopCatalog(): ShopCatalog {
         val path = rootPath.resolve(AssetPaths.shopCatalog)
