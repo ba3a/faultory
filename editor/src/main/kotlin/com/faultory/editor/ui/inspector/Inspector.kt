@@ -8,9 +8,11 @@ import com.faultory.editor.repository.AssetRepository
 import com.faultory.editor.ui.tree.AssetSelection
 import com.faultory.editor.ui.tree.SelectionBus
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
+import com.badlogic.gdx.utils.Array as GdxArray
 import com.kotcrab.vis.ui.widget.VisCheckBox
 import com.kotcrab.vis.ui.widget.VisLabel
 import com.kotcrab.vis.ui.widget.VisScrollPane
+import com.kotcrab.vis.ui.widget.VisSelectBox
 import com.kotcrab.vis.ui.widget.VisTable
 import com.kotcrab.vis.ui.widget.VisTextButton
 import com.kotcrab.vis.ui.widget.VisTextField
@@ -110,7 +112,108 @@ class Inspector(
                 }
             }
             is StringListEditor -> VisTable().apply { stringListActor(this, editor) }
+            is IdReferenceEditor -> idReferenceActor(editor)
+            is IdReferenceListEditor -> VisTable().apply { idReferenceListActor(this, editor) }
         }
+    }
+
+    private fun idsFor(catalogType: CatalogType): List<String> {
+        return when (catalogType) {
+            CatalogType.PRODUCT -> repository.shopCatalog.products.map { it.id }
+            CatalogType.WORKER -> repository.shopCatalog.workers.map { it.id }
+            CatalogType.MACHINE -> repository.shopCatalog.machines.map { it.id }
+        }
+    }
+
+    private fun idReferenceActor(editor: IdReferenceEditor): com.badlogic.gdx.scenes.scene2d.Actor {
+        val catalogIds = idsFor(editor.catalogType)
+        val options = buildList {
+            if (editor.isNullable) add(NONE_OPTION)
+            addAll(catalogIds)
+            if (editor.value.isNotEmpty() && editor.value !in catalogIds) add(editor.value)
+        }
+        val select = VisSelectBox<String>()
+        select.items = GdxArray(options.toTypedArray())
+        select.selected = when {
+            editor.value.isEmpty() && editor.isNullable -> NONE_OPTION
+            editor.value.isEmpty() -> options.firstOrNull() ?: ""
+            else -> editor.value
+        }
+        select.addListener(object : ChangeListener() {
+            override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                val selected = select.selected ?: return
+                editor.value = if (selected == NONE_OPTION) "" else selected
+            }
+        })
+        return select
+    }
+
+    private fun idReferenceListActor(table: VisTable, editor: IdReferenceListEditor) {
+        val catalogIds = idsFor(editor.catalogType)
+        fun rebuild() {
+            table.clear()
+            table.top().left()
+            editor.values.forEachIndexed { index, value ->
+                val options = buildList {
+                    addAll(catalogIds)
+                    if (value.isNotEmpty() && value !in catalogIds) add(value)
+                }
+                val select = VisSelectBox<String>().apply {
+                    items = GdxArray(options.toTypedArray())
+                    selected = if (value.isNotEmpty()) value else options.firstOrNull() ?: ""
+                    addListener(object : ChangeListener() {
+                        override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                            selected?.let { editor.values[index] = it }
+                        }
+                    })
+                }
+                val up = VisTextButton("\u2191").apply {
+                    isDisabled = index == 0
+                    addListener(object : ChangeListener() {
+                        override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                            editor.move(index, index - 1)
+                            rebuild()
+                        }
+                    })
+                }
+                val down = VisTextButton("\u2193").apply {
+                    isDisabled = index == editor.values.lastIndex
+                    addListener(object : ChangeListener() {
+                        override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                            editor.move(index, index + 1)
+                            rebuild()
+                        }
+                    })
+                }
+                val remove = VisTextButton("-").apply {
+                    addListener(object : ChangeListener() {
+                        override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                            editor.removeAt(index)
+                            rebuild()
+                        }
+                    })
+                }
+                table.add(select).growX().pad(2f)
+                table.add(up).pad(2f)
+                table.add(down).pad(2f)
+                table.add(remove).pad(2f).row()
+            }
+            val addButton = VisTextButton("+ add").apply {
+                isDisabled = catalogIds.isEmpty()
+                addListener(object : ChangeListener() {
+                    override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                        editor.add(catalogIds.firstOrNull() ?: "")
+                        rebuild()
+                    }
+                })
+            }
+            table.add(addButton).colspan(4).left().pad(2f).row()
+        }
+        rebuild()
+    }
+
+    companion object {
+        private const val NONE_OPTION = "(none)"
     }
 
     private fun stringListActor(table: VisTable, editor: StringListEditor) {

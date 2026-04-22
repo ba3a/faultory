@@ -120,8 +120,8 @@ class ReflectionFormTest {
         val upgradeTree = editors.filterIsInstance<ClassEditor>().single { it.fieldName == "upgradeTree" }
         assertEquals(
             listOf(
-                StringEditor("leftUpgradeId", "press-v2"),
-                NullableEditor("rightUpgradeId"),
+                IdReferenceEditor("leftUpgradeId", "press-v2", CatalogType.MACHINE, isNullable = true),
+                IdReferenceEditor("rightUpgradeId", "", CatalogType.MACHINE, isNullable = true),
             ),
             upgradeTree.children,
         )
@@ -149,7 +149,7 @@ class ReflectionFormTest {
     }
 
     @Test
-    fun `MachineSpec string-list fields produce StringListEditor`() {
+    fun `MachineSpec id-reference list fields produce IdReferenceListEditor`() {
         val machine = MachineSpec(
             id = "press",
             displayName = "Press",
@@ -165,16 +165,22 @@ class ReflectionFormTest {
 
         val editors = ReflectionForm.editorsFor(machine)
 
-        val productIds = editors.filterIsInstance<StringListEditor>().single { it.fieldName == "productIds" }
-        assertEquals(StringListEditor("productIds", mutableListOf("gear", "bolt")), productIds)
+        val productIds = editors.filterIsInstance<IdReferenceListEditor>().single { it.fieldName == "productIds" }
+        assertEquals(
+            IdReferenceListEditor("productIds", mutableListOf("gear", "bolt"), CatalogType.PRODUCT),
+            productIds,
+        )
 
-        val operatorIds = editors.filterIsInstance<StringListEditor>()
+        val operatorIds = editors.filterIsInstance<IdReferenceListEditor>()
             .single { it.fieldName == "minimumOperatorWorkerIds" }
-        assertEquals(StringListEditor("minimumOperatorWorkerIds", mutableListOf("apprentice")), operatorIds)
+        assertEquals(
+            IdReferenceListEditor("minimumOperatorWorkerIds", mutableListOf("apprentice"), CatalogType.WORKER),
+            operatorIds,
+        )
     }
 
     @Test
-    fun `LevelDefinition availableWorkerIds and availableMachineIds produce StringListEditor`() {
+    fun `LevelDefinition availableWorkerIds and availableMachineIds produce IdReferenceListEditor`() {
         val level = LevelDefinition(
             id = "tutorial",
             displayName = "Tutorial",
@@ -187,15 +193,17 @@ class ReflectionFormTest {
 
         val editors = ReflectionForm.editorsFor(level)
 
-        val workers = editors.filterIsInstance<StringListEditor>().single { it.fieldName == "availableWorkerIds" }
+        val workers = editors.filterIsInstance<IdReferenceListEditor>()
+            .single { it.fieldName == "availableWorkerIds" }
         assertEquals(
-            StringListEditor("availableWorkerIds", mutableListOf("apprentice", "senior")),
+            IdReferenceListEditor("availableWorkerIds", mutableListOf("apprentice", "senior"), CatalogType.WORKER),
             workers,
         )
 
-        val machines = editors.filterIsInstance<StringListEditor>().single { it.fieldName == "availableMachineIds" }
+        val machines = editors.filterIsInstance<IdReferenceListEditor>()
+            .single { it.fieldName == "availableMachineIds" }
         assertEquals(
-            StringListEditor("availableMachineIds", mutableListOf("press", "assembler")),
+            IdReferenceListEditor("availableMachineIds", mutableListOf("press", "assembler"), CatalogType.MACHINE),
             machines,
         )
     }

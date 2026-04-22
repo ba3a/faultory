@@ -27,26 +27,38 @@ object ReflectionForm {
 
     fun <T> editorsFor(serializer: KSerializer<T>, instance: T): List<PropertyEditor> {
         val element = EditorJson.instance.encodeToJsonElement(serializer, instance)
-        return editorsFrom(serializer.descriptor, element.jsonObject)
+        return editorsFrom(listOf(serializer.descriptor), element.jsonObject)
     }
 
     fun editorsFrom(descriptor: SerialDescriptor, json: JsonObject): List<PropertyEditor> {
+        return editorsFrom(listOf(descriptor), json)
+    }
+
+    private fun editorsFrom(ownerChain: List<SerialDescriptor>, json: JsonObject): List<PropertyEditor> {
+        val current = ownerChain.last()
         val editors = mutableListOf<PropertyEditor>()
-        for (index in 0 until descriptor.elementsCount) {
-            val name = descriptor.getElementName(index)
-            val elementDescriptor = descriptor.getElementDescriptor(index)
+        for (index in 0 until current.elementsCount) {
+            val name = current.getElementName(index)
+            val elementDescriptor = current.getElementDescriptor(index)
             val value = json[name]
-            val editor = editorFor(name, elementDescriptor, value) ?: continue
+            val editor = editorFor(ownerChain, name, elementDescriptor, value) ?: continue
             editors += editor
         }
         return editors
     }
 
     private fun editorFor(
+        ownerChain: List<SerialDescriptor>,
         name: String,
         descriptor: SerialDescriptor,
         value: JsonElement?,
     ): PropertyEditor? {
+        val idReferenceTarget = IdReferenceRegistry.lookupByDescriptors(ownerChain, name)
+        if (idReferenceTarget != null) {
+            val referenceEditor = idReferenceEditorFor(name, descriptor, value, idReferenceTarget)
+            if (referenceEditor != null) return referenceEditor
+        }
+
         if (descriptor.isNullable && value is JsonNull) {
             return NullableEditor(name, inner = null)
         }
@@ -64,7 +76,7 @@ object ReflectionForm {
             )
             StructureKind.CLASS -> {
                 val obj = value as? JsonObject ?: return null
-                ClassEditor(name, editorsFrom(descriptor, obj))
+                ClassEditor(name, editorsFrom(ownerChain + descriptor, obj))
             }
             StructureKind.LIST -> {
                 val elementDescriptor = descriptor.getElementDescriptor(0)
@@ -75,6 +87,31 @@ object ReflectionForm {
                     ?.toMutableList()
                     ?: mutableListOf()
                 StringListEditor(name, values)
+            }
+            else -> null
+        }
+    }
+
+    private fun idReferenceEditorFor(
+        name: String,
+        descriptor: SerialDescriptor,
+        value: JsonElement?,
+        catalogType: CatalogType,
+    ): PropertyEditor? {
+        return when (descriptor.kind) {
+            PrimitiveKind.STRING -> {
+                val text = if (value is JsonNull || value == null) "" else (value as? JsonPrimitive)?.content.orEmpty()
+                IdReferenceEditor(name, text, catalogType, descriptor.isNullable)
+            }
+            StructureKind.LIST -> {
+                val elementDescriptor = descriptor.getElementDescriptor(0)
+                if (elementDescriptor.kind != PrimitiveKind.STRING) return null
+                val array = value as? JsonArray
+                val values = array
+                    ?.map { (it as? JsonPrimitive)?.content.orEmpty() }
+                    ?.toMutableList()
+                    ?: mutableListOf()
+                IdReferenceListEditor(name, values, catalogType)
             }
             else -> null
         }
