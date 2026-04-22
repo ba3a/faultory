@@ -1,0 +1,21 @@
+{
+  "levels": [
+    {
+      "id": "tutorial-shop",
+      "displayName": "Morning Ceramic Run",
+      "subtitle": "Balanced starter floor with one main conveyor loop.",
+      "shopAssetPath": "shops/tutorial.json",
+      "starThresholds": {
+        "oneStar": 3,
+        "twoStar": 6,
+        "threeStar": 9
+      },
+      "availableWorkerIds": [
+        "line-inspector"
+      ],
+      "availableMachineIds": [
+        "bench-assembler"
+      ]
+    }
+  ]
+}

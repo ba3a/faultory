@@ -1,0 +1,61 @@
+{
+  "workers": [
+    {
+      "id": "line-inspector",
+      "displayName": "Line Inspector",
+      "level": 1,
+      "hireCost": 60,
+      "walkSpeed": 128.0,
+      "skin": "worker_line_inspector",
+      "roleProfiles": [
+        {
+          "role": "PRODUCER_OPERATOR",
+          "taskDurationSeconds": 1.9,
+          "defectChance": 0.12,
+          "sabotageChance": 0.05
+        }
+      ]
+    }
+  ],
+  "machines": [
+    {
+      "id": "bench-assembler",
+      "displayName": "Bench Assembler",
+      "level": 1,
+      "type": "PRODUCER",
+      "manuality": "HUMAN_OPERATED",
+      "skin": "machine_bench_assembler",
+      "shape": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "slots": [
+        {
+          "x": 0,
+          "y": 0,
+          "side": "NORTH",
+          "type": "OPERATOR"
+        }
+      ],
+      "minimumOperatorWorkerIds": [
+        "line-inspector"
+      ],
+      "installCost": 75,
+      "operationDurationSeconds": 1.8,
+      "producerProfile": {
+        "productId": "ceramic-mug",
+        "defectChance": 0.18,
+        "faultyProductCapacity": 0
+      }
+    }
+  ],
+  "products": [
+    {
+      "id": "ceramic-mug",
+      "displayName": "Ceramic Mug",
+      "saleValue": 22
+    }
+  ]
+}

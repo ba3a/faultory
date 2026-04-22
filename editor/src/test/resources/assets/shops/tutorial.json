@@ -1,0 +1,23 @@
+{
+  "id": "tutorial-shop",
+  "displayName": "Morning Ceramic Run",
+  "qualityThresholdPercent": 92.0,
+  "shiftLengthSeconds": 180.0,
+  "conveyorBelts": [
+    {
+      "id": "belt-a",
+      "checkpoints": [
+        {
+          "x": 120.0,
+          "y": 520.0
+        },
+        {
+          "x": 420.0,
+          "y": 520.0
+        }
+      ]
+    }
+  ],
+  "machineSlots": [],
+  "workerSpawnPoints": []
+}
