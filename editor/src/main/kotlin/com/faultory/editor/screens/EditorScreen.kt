@@ -7,21 +7,24 @@ import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.ScreenViewport
+import com.faultory.editor.repository.AssetRepository
 import com.faultory.editor.ui.dialogs.ConfirmDialog
+import com.faultory.editor.ui.tree.AssetTree
 import com.kotcrab.vis.ui.widget.Menu
 import com.kotcrab.vis.ui.widget.MenuBar
 import com.kotcrab.vis.ui.widget.MenuItem
 import com.kotcrab.vis.ui.widget.VisLabel
+import com.kotcrab.vis.ui.widget.VisScrollPane
 import com.kotcrab.vis.ui.widget.VisSplitPane
 import com.kotcrab.vis.ui.widget.VisTable
 
-class EditorScreen : ScreenAdapter() {
+class EditorScreen(
+    private val repository: AssetRepository? = null,
+) : ScreenAdapter() {
     private val stage = Stage(ScreenViewport())
     private val root = VisTable()
     private val menuBar = MenuBar()
-    private val leftPanel = VisTable().apply {
-        add(VisLabel("Asset tree")).pad(8f)
-    }
+    private val leftPanel = VisTable()
     private val rightPanel = VisTable().apply {
         add(VisLabel("Inspector")).pad(8f)
     }
@@ -33,6 +36,7 @@ class EditorScreen : ScreenAdapter() {
 
     init {
         buildMenuBar()
+        buildLeftPanel()
 
         root.setFillParent(true)
         root.top()
@@ -48,6 +52,20 @@ class EditorScreen : ScreenAdapter() {
         fileMenu.addItem(menuItem("Restore…") { showNotImplemented("Restore") })
         fileMenu.addItem(menuItem("Exit") { Gdx.app.exit() })
         menuBar.addMenu(fileMenu)
+    }
+
+    private fun buildLeftPanel() {
+        leftPanel.top()
+        if (repository == null) {
+            leftPanel.add(VisLabel("No assets loaded")).pad(8f)
+            return
+        }
+        val tree = AssetTree(repository)
+        val scroll = VisScrollPane(tree).apply {
+            setFadeScrollBars(false)
+            setScrollingDisabled(true, false)
+        }
+        leftPanel.add(scroll).grow().pad(4f)
     }
 
     private fun menuItem(text: String, onClick: () -> Unit): MenuItem {
