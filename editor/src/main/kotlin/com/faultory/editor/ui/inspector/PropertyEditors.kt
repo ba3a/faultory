@@ -46,3 +46,22 @@ data class ClassEditor(
     override val fieldName: String,
     val children: List<PropertyEditor>,
 ) : PropertyEditor
+
+data class StringListEditor(
+    override val fieldName: String,
+    val values: MutableList<String>,
+) : PropertyEditor {
+    fun add(value: String) {
+        values.add(value)
+    }
+
+    fun removeAt(index: Int) {
+        values.removeAt(index)
+    }
+
+    fun move(from: Int, to: Int) {
+        if (from == to || from !in values.indices || to !in values.indices) return
+        val item = values.removeAt(from)
+        values.add(to, item)
+    }
+}

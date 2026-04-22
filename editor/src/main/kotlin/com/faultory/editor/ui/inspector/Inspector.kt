@@ -7,10 +7,12 @@ import com.faultory.core.shop.ShopBlueprint
 import com.faultory.editor.repository.AssetRepository
 import com.faultory.editor.ui.tree.AssetSelection
 import com.faultory.editor.ui.tree.SelectionBus
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.kotcrab.vis.ui.widget.VisCheckBox
 import com.kotcrab.vis.ui.widget.VisLabel
 import com.kotcrab.vis.ui.widget.VisScrollPane
 import com.kotcrab.vis.ui.widget.VisTable
+import com.kotcrab.vis.ui.widget.VisTextButton
 import com.kotcrab.vis.ui.widget.VisTextField
 
 class Inspector(
@@ -107,6 +109,63 @@ class Inspector(
                     add(actorFor(child)).growX().pad(2f).row()
                 }
             }
+            is StringListEditor -> VisTable().apply { stringListActor(this, editor) }
         }
+    }
+
+    private fun stringListActor(table: VisTable, editor: StringListEditor) {
+        fun rebuild() {
+            table.clear()
+            table.top().left()
+            editor.values.forEachIndexed { index, value ->
+                val field = VisTextField(value).apply {
+                    addListener(object : ChangeListener() {
+                        override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                            editor.values[index] = text
+                        }
+                    })
+                }
+                val up = VisTextButton("\u2191").apply {
+                    isDisabled = index == 0
+                    addListener(object : ChangeListener() {
+                        override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                            editor.move(index, index - 1)
+                            rebuild()
+                        }
+                    })
+                }
+                val down = VisTextButton("\u2193").apply {
+                    isDisabled = index == editor.values.lastIndex
+                    addListener(object : ChangeListener() {
+                        override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                            editor.move(index, index + 1)
+                            rebuild()
+                        }
+                    })
+                }
+                val remove = VisTextButton("-").apply {
+                    addListener(object : ChangeListener() {
+                        override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                            editor.removeAt(index)
+                            rebuild()
+                        }
+                    })
+                }
+                table.add(field).growX().pad(2f)
+                table.add(up).pad(2f)
+                table.add(down).pad(2f)
+                table.add(remove).pad(2f).row()
+            }
+            val addButton = VisTextButton("+ add").apply {
+                addListener(object : ChangeListener() {
+                    override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                        editor.add("")
+                        rebuild()
+                    }
+                })
+            }
+            table.add(addButton).colspan(4).left().pad(2f).row()
+        }
+        rebuild()
     }
 }
