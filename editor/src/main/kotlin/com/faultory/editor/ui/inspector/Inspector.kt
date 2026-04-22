@@ -96,6 +96,10 @@ class Inspector(
                 isChecked = editor.value
                 isDisabled = true
             }
+            is EnumEditor -> VisTextField(editor.value).apply { isDisabled = true }
+            is NullableEditor -> VisTextField(if (editor.isNull) "null" else "<value>").apply {
+                isDisabled = true
+            }
         }
     }
 }

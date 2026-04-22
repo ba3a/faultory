@@ -6,6 +6,7 @@ import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.SerialKind
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -44,6 +45,9 @@ object ReflectionForm {
         descriptor: SerialDescriptor,
         value: JsonElement?,
     ): PropertyEditor? {
+        if (descriptor.isNullable && value is JsonNull) {
+            return NullableEditor(name, inner = null)
+        }
         val primitive = value as? JsonPrimitive
         return when (descriptor.kind) {
             PrimitiveKind.STRING -> StringEditor(name, primitive?.content ?: "")
@@ -51,7 +55,11 @@ object ReflectionForm {
             PrimitiveKind.LONG -> LongEditor(name, primitive?.longOrZero() ?: 0L)
             PrimitiveKind.FLOAT, PrimitiveKind.DOUBLE -> FloatEditor(name, primitive?.floatOrZero() ?: 0f)
             PrimitiveKind.BOOLEAN -> BooleanEditor(name, primitive?.booleanOrNull ?: false)
-            SerialKind.ENUM -> null
+            SerialKind.ENUM -> EnumEditor(
+                fieldName = name,
+                value = primitive?.content ?: "",
+                options = (0 until descriptor.elementsCount).map(descriptor::getElementName),
+            )
             else -> null
         }
     }

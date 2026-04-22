@@ -28,3 +28,16 @@ data class BooleanEditor(
     override val fieldName: String,
     var value: Boolean = false,
 ) : PropertyEditor
+
+data class EnumEditor(
+    override val fieldName: String,
+    var value: String,
+    val options: List<String>,
+) : PropertyEditor
+
+data class NullableEditor(
+    override val fieldName: String,
+    val inner: PropertyEditor? = null,
+) : PropertyEditor {
+    val isNull: Boolean get() = inner == null
+}
