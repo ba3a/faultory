@@ -5,6 +5,7 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.SerialKind
+import kotlinx.serialization.descriptors.StructureKind
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -60,6 +61,10 @@ object ReflectionForm {
                 value = primitive?.content ?: "",
                 options = (0 until descriptor.elementsCount).map(descriptor::getElementName),
             )
+            StructureKind.CLASS -> {
+                val obj = value as? JsonObject ?: return null
+                ClassEditor(name, editorsFrom(descriptor, obj))
+            }
             else -> null
         }
     }

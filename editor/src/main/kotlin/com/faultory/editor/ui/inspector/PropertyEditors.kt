@@ -41,3 +41,8 @@ data class NullableEditor(
 ) : PropertyEditor {
     val isNull: Boolean get() = inner == null
 }
+
+data class ClassEditor(
+    override val fieldName: String,
+    val children: List<PropertyEditor>,
+) : PropertyEditor

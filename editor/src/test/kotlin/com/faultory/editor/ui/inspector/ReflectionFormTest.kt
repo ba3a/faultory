@@ -1,9 +1,13 @@
 package com.faultory.editor.ui.inspector
 
+import com.faultory.core.content.BinaryUpgradeTree
+import com.faultory.core.content.FaultyProductStrategy
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.MachineType
 import com.faultory.core.content.Manuality
+import com.faultory.core.content.ProducerMachineProfile
 import com.faultory.core.content.ProductDefinition
+import com.faultory.core.content.QaMachineProfile
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -82,5 +86,63 @@ class ReflectionFormTest {
             nullables,
         )
         nullables.forEach { assertEquals(true, it.isNull) }
+    }
+
+    @Test
+    fun `MachineSpec nested classes produce ClassEditor with recursive fields`() {
+        val machine = MachineSpec(
+            id = "press",
+            displayName = "Press",
+            level = 1,
+            type = MachineType.PRODUCER,
+            manuality = Manuality.HUMAN_OPERATED,
+            skin = "press-skin",
+            installCost = 100,
+            operationDurationSeconds = 2.5f,
+            upgradeTree = BinaryUpgradeTree(leftUpgradeId = "press-v2", rightUpgradeId = null),
+            producerProfile = ProducerMachineProfile(
+                productId = "gear",
+                defectChance = 0.1f,
+                faultyProductCapacity = 3,
+            ),
+            qaProfile = QaMachineProfile(
+                inspectionDurationSeconds = 1.5f,
+                detectionAccuracy = 0.9f,
+                falsePositiveChance = 0.05f,
+                faultyProductStrategy = FaultyProductStrategy.DESTROY,
+            ),
+        )
+
+        val editors = ReflectionForm.editorsFor(machine)
+
+        val upgradeTree = editors.filterIsInstance<ClassEditor>().single { it.fieldName == "upgradeTree" }
+        assertEquals(
+            listOf(
+                StringEditor("leftUpgradeId", "press-v2"),
+                NullableEditor("rightUpgradeId"),
+            ),
+            upgradeTree.children,
+        )
+
+        val producerProfile = editors.filterIsInstance<ClassEditor>().single { it.fieldName == "producerProfile" }
+        assertEquals(
+            listOf(
+                StringEditor("productId", "gear"),
+                FloatEditor("defectChance", 0.1f),
+                IntEditor("faultyProductCapacity", 3),
+            ),
+            producerProfile.children,
+        )
+
+        val qaProfile = editors.filterIsInstance<ClassEditor>().single { it.fieldName == "qaProfile" }
+        assertEquals(
+            listOf(
+                FloatEditor("inspectionDurationSeconds", 1.5f),
+                FloatEditor("detectionAccuracy", 0.9f),
+                FloatEditor("falsePositiveChance", 0.05f),
+                EnumEditor("faultyProductStrategy", "DESTROY", listOf("DESTROY", "PUT_ON_FREE_TILE", "HAND_TO_PRODUCER")),
+            ),
+            qaProfile.children,
+        )
     }
 }

@@ -100,6 +100,13 @@ class Inspector(
             is NullableEditor -> VisTextField(if (editor.isNull) "null" else "<value>").apply {
                 isDisabled = true
             }
+            is ClassEditor -> VisTable().apply {
+                top().left()
+                for (child in editor.children) {
+                    add(VisLabel(child.fieldName)).left().pad(2f)
+                    add(actorFor(child)).growX().pad(2f).row()
+                }
+            }
         }
     }
 }
