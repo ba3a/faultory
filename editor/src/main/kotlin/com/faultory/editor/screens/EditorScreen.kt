@@ -2,21 +2,64 @@ package com.faultory.editor.screens
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.ScreenAdapter
+import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Stage
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.ScreenViewport
+import com.faultory.editor.ui.dialogs.ConfirmDialog
+import com.kotcrab.vis.ui.widget.Menu
+import com.kotcrab.vis.ui.widget.MenuBar
+import com.kotcrab.vis.ui.widget.MenuItem
 import com.kotcrab.vis.ui.widget.VisLabel
+import com.kotcrab.vis.ui.widget.VisSplitPane
 import com.kotcrab.vis.ui.widget.VisTable
 
 class EditorScreen : ScreenAdapter() {
     private val stage = Stage(ScreenViewport())
-    private val root = VisTable().apply {
-        setFillParent(true)
-        add(VisLabel("Faultory Asset Editor")).center()
+    private val root = VisTable()
+    private val menuBar = MenuBar()
+    private val leftPanel = VisTable().apply {
+        add(VisLabel("Asset tree")).pad(8f)
+    }
+    private val rightPanel = VisTable().apply {
+        add(VisLabel("Inspector")).pad(8f)
+    }
+    private val splitPane = VisSplitPane(leftPanel, rightPanel, false).apply {
+        setSplitAmount(0.25f)
+        setMinSplitAmount(0.1f)
+        setMaxSplitAmount(0.6f)
     }
 
     init {
+        buildMenuBar()
+
+        root.setFillParent(true)
+        root.top()
+        root.add(menuBar.table).growX().row()
+        root.add(splitPane).grow()
+
         stage.addActor(root)
+    }
+
+    private fun buildMenuBar() {
+        val fileMenu = Menu("File")
+        fileMenu.addItem(menuItem("Backup…") { showNotImplemented("Backup") })
+        fileMenu.addItem(menuItem("Restore…") { showNotImplemented("Restore") })
+        fileMenu.addItem(menuItem("Exit") { Gdx.app.exit() })
+        menuBar.addMenu(fileMenu)
+    }
+
+    private fun menuItem(text: String, onClick: () -> Unit): MenuItem {
+        val item = MenuItem(text)
+        item.addListener(object : ChangeListener() {
+            override fun changed(event: ChangeEvent, actor: Actor) = onClick()
+        })
+        return item
+    }
+
+    private fun showNotImplemented(feature: String) {
+        ConfirmDialog.info(stage, "Not implemented", "$feature is not yet implemented.")
     }
 
     override fun show() {
