@@ -9,6 +9,7 @@ import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.faultory.editor.repository.AssetRepository
 import com.faultory.editor.ui.dialogs.ConfirmDialog
+import com.faultory.editor.ui.inspector.Inspector
 import com.faultory.editor.ui.tree.AssetTree
 import com.kotcrab.vis.ui.widget.Menu
 import com.kotcrab.vis.ui.widget.MenuBar
@@ -25,9 +26,8 @@ class EditorScreen(
     private val root = VisTable()
     private val menuBar = MenuBar()
     private val leftPanel = VisTable()
-    private val rightPanel = VisTable().apply {
-        add(VisLabel("Inspector")).pad(8f)
-    }
+    private val rightPanel = VisTable()
+    private val inspector: Inspector? = repository?.let { Inspector(it) }
     private val splitPane = VisSplitPane(leftPanel, rightPanel, false).apply {
         setSplitAmount(0.25f)
         setMinSplitAmount(0.1f)
@@ -37,6 +37,7 @@ class EditorScreen(
     init {
         buildMenuBar()
         buildLeftPanel()
+        buildRightPanel()
 
         root.setFillParent(true)
         root.top()
@@ -66,6 +67,15 @@ class EditorScreen(
             setScrollingDisabled(true, false)
         }
         leftPanel.add(scroll).grow().pad(4f)
+    }
+
+    private fun buildRightPanel() {
+        rightPanel.top()
+        if (inspector == null) {
+            rightPanel.add(VisLabel("Inspector")).pad(8f)
+            return
+        }
+        rightPanel.add(inspector.actor).grow().pad(4f)
     }
 
     private fun menuItem(text: String, onClick: () -> Unit): MenuItem {
@@ -101,6 +111,7 @@ class EditorScreen(
     }
 
     override fun dispose() {
+        inspector?.dispose()
         stage.dispose()
     }
 }
