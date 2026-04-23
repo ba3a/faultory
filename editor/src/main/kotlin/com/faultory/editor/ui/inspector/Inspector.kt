@@ -33,12 +33,14 @@ class Inspector(
         setFadeScrollBars(false)
         setScrollingDisabled(true, false)
     }
+    private val issuePanel = IssuePanel()
 
     private val listener: (AssetSelection?) -> Unit = { render(it) }
 
     init {
         actor.top().left()
-        actor.add(scroll).grow().pad(4f)
+        actor.add(scroll).grow().pad(4f).row()
+        actor.add(issuePanel.actor).growX().pad(4f).row()
         bus.addListener(listener)
         render(bus.current)
     }
@@ -51,6 +53,7 @@ class Inspector(
 
     private fun render(selection: AssetSelection?) {
         content.clear()
+        issuePanel.clear()
         if (selection == null) {
             content.add(VisLabel("No selection")).pad(8f)
             return
@@ -65,6 +68,12 @@ class Inspector(
             content.add(VisLabel(editor.fieldName)).left().pad(4f)
             content.add(actorFor(editor, bundle.onChange)).growX().pad(4f).row()
         }
+        refreshIssues(selection)
+    }
+
+    private fun refreshIssues(selection: AssetSelection) {
+        val context = com.faultory.editor.validation.ValidationContext(repository, selection)
+        issuePanel.show(com.faultory.editor.validation.ValidatorRegistry.validate(selection, context))
     }
 
     private data class EditorsBundle(
