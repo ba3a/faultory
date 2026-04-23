@@ -31,6 +31,7 @@
         "twoStar": 8,
         "threeStar": 12
       },
+      "recommendedNextLevelId": null,
       "availableWorkerIds": [
         "line-inspector",
         "float-tech"
