@@ -1,8 +1,11 @@
 package com.faultory.editor.screens
 
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.Input
 import com.badlogic.gdx.ScreenAdapter
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.InputEvent
+import com.badlogic.gdx.scenes.scene2d.InputListener
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.badlogic.gdx.utils.ScreenUtils
@@ -18,6 +21,7 @@ import com.kotcrab.vis.ui.widget.VisLabel
 import com.kotcrab.vis.ui.widget.VisScrollPane
 import com.kotcrab.vis.ui.widget.VisSplitPane
 import com.kotcrab.vis.ui.widget.VisTable
+import com.kotcrab.vis.ui.widget.VisTextButton
 
 class EditorScreen(
     private val session: EditorSession? = null,
@@ -26,6 +30,8 @@ class EditorScreen(
     private val stage = Stage(ScreenViewport())
     private val root = VisTable()
     private val menuBar = MenuBar()
+    private val toolbar = VisTable()
+    private val saveButton = VisTextButton("Save")
     private val leftPanel = VisTable()
     private val rightPanel = VisTable()
     private val inspector: Inspector? = session?.let { Inspector(it) }
@@ -39,15 +45,18 @@ class EditorScreen(
 
     init {
         buildMenuBar()
+        buildToolbar()
         buildLeftPanel()
         buildRightPanel()
 
         root.setFillParent(true)
         root.top()
         root.add(menuBar.table).growX().row()
+        root.add(toolbar).growX().row()
         root.add(splitPane).grow()
 
         stage.addActor(root)
+        stage.addListener(saveShortcutListener())
         session?.addDirtyListener(dirtyListener)
     }
 
@@ -58,10 +67,43 @@ class EditorScreen(
 
     private fun buildMenuBar() {
         val fileMenu = Menu("File")
+        fileMenu.addItem(menuItem("Save") { saveSession() })
+        fileMenu.addSeparator()
         fileMenu.addItem(menuItem("Backup…") { showNotImplemented("Backup") })
         fileMenu.addItem(menuItem("Restore…") { showNotImplemented("Restore") })
+        fileMenu.addSeparator()
         fileMenu.addItem(menuItem("Exit") { Gdx.app.exit() })
         menuBar.addMenu(fileMenu)
+    }
+
+    private fun buildToolbar() {
+        toolbar.left().pad(4f)
+        saveButton.addListener(object : ChangeListener() {
+            override fun changed(event: ChangeEvent, actor: Actor) = saveSession()
+        })
+        toolbar.add(saveButton)
+    }
+
+    private fun saveSession() {
+        val session = session ?: return
+        if (!session.isDirty) return
+        session.save()
+    }
+
+    private fun saveShortcutListener(): InputListener = object : InputListener() {
+        override fun keyDown(event: InputEvent, keycode: Int): Boolean {
+            if (keycode == Input.Keys.S && isCtrlPressed()) {
+                saveSession()
+                return true
+            }
+            return false
+        }
+
+        private fun isCtrlPressed(): Boolean {
+            val input = Gdx.input ?: return false
+            return input.isKeyPressed(Input.Keys.CONTROL_LEFT) ||
+                input.isKeyPressed(Input.Keys.CONTROL_RIGHT)
+        }
     }
 
     private fun buildLeftPanel() {
