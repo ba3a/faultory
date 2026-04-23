@@ -74,7 +74,7 @@ class EditorSession(val repository: AssetRepository) {
         markDirty()
     }
 
-    private fun markDirty() {
+    fun markDirty() {
         setDirty(true)
     }
 

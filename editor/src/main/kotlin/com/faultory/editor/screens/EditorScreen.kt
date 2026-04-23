@@ -10,10 +10,13 @@ import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.ScreenViewport
+import com.faultory.editor.model.Duplicator
 import com.faultory.editor.model.EditorSession
 import com.faultory.editor.ui.dialogs.ConfirmDialog
+import com.faultory.editor.ui.dialogs.DuplicateDialog
 import com.faultory.editor.ui.inspector.Inspector
 import com.faultory.editor.ui.tree.AssetTree
+import com.faultory.editor.ui.tree.SelectionBus
 import com.faultory.editor.validation.ValidationIssue
 import com.faultory.editor.validation.ValidatorRegistry
 import com.kotcrab.vis.ui.widget.Menu
@@ -82,6 +85,23 @@ class EditorScreen(
         fileMenu.addSeparator()
         fileMenu.addItem(menuItem("Exit") { Gdx.app.exit() })
         menuBar.addMenu(fileMenu)
+
+        val editMenu = Menu("Edit")
+        editMenu.addItem(menuItem("Duplicate…") { openDuplicateDialog() })
+        menuBar.addMenu(editMenu)
+    }
+
+    private fun openDuplicateDialog() {
+        val session = session ?: return
+        val selection = SelectionBus.current
+        if (selection == null) {
+            ConfirmDialog.info(stage, "Duplicate", "Select an asset to duplicate.")
+            return
+        }
+        val duplicator = Duplicator(session.repository, session)
+        DuplicateDialog.open(stage, selection, duplicator) { newSelection ->
+            SelectionBus.select(newSelection)
+        }
     }
 
     private fun buildToolbar() {
@@ -122,6 +142,10 @@ class EditorScreen(
             return
         }
         val tree = AssetTree(session.repository)
+        tree.onContextMenu = { selection ->
+            SelectionBus.select(selection)
+            openDuplicateDialog()
+        }
         val scroll = VisScrollPane(tree).apply {
             setFadeScrollBars(false)
             setScrollingDisabled(true, false)

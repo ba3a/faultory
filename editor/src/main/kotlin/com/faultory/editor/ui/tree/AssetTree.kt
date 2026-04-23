@@ -1,7 +1,10 @@
 package com.faultory.editor.ui.tree
 
+import com.badlogic.gdx.Input
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.faultory.editor.repository.AssetRepository
 import com.kotcrab.vis.ui.widget.VisTree
 
@@ -9,6 +12,8 @@ class AssetTree(
     repository: AssetRepository,
     private val selectionBus: SelectionBus = SelectionBus,
 ) : VisTree<AssetTreeNode, AssetSelection>() {
+
+    var onContextMenu: ((AssetSelection) -> Unit)? = null
 
     private val primaryIndex: Map<AssetSelection, AssetTreeNode>
 
@@ -38,6 +43,17 @@ class AssetTree(
                     return
                 }
                 selectionBus.select(node.selection)
+            }
+        })
+
+        addListener(object : ClickListener(Input.Buttons.RIGHT) {
+            override fun clicked(event: InputEvent, x: Float, y: Float) {
+                val node = getNodeAt(y) ?: return
+                if (node.isLink) return
+                val target = node.selection ?: return
+                selection.set(node)
+                selectionBus.select(target)
+                onContextMenu?.invoke(target)
             }
         })
     }
