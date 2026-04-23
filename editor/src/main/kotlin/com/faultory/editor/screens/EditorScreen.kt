@@ -14,6 +14,8 @@ import com.faultory.editor.model.EditorSession
 import com.faultory.editor.ui.dialogs.ConfirmDialog
 import com.faultory.editor.ui.inspector.Inspector
 import com.faultory.editor.ui.tree.AssetTree
+import com.faultory.editor.validation.ValidationIssue
+import com.faultory.editor.validation.ValidatorRegistry
 import com.kotcrab.vis.ui.widget.Menu
 import com.kotcrab.vis.ui.widget.MenuBar
 import com.kotcrab.vis.ui.widget.MenuItem
@@ -42,6 +44,11 @@ class EditorScreen(
     }
 
     private val dirtyListener: (Boolean) -> Unit = { dirty -> updateTitle(dirty) }
+    private var hasBlockingErrors: Boolean = false
+    private val validationListener: (List<ValidationIssue>) -> Unit = { issues ->
+        hasBlockingErrors = ValidatorRegistry.hasBlockingErrors(issues)
+        saveButton.isDisabled = hasBlockingErrors
+    }
 
     init {
         buildMenuBar()
@@ -58,6 +65,7 @@ class EditorScreen(
         stage.addActor(root)
         stage.addListener(saveShortcutListener())
         session?.addDirtyListener(dirtyListener)
+        inspector?.addValidationListener(validationListener)
     }
 
     private fun updateTitle(dirty: Boolean) {
@@ -86,6 +94,7 @@ class EditorScreen(
 
     private fun saveSession() {
         val session = session ?: return
+        if (hasBlockingErrors) return
         if (!session.isDirty) return
         session.save()
     }
@@ -163,6 +172,7 @@ class EditorScreen(
 
     override fun dispose() {
         session?.removeDirtyListener(dirtyListener)
+        inspector?.removeValidationListener(validationListener)
         inspector?.dispose()
         stage.dispose()
     }

@@ -34,6 +34,18 @@ class Inspector(
         setScrollingDisabled(true, false)
     }
     private val issuePanel = IssuePanel()
+    private val validationListeners = mutableListOf<(List<com.faultory.editor.validation.ValidationIssue>) -> Unit>()
+    var currentIssues: List<com.faultory.editor.validation.ValidationIssue> = emptyList()
+        private set
+
+    fun addValidationListener(listener: (List<com.faultory.editor.validation.ValidationIssue>) -> Unit) {
+        validationListeners += listener
+        listener(currentIssues)
+    }
+
+    fun removeValidationListener(listener: (List<com.faultory.editor.validation.ValidationIssue>) -> Unit) {
+        validationListeners.remove(listener)
+    }
 
     private val listener: (AssetSelection?) -> Unit = { render(it) }
 
@@ -56,24 +68,37 @@ class Inspector(
         issuePanel.clear()
         if (selection == null) {
             content.add(VisLabel("No selection")).pad(8f)
+            publishIssues(emptyList())
             return
         }
         val bundle = buildEditors(selection)
         if (bundle == null) {
             content.add(VisLabel("Unsupported selection")).pad(8f)
+            publishIssues(emptyList())
             return
         }
         content.add(VisLabel(titleFor(selection))).colspan(2).left().pad(6f).row()
+        val onChangeWithValidation = {
+            bundle.onChange()
+            refreshIssues(selection)
+        }
         for (editor in bundle.editors) {
             content.add(VisLabel(editor.fieldName)).left().pad(4f)
-            content.add(actorFor(editor, bundle.onChange)).growX().pad(4f).row()
+            content.add(actorFor(editor, onChangeWithValidation)).growX().pad(4f).row()
         }
         refreshIssues(selection)
     }
 
     private fun refreshIssues(selection: AssetSelection) {
         val context = com.faultory.editor.validation.ValidationContext(repository, selection)
-        issuePanel.show(com.faultory.editor.validation.ValidatorRegistry.validate(selection, context))
+        val issues = com.faultory.editor.validation.ValidatorRegistry.validate(selection, context)
+        issuePanel.show(issues)
+        publishIssues(issues)
+    }
+
+    private fun publishIssues(issues: List<com.faultory.editor.validation.ValidationIssue>) {
+        currentIssues = issues
+        validationListeners.toList().forEach { it(issues) }
     }
 
     private data class EditorsBundle(
