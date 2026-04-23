@@ -1,0 +1,42 @@
+{
+  "atlas": "textures/machine_producer_tier1.atlas",
+  "actions": {
+    "idle": {
+      "frames": {
+        "NORTH": [
+          "idle_north_000"
+        ],
+        "EAST": [
+          "idle_east_000"
+        ],
+        "SOUTH": [
+          "idle_south_000"
+        ],
+        "WEST": [
+          "idle_west_000"
+        ]
+      }
+    },
+    "working": {
+      "frames": {
+        "NORTH": [
+          "working_north_000",
+          "working_north_001"
+        ],
+        "EAST": [
+          "working_east_000",
+          "working_east_001"
+        ],
+        "SOUTH": [
+          "working_south_000",
+          "working_south_001"
+        ],
+        "WEST": [
+          "working_west_000",
+          "working_west_001"
+        ]
+      },
+      "fps": 6.0
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "atlas": "textures/worker_line_inspector.atlas",
+  "actions": {
+    "idle": {
+      "frames": {
+        "NORTH": [
+          "idle_north_000"
+        ],
+        "EAST": [
+          "idle_east_000"
+        ],
+        "SOUTH": [
+          "idle_south_000"
+        ],
+        "WEST": [
+          "idle_west_000"
+        ]
+      }
+    },
+    "walk": {
+      "frames": {
+        "NORTH": [
+          "walk_north_000",
+          "walk_north_001"
+        ],
+        "EAST": [
+          "walk_east_000",
+          "walk_east_001"
+        ],
+        "SOUTH": [
+          "walk_south_000",
+          "walk_south_001"
+        ],
+        "WEST": [
+          "walk_west_000",
+          "walk_west_001"
+        ]
+      },
+      "fps": 12.0
+    }
+  }
+}
