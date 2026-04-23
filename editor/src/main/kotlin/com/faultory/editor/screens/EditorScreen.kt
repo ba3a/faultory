@@ -13,11 +13,15 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.faultory.editor.backup.BackupService
 import com.faultory.editor.model.Duplicator
 import com.faultory.editor.model.EditorSession
+import com.faultory.editor.model.ReferenceIndex
 import com.faultory.editor.ui.dialogs.ConfirmDialog
 import com.faultory.editor.ui.dialogs.DuplicateDialog
+import com.faultory.editor.ui.dialogs.FindReferencesDialog
 import com.faultory.editor.ui.inspector.Inspector
+import com.faultory.editor.ui.tree.AssetSelection
 import com.faultory.editor.ui.tree.AssetTree
 import com.faultory.editor.ui.tree.SelectionBus
+import com.kotcrab.vis.ui.widget.PopupMenu
 import com.faultory.editor.validation.ValidationIssue
 import com.faultory.editor.validation.ValidatorRegistry
 import com.kotcrab.vis.ui.widget.Menu
@@ -89,6 +93,14 @@ class EditorScreen(
 
         val editMenu = Menu("Edit")
         editMenu.addItem(menuItem("Duplicate…") { openDuplicateDialog() })
+        editMenu.addItem(menuItem("Find references…") {
+            val selection = SelectionBus.current
+            if (selection == null) {
+                ConfirmDialog.info(stage, "Find references", "Select an asset first.")
+            } else {
+                openFindReferences(selection)
+            }
+        })
         menuBar.addMenu(editMenu)
     }
 
@@ -146,6 +158,27 @@ class EditorScreen(
         }
     }
 
+    private fun showTreeContextMenu(selection: AssetSelection) {
+        val menu = PopupMenu()
+        menu.addItem(com.kotcrab.vis.ui.widget.MenuItem("Duplicate…").apply {
+            addListener(object : ChangeListener() {
+                override fun changed(event: ChangeEvent, actor: Actor) = openDuplicateDialog()
+            })
+        })
+        menu.addItem(com.kotcrab.vis.ui.widget.MenuItem("Find references…").apply {
+            addListener(object : ChangeListener() {
+                override fun changed(event: ChangeEvent, actor: Actor) = openFindReferences(selection)
+            })
+        })
+        val input = Gdx.input ?: return
+        menu.showMenu(stage, input.x.toFloat(), stage.height - input.y.toFloat())
+    }
+
+    private fun openFindReferences(selection: AssetSelection) {
+        val session = session ?: return
+        FindReferencesDialog.open(stage, selection, ReferenceIndex(session.repository))
+    }
+
     private fun openDuplicateDialog() {
         val session = session ?: return
         val selection = SelectionBus.current
@@ -199,7 +232,7 @@ class EditorScreen(
         val tree = AssetTree(session.repository)
         tree.onContextMenu = { selection ->
             SelectionBus.select(selection)
-            openDuplicateDialog()
+            showTreeContextMenu(selection)
         }
         val scroll = VisScrollPane(tree).apply {
             setFadeScrollBars(false)
