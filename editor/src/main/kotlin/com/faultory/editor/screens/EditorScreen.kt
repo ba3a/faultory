@@ -82,7 +82,7 @@ class EditorScreen(
         fileMenu.addItem(menuItem("Save") { saveSession() })
         fileMenu.addSeparator()
         fileMenu.addItem(menuItem("Backup…") { exportBackup() })
-        fileMenu.addItem(menuItem("Restore…") { showNotImplemented("Restore") })
+        fileMenu.addItem(menuItem("Restore…") { openRestoreDialog() })
         fileMenu.addSeparator()
         fileMenu.addItem(menuItem("Exit") { Gdx.app.exit() })
         menuBar.addMenu(fileMenu)
@@ -90,6 +90,50 @@ class EditorScreen(
         val editMenu = Menu("Edit")
         editMenu.addItem(menuItem("Duplicate…") { openDuplicateDialog() })
         menuBar.addMenu(editMenu)
+    }
+
+    private fun openRestoreDialog() {
+        val session = session ?: return
+        val chooser = com.kotcrab.vis.ui.widget.file.FileChooser(
+            com.kotcrab.vis.ui.widget.file.FileChooser.Mode.OPEN,
+        )
+        val backupsDir = session.repository.rootPath.resolve(BackupService.DEFAULT_DIR).toFile()
+        if (backupsDir.isDirectory) {
+            chooser.setDirectory(backupsDir)
+        }
+        chooser.selectionMode = com.kotcrab.vis.ui.widget.file.FileChooser.SelectionMode.FILES
+        chooser.setListener(object : com.kotcrab.vis.ui.widget.file.FileChooserAdapter() {
+            override fun selected(files: com.badlogic.gdx.utils.Array<com.badlogic.gdx.files.FileHandle>) {
+                val file = files.firstOrNull() ?: return
+                confirmAndRestore(file.file().toPath())
+            }
+        })
+        stage.addActor(chooser.fadeIn())
+    }
+
+    private fun confirmAndRestore(bundle: java.nio.file.Path) {
+        val message = "Replace all editor content with the bundle at:\n$bundle\n\nA pre-restore snapshot will be saved."
+        ConfirmDialog(
+            title = "Confirm Restore",
+            message = message,
+            confirmText = "Restore",
+            onConfirm = { performRestore(bundle) },
+        ).showOn(stage)
+    }
+
+    private fun performRestore(bundle: java.nio.file.Path) {
+        val session = session ?: return
+        try {
+            val result = BackupService(session.repository).restore(bundle)
+            SelectionBus.select(null)
+            ConfirmDialog.info(
+                stage,
+                "Restore complete",
+                "Restored from ${result.restoredFrom}\nPre-restore snapshot: ${result.preRestoreSnapshot}",
+            )
+        } catch (t: Throwable) {
+            ConfirmDialog.info(stage, "Restore failed", t.message ?: t.toString())
+        }
     }
 
     private fun exportBackup() {
