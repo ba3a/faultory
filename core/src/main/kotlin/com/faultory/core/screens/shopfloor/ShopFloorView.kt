@@ -10,6 +10,12 @@ class ShopFloorView(private val layers: List<ShopFloorLayer>) {
         }
         ctx.shapeRenderer.end()
 
+        ctx.spriteBatch.begin()
+        for (layer in layers) {
+            layer.drawSprite(ctx)
+        }
+        ctx.spriteBatch.end()
+
         ctx.shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
         for (layer in layers) {
             layer.drawLine(ctx)

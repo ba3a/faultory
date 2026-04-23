@@ -3,11 +3,13 @@ package com.faultory.core.screens
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.ScreenAdapter
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
+import com.badlogic.gdx.graphics.g2d.TextureAtlas
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.faultory.core.FaultoryGame
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelDefinition
+import com.faultory.core.graphics.AnimationPlayer
 import com.faultory.core.content.ShopCatalog
 import com.faultory.core.screens.shopfloor.BankPanel
 import com.faultory.core.screens.shopfloor.BankPanelRenderer
@@ -27,6 +29,7 @@ import com.faultory.core.screens.shopfloor.ShopFloorGeometry
 import com.faultory.core.screens.shopfloor.ShopFloorInput
 import com.faultory.core.screens.shopfloor.ShopFloorRenderContext
 import com.faultory.core.screens.shopfloor.ShopFloorView
+import com.faultory.core.screens.shopfloor.SpriteSkinRenderer
 import com.faultory.core.screens.shopfloor.WorkerAssignmentController
 import com.faultory.core.screens.shopfloor.WorkerContextMenuRenderer
 import com.faultory.core.save.GameSave
@@ -57,6 +60,8 @@ class ShopFloorScreen(
     private val failureBlink = FailureBlinkController()
     private val hoverState = HoverState()
     private val geometry = ShopFloorGeometry(shopFloor)
+    private val animationPlayer = AnimationPlayer()
+    private val atlasProvider: (String) -> TextureAtlas? = { null }
     private val machineDrag = MachineDragController(
         shopFloor = shopFloor,
         pointerState = pointerState,
@@ -81,6 +86,7 @@ class ShopFloorScreen(
         listOf(
             GridBackgroundRenderer(shopFloor),
             PlacementPreviewRenderer(shopFloor, geometry, placement, hoverState),
+            SpriteSkinRenderer(shopFloor, catalogLookup, geometry),
             PlacedObjectRenderer(shopFloor, catalogLookup, geometry, workerAssignment, failureBlink, hoverState),
             HudRenderer(level, shopFloor, catalogLookup, bankPanel, workerAssignment, shiftLifecycle, hoverState),
             BankPanelRenderer(bankPanel),
@@ -147,6 +153,8 @@ class ShopFloorScreen(
                 titleLayout = titleLayout,
                 hintLayout = hintLayout,
                 viewport = viewport,
+                animationPlayer = animationPlayer,
+                atlasProvider = atlasProvider,
                 skinRegistry = game.skinRegistry
             )
         )
