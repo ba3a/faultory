@@ -10,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.ScreenViewport
+import com.faultory.editor.backup.BackupService
 import com.faultory.editor.model.Duplicator
 import com.faultory.editor.model.EditorSession
 import com.faultory.editor.ui.dialogs.ConfirmDialog
@@ -80,7 +81,7 @@ class EditorScreen(
         val fileMenu = Menu("File")
         fileMenu.addItem(menuItem("Save") { saveSession() })
         fileMenu.addSeparator()
-        fileMenu.addItem(menuItem("Backup…") { showNotImplemented("Backup") })
+        fileMenu.addItem(menuItem("Backup…") { exportBackup() })
         fileMenu.addItem(menuItem("Restore…") { showNotImplemented("Restore") })
         fileMenu.addSeparator()
         fileMenu.addItem(menuItem("Exit") { Gdx.app.exit() })
@@ -89,6 +90,16 @@ class EditorScreen(
         val editMenu = Menu("Edit")
         editMenu.addItem(menuItem("Duplicate…") { openDuplicateDialog() })
         menuBar.addMenu(editMenu)
+    }
+
+    private fun exportBackup() {
+        val session = session ?: return
+        try {
+            val path = BackupService(session.repository).exportToDefaultDirectory()
+            ConfirmDialog.info(stage, "Backup", "Backup written to $path")
+        } catch (t: Throwable) {
+            ConfirmDialog.info(stage, "Backup failed", t.message ?: t.toString())
+        }
     }
 
     private fun openDuplicateDialog() {

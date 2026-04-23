@@ -2,6 +2,7 @@ import org.gradle.api.tasks.JavaExec
 
 plugins {
     id("buildsrc.convention.kotlin-jvm")
+    alias(libs.plugins.kotlinPluginSerialization)
     application
 }
 
