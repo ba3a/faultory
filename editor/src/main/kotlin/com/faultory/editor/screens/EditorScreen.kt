@@ -7,7 +7,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.ScreenViewport
-import com.faultory.editor.repository.AssetRepository
+import com.faultory.editor.model.EditorSession
 import com.faultory.editor.ui.dialogs.ConfirmDialog
 import com.faultory.editor.ui.inspector.Inspector
 import com.faultory.editor.ui.tree.AssetTree
@@ -20,19 +20,22 @@ import com.kotcrab.vis.ui.widget.VisSplitPane
 import com.kotcrab.vis.ui.widget.VisTable
 
 class EditorScreen(
-    private val repository: AssetRepository? = null,
+    private val session: EditorSession? = null,
+    private val baseTitle: String = "Faultory Asset Editor",
 ) : ScreenAdapter() {
     private val stage = Stage(ScreenViewport())
     private val root = VisTable()
     private val menuBar = MenuBar()
     private val leftPanel = VisTable()
     private val rightPanel = VisTable()
-    private val inspector: Inspector? = repository?.let { Inspector(it) }
+    private val inspector: Inspector? = session?.let { Inspector(it) }
     private val splitPane = VisSplitPane(leftPanel, rightPanel, false).apply {
         setSplitAmount(0.25f)
         setMinSplitAmount(0.1f)
         setMaxSplitAmount(0.6f)
     }
+
+    private val dirtyListener: (Boolean) -> Unit = { dirty -> updateTitle(dirty) }
 
     init {
         buildMenuBar()
@@ -45,6 +48,12 @@ class EditorScreen(
         root.add(splitPane).grow()
 
         stage.addActor(root)
+        session?.addDirtyListener(dirtyListener)
+    }
+
+    private fun updateTitle(dirty: Boolean) {
+        val graphics = Gdx.graphics ?: return
+        graphics.setTitle(if (dirty) "$baseTitle *" else baseTitle)
     }
 
     private fun buildMenuBar() {
@@ -57,11 +66,11 @@ class EditorScreen(
 
     private fun buildLeftPanel() {
         leftPanel.top()
-        if (repository == null) {
+        if (session == null) {
             leftPanel.add(VisLabel("No assets loaded")).pad(8f)
             return
         }
-        val tree = AssetTree(repository)
+        val tree = AssetTree(session.repository)
         val scroll = VisScrollPane(tree).apply {
             setFadeScrollBars(false)
             setScrollingDisabled(true, false)
@@ -111,6 +120,7 @@ class EditorScreen(
     }
 
     override fun dispose() {
+        session?.removeDirtyListener(dirtyListener)
         inspector?.dispose()
         stage.dispose()
     }

@@ -1,10 +1,12 @@
 package com.faultory.editor.ui.inspector
 
+import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.ProductDefinition
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.shop.ShopBlueprint
-import com.faultory.editor.repository.AssetRepository
+import com.faultory.editor.model.EditorSession
+import com.faultory.editor.repository.EditorJson
 import com.faultory.editor.ui.tree.AssetSelection
 import com.faultory.editor.ui.tree.SelectionBus
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
@@ -16,9 +18,13 @@ import com.kotcrab.vis.ui.widget.VisSelectBox
 import com.kotcrab.vis.ui.widget.VisTable
 import com.kotcrab.vis.ui.widget.VisTextButton
 import com.kotcrab.vis.ui.widget.VisTextField
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.serializer
 
 class Inspector(
-    private val repository: AssetRepository,
+    private val session: EditorSession,
     private val bus: SelectionBus = SelectionBus,
 ) {
     val actor: VisTable = VisTable()
@@ -41,35 +47,88 @@ class Inspector(
         bus.removeListener(listener)
     }
 
+    private val repository get() = session.repository
+
     private fun render(selection: AssetSelection?) {
         content.clear()
         if (selection == null) {
             content.add(VisLabel("No selection")).pad(8f)
             return
         }
-        val editors = editorsFor(selection)
-        if (editors == null) {
+        val bundle = buildEditors(selection)
+        if (bundle == null) {
             content.add(VisLabel("Unsupported selection")).pad(8f)
             return
         }
         content.add(VisLabel(titleFor(selection))).colspan(2).left().pad(6f).row()
-        for (editor in editors) {
+        for (editor in bundle.editors) {
             content.add(VisLabel(editor.fieldName)).left().pad(4f)
-            content.add(actorFor(editor)).growX().pad(4f).row()
+            content.add(actorFor(editor, bundle.onChange)).growX().pad(4f).row()
         }
     }
 
-    private fun editorsFor(selection: AssetSelection): List<PropertyEditor>? {
+    private data class EditorsBundle(
+        val editors: List<PropertyEditor>,
+        val onChange: () -> Unit,
+    )
+
+    private fun buildEditors(selection: AssetSelection): EditorsBundle? {
         return when (selection) {
-            is AssetSelection.Product -> findProduct(selection.id)?.let { ReflectionForm.editorsFor(it) }
-            is AssetSelection.Worker -> findWorker(selection.id)?.let { ReflectionForm.editorsFor(it) }
-            is AssetSelection.Machine -> findMachine(selection.id)?.let { ReflectionForm.editorsFor(it) }
-            is AssetSelection.Level -> null
-            is AssetSelection.Blueprint -> findBlueprint(selection.shopAssetPath)?.let {
-                ReflectionForm.editorsFor(it)
+            is AssetSelection.Product -> findProduct(selection.id)?.let { product ->
+                val original = originalJson(product)
+                val editors = ReflectionForm.editorsFor(product)
+                EditorsBundle(editors) {
+                    val updated = EditorJson.instance.decodeFromString<ProductDefinition>(
+                        EditorJson.instance.encodeToString(EditorCommitter.commit(editors, original))
+                    )
+                    session.updateProduct(selection.id, updated)
+                }
+            }
+            is AssetSelection.Worker -> findWorker(selection.id)?.let { worker ->
+                val original = originalJson(worker)
+                val editors = ReflectionForm.editorsFor(worker)
+                EditorsBundle(editors) {
+                    val updated = EditorJson.instance.decodeFromString<WorkerProfile>(
+                        EditorJson.instance.encodeToString(EditorCommitter.commit(editors, original))
+                    )
+                    session.updateWorker(selection.id, updated)
+                }
+            }
+            is AssetSelection.Machine -> findMachine(selection.id)?.let { machine ->
+                val original = originalJson(machine)
+                val editors = ReflectionForm.editorsFor(machine)
+                EditorsBundle(editors) {
+                    val updated = EditorJson.instance.decodeFromString<MachineSpec>(
+                        EditorJson.instance.encodeToString(EditorCommitter.commit(editors, original))
+                    )
+                    session.updateMachine(selection.id, updated)
+                }
+            }
+            is AssetSelection.Level -> findLevel(selection.id)?.let { level ->
+                val original = originalJson(level)
+                val editors = ReflectionForm.editorsFor(level)
+                EditorsBundle(editors) {
+                    val updated = EditorJson.instance.decodeFromString<LevelDefinition>(
+                        EditorJson.instance.encodeToString(EditorCommitter.commit(editors, original))
+                    )
+                    session.updateLevel(selection.id, updated)
+                }
+            }
+            is AssetSelection.Blueprint -> findBlueprint(selection.shopAssetPath)?.let { blueprint ->
+                val original = originalJson(blueprint)
+                val editors = ReflectionForm.editorsFor(blueprint)
+                EditorsBundle(editors) {
+                    val updated = EditorJson.instance.decodeFromString<ShopBlueprint>(
+                        EditorJson.instance.encodeToString(EditorCommitter.commit(editors, original))
+                    )
+                    session.updateBlueprint(selection.shopAssetPath, updated)
+                }
             }
         }
     }
+
+    private inline fun <reified T> originalJson(instance: T): JsonObject =
+        EditorJson.instance.encodeToJsonElement(serializer<T>(), instance).jsonObject
 
     private fun findProduct(id: String): ProductDefinition? =
         repository.shopCatalog.products.firstOrNull { it.id == id }
@@ -79,6 +138,9 @@ class Inspector(
 
     private fun findMachine(id: String): MachineSpec? =
         repository.shopCatalog.machines.firstOrNull { it.id == id }
+
+    private fun findLevel(id: String): LevelDefinition? =
+        repository.levelCatalog.levels.firstOrNull { it.id == id }
 
     private fun findBlueprint(path: String): ShopBlueprint? = repository.blueprints[path]
 
@@ -90,17 +152,69 @@ class Inspector(
         is AssetSelection.Blueprint -> "Blueprint: ${selection.shopAssetPath}"
     }
 
-    private fun actorFor(editor: PropertyEditor): com.badlogic.gdx.scenes.scene2d.Actor {
+    private fun actorFor(editor: PropertyEditor, onChange: () -> Unit): com.badlogic.gdx.scenes.scene2d.Actor {
         return when (editor) {
-            is StringEditor -> VisTextField(editor.value).apply { isDisabled = true }
-            is IntEditor -> VisTextField(editor.value.toString()).apply { isDisabled = true }
-            is LongEditor -> VisTextField(editor.value.toString()).apply { isDisabled = true }
-            is FloatEditor -> VisTextField(editor.value.toString()).apply { isDisabled = true }
+            is StringEditor -> VisTextField(editor.value).apply {
+                addListener(object : ChangeListener() {
+                    override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                        if (editor.value == text) return
+                        editor.value = text
+                        onChange()
+                    }
+                })
+            }
+            is IntEditor -> VisTextField(editor.value.toString()).apply {
+                addListener(object : ChangeListener() {
+                    override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                        val parsed = text.toIntOrNull() ?: return
+                        if (editor.value == parsed) return
+                        editor.value = parsed
+                        onChange()
+                    }
+                })
+            }
+            is LongEditor -> VisTextField(editor.value.toString()).apply {
+                addListener(object : ChangeListener() {
+                    override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                        val parsed = text.toLongOrNull() ?: return
+                        if (editor.value == parsed) return
+                        editor.value = parsed
+                        onChange()
+                    }
+                })
+            }
+            is FloatEditor -> VisTextField(editor.value.toString()).apply {
+                addListener(object : ChangeListener() {
+                    override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                        val parsed = text.toFloatOrNull() ?: return
+                        if (editor.value == parsed) return
+                        editor.value = parsed
+                        onChange()
+                    }
+                })
+            }
             is BooleanEditor -> VisCheckBox(null).apply {
                 isChecked = editor.value
-                isDisabled = true
+                addListener(object : ChangeListener() {
+                    override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                        if (editor.value == isChecked) return
+                        editor.value = isChecked
+                        onChange()
+                    }
+                })
             }
-            is EnumEditor -> VisTextField(editor.value).apply { isDisabled = true }
+            is EnumEditor -> VisSelectBox<String>().apply {
+                items = GdxArray(editor.options.toTypedArray())
+                selected = editor.value.takeIf { it in editor.options } ?: editor.options.firstOrNull() ?: ""
+                addListener(object : ChangeListener() {
+                    override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                        val choice = selected ?: return
+                        if (editor.value == choice) return
+                        editor.value = choice
+                        onChange()
+                    }
+                })
+            }
             is NullableEditor -> VisTextField(if (editor.isNull) "null" else "<value>").apply {
                 isDisabled = true
             }
@@ -108,12 +222,12 @@ class Inspector(
                 top().left()
                 for (child in editor.children) {
                     add(VisLabel(child.fieldName)).left().pad(2f)
-                    add(actorFor(child)).growX().pad(2f).row()
+                    add(actorFor(child, onChange)).growX().pad(2f).row()
                 }
             }
-            is StringListEditor -> VisTable().apply { stringListActor(this, editor) }
-            is IdReferenceEditor -> idReferenceActor(editor)
-            is IdReferenceListEditor -> VisTable().apply { idReferenceListActor(this, editor) }
+            is StringListEditor -> VisTable().apply { stringListActor(this, editor, onChange) }
+            is IdReferenceEditor -> idReferenceActor(editor, onChange)
+            is IdReferenceListEditor -> VisTable().apply { idReferenceListActor(this, editor, onChange) }
         }
     }
 
@@ -125,7 +239,10 @@ class Inspector(
         }
     }
 
-    private fun idReferenceActor(editor: IdReferenceEditor): com.badlogic.gdx.scenes.scene2d.Actor {
+    private fun idReferenceActor(
+        editor: IdReferenceEditor,
+        onChange: () -> Unit,
+    ): com.badlogic.gdx.scenes.scene2d.Actor {
         val catalogIds = idsFor(editor.catalogType)
         val options = buildList {
             if (editor.isNullable) add(NONE_OPTION)
@@ -142,13 +259,20 @@ class Inspector(
         select.addListener(object : ChangeListener() {
             override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
                 val selected = select.selected ?: return
-                editor.value = if (selected == NONE_OPTION) "" else selected
+                val newValue = if (selected == NONE_OPTION) "" else selected
+                if (editor.value == newValue) return
+                editor.value = newValue
+                onChange()
             }
         })
         return select
     }
 
-    private fun idReferenceListActor(table: VisTable, editor: IdReferenceListEditor) {
+    private fun idReferenceListActor(
+        table: VisTable,
+        editor: IdReferenceListEditor,
+        onChange: () -> Unit,
+    ) {
         val catalogIds = idsFor(editor.catalogType)
         fun rebuild() {
             table.clear()
@@ -163,7 +287,10 @@ class Inspector(
                     selected = if (value.isNotEmpty()) value else options.firstOrNull() ?: ""
                     addListener(object : ChangeListener() {
                         override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
-                            selected?.let { editor.values[index] = it }
+                            val choice = selected ?: return
+                            if (editor.values[index] == choice) return
+                            editor.values[index] = choice
+                            onChange()
                         }
                     })
                 }
@@ -172,6 +299,7 @@ class Inspector(
                     addListener(object : ChangeListener() {
                         override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
                             editor.move(index, index - 1)
+                            onChange()
                             rebuild()
                         }
                     })
@@ -181,6 +309,7 @@ class Inspector(
                     addListener(object : ChangeListener() {
                         override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
                             editor.move(index, index + 1)
+                            onChange()
                             rebuild()
                         }
                     })
@@ -189,6 +318,7 @@ class Inspector(
                     addListener(object : ChangeListener() {
                         override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
                             editor.removeAt(index)
+                            onChange()
                             rebuild()
                         }
                     })
@@ -203,6 +333,7 @@ class Inspector(
                 addListener(object : ChangeListener() {
                     override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
                         editor.add(catalogIds.firstOrNull() ?: "")
+                        onChange()
                         rebuild()
                     }
                 })
@@ -216,7 +347,7 @@ class Inspector(
         private const val NONE_OPTION = "(none)"
     }
 
-    private fun stringListActor(table: VisTable, editor: StringListEditor) {
+    private fun stringListActor(table: VisTable, editor: StringListEditor, onChange: () -> Unit) {
         fun rebuild() {
             table.clear()
             table.top().left()
@@ -224,7 +355,9 @@ class Inspector(
                 val field = VisTextField(value).apply {
                     addListener(object : ChangeListener() {
                         override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                            if (editor.values[index] == text) return
                             editor.values[index] = text
+                            onChange()
                         }
                     })
                 }
@@ -233,6 +366,7 @@ class Inspector(
                     addListener(object : ChangeListener() {
                         override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
                             editor.move(index, index - 1)
+                            onChange()
                             rebuild()
                         }
                     })
@@ -242,6 +376,7 @@ class Inspector(
                     addListener(object : ChangeListener() {
                         override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
                             editor.move(index, index + 1)
+                            onChange()
                             rebuild()
                         }
                     })
@@ -250,6 +385,7 @@ class Inspector(
                     addListener(object : ChangeListener() {
                         override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
                             editor.removeAt(index)
+                            onChange()
                             rebuild()
                         }
                     })
@@ -263,6 +399,7 @@ class Inspector(
                 addListener(object : ChangeListener() {
                     override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
                         editor.add("")
+                        onChange()
                         rebuild()
                     }
                 })
