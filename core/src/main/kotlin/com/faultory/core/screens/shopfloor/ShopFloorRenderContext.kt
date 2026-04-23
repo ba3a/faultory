@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.utils.viewport.Viewport
+import com.faultory.core.graphics.SkinRegistry
 
 class ShopFloorRenderContext(
     val shapeRenderer: ShapeRenderer,
@@ -12,5 +13,6 @@ class ShopFloorRenderContext(
     val font: BitmapFont,
     val titleLayout: GlyphLayout,
     val hintLayout: GlyphLayout,
-    val viewport: Viewport
+    val viewport: Viewport,
+    val skinRegistry: SkinRegistry? = null
 )

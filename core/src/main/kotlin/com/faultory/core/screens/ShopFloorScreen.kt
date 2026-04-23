@@ -146,7 +146,8 @@ class ShopFloorScreen(
                 font = game.renderContext.uiFont,
                 titleLayout = titleLayout,
                 hintLayout = hintLayout,
-                viewport = viewport
+                viewport = viewport,
+                skinRegistry = game.skinRegistry
             )
         )
     }

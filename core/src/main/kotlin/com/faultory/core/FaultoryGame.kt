@@ -12,6 +12,9 @@ import com.faultory.core.content.LevelCatalogAssetLoader
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.ShopCatalog
 import com.faultory.core.content.ShopCatalogAssetLoader
+import com.faultory.core.graphics.SkinDefinition
+import com.faultory.core.graphics.SkinDefinitionAssetLoader
+import com.faultory.core.graphics.SkinRegistry
 import com.faultory.core.render.RenderContext
 import com.faultory.core.save.GameSave
 import com.faultory.core.save.LocalSaveRepository
@@ -31,6 +34,9 @@ class FaultoryGame : Game() {
     lateinit var assetManager: AssetManager
         private set
 
+    lateinit var skinRegistry: SkinRegistry
+        private set
+
     override fun create() {
         renderContext = RenderContext(
             spriteBatch = SpriteBatch(),
@@ -39,13 +45,17 @@ class FaultoryGame : Game() {
         )
         saveRepository = LocalSaveRepository()
 
-        assetManager = AssetManager(InternalFileHandleResolver()).apply {
+        val fileHandleResolver = InternalFileHandleResolver()
+        assetManager = AssetManager(fileHandleResolver).apply {
             setLoader(ShopCatalog::class.java, ShopCatalogAssetLoader(fileHandleResolver))
             setLoader(LevelCatalog::class.java, LevelCatalogAssetLoader(fileHandleResolver))
             setLoader(ShopBlueprint::class.java, ShopBlueprintAssetLoader(fileHandleResolver))
+            setLoader(SkinDefinition::class.java, SkinDefinitionAssetLoader(fileHandleResolver))
             load(AssetPaths.levelCatalog, LevelCatalog::class.java)
             load(AssetPaths.shopCatalog, ShopCatalog::class.java)
+            enqueueSkinDefinitions(fileHandleResolver)
         }
+        skinRegistry = SkinRegistry(assetManager)
 
         setScreen(BootScreen(this))
     }
@@ -78,5 +88,18 @@ class FaultoryGame : Game() {
                 unlockedWorkerIds = unlockedWorkerIds,
                 unlockedMachineIds = unlockedMachineIds
             ).also(saveRepository::save)
+    }
+
+    private fun AssetManager.enqueueSkinDefinitions(fileHandleResolver: InternalFileHandleResolver) {
+        val skinsDirectory = fileHandleResolver.resolve(AssetPaths.skinsDir)
+        if (!skinsDirectory.exists() || !skinsDirectory.isDirectory) {
+            return
+        }
+
+        skinsDirectory.list(".json")
+            .sortedBy { it.name() }
+            .forEach { skinFile ->
+                load("${AssetPaths.skinsDir}${skinFile.name()}", SkinDefinition::class.java)
+            }
     }
 }
