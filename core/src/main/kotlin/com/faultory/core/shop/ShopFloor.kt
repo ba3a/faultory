@@ -52,6 +52,10 @@ class ShopFloor(
     val qaInspectionStates: List<QaInspectionState>
         get() = mutableQaInspectionStates
 
+    fun machineProductionStateFor(machineId: String): MachineProductionState? {
+        return mutableMachineProductionStates.firstOrNull { it.machineId == machineId }
+    }
+
     fun update(
         deltaSeconds: Float,
         workerProfilesById: Map<String, WorkerProfile>

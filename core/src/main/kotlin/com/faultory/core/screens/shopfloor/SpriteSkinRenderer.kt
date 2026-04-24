@@ -3,6 +3,7 @@ package com.faultory.core.screens.shopfloor
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.faultory.core.config.GameConfig
+import com.faultory.core.graphics.MachineActionResolver
 import com.faultory.core.graphics.SkinActions
 import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.graphics.SkinRegistry
@@ -15,6 +16,8 @@ class SpriteSkinRenderer(
     private val catalogLookup: CatalogLookup,
     private val geometry: ShopFloorGeometry
 ) : ShopFloorLayer {
+    private val machineActionResolver = MachineActionResolver(shopFloor)
+
     override fun drawSprite(ctx: ShopFloorRenderContext) {
         val skinRegistry = ctx.skinRegistry ?: return
         val batch = ctx.spriteBatch
@@ -23,11 +26,12 @@ class SpriteSkinRenderer(
         batch.color = Color.WHITE
         sortedPlacedObjects().forEach { placedObject ->
             val definition = skinDefinitionFor(placedObject, skinRegistry) ?: return@forEach
-            val clip = definition.actions[SkinActions.IDLE] ?: return@forEach
+            val action = actionFor(placedObject)
+            val clip = definition.actions[action] ?: return@forEach
             val atlas = atlasFor(definition, ctx) ?: return@forEach
             val state = ctx.animationPlayer.advance(
                 id = placedObject.id,
-                action = SkinActions.IDLE,
+                action = action,
                 orientation = placedObject.orientation,
                 delta = delta
             )
@@ -45,6 +49,13 @@ class SpriteSkinRenderer(
             compareByDescending<PlacedShopObject> { geometry.renderPositionFor(it).worldY }
                 .thenBy { geometry.renderPositionFor(it).worldX }
         )
+    }
+
+    private fun actionFor(placedObject: PlacedShopObject): String {
+        return when (placedObject.kind) {
+            PlacedShopObjectKind.MACHINE -> machineActionResolver.actionFor(placedObject)
+            PlacedShopObjectKind.WORKER -> SkinActions.IDLE
+        }
     }
 
     private fun atlasFor(definition: SkinDefinition, ctx: ShopFloorRenderContext) = ctx.atlasProvider(definition.atlas)
