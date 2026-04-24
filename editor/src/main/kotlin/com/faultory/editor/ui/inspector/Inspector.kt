@@ -1,14 +1,18 @@
 package com.faultory.editor.ui.inspector
 
+import com.faultory.core.assets.AssetPaths as CoreAssetPaths
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.ProductDefinition
 import com.faultory.core.content.WorkerProfile
+import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.editor.model.EditorSession
 import com.faultory.editor.repository.EditorJson
 import com.faultory.editor.ui.tree.AssetSelection
 import com.faultory.editor.ui.tree.SelectionBus
+import com.badlogic.gdx.files.FileHandle
+import com.badlogic.gdx.graphics.g2d.TextureAtlas
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.badlogic.gdx.utils.Array as GdxArray
 import com.kotcrab.vis.ui.widget.VisCheckBox
@@ -18,10 +22,13 @@ import com.kotcrab.vis.ui.widget.VisSelectBox
 import com.kotcrab.vis.ui.widget.VisTable
 import com.kotcrab.vis.ui.widget.VisTextButton
 import com.kotcrab.vis.ui.widget.VisTextField
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.serializer
+import java.nio.file.Files
+import kotlin.io.path.readText
 
 class Inspector(
     private val session: EditorSession,
@@ -48,6 +55,7 @@ class Inspector(
     }
 
     private val listener: (AssetSelection?) -> Unit = { render(it) }
+    private var currentPreview: SkinPreviewActor? = null
 
     init {
         actor.top().left()
@@ -59,6 +67,7 @@ class Inspector(
 
     fun dispose() {
         bus.removeListener(listener)
+        disposePreview()
     }
 
     private val repository get() = session.repository
@@ -66,6 +75,7 @@ class Inspector(
     private fun render(selection: AssetSelection?) {
         content.clear()
         issuePanel.clear()
+        disposePreview()
         if (selection == null) {
             content.add(VisLabel("No selection")).pad(8f)
             publishIssues(emptyList())
@@ -86,7 +96,52 @@ class Inspector(
             content.add(VisLabel(editor.fieldName)).left().pad(4f)
             content.add(actorFor(editor, onChangeWithValidation)).growX().pad(4f).row()
         }
+        appendSkinPreview(selection)
         refreshIssues(selection)
+    }
+
+    private fun appendSkinPreview(selection: AssetSelection) {
+        val skinValue = skinValueFor(selection)?.takeIf { it.isNotBlank() } ?: return
+        content.add(VisLabel("Preview")).colspan(2).left().pad(6f).row()
+        val preview = tryCreatePreview(skinValue)
+        if (preview == null) {
+            content.add(VisLabel("(skin '$skinValue' not baked yet)"))
+                .colspan(2).left().pad(4f).row()
+            return
+        }
+        currentPreview = preview
+        content.add(preview).colspan(2).size(PREVIEW_SIZE, PREVIEW_SIZE).left().pad(4f).row()
+    }
+
+    private fun skinValueFor(selection: AssetSelection): String? {
+        return when (selection) {
+            is AssetSelection.Machine -> findMachine(selection.id)?.skin
+            is AssetSelection.Worker -> findWorker(selection.id)?.skin
+            else -> null
+        }
+    }
+
+    private fun tryCreatePreview(skinId: String): SkinPreviewActor? {
+        val skinJsonPath = repository.rootPath.resolve(CoreAssetPaths.skinPath(skinId))
+        if (!Files.isRegularFile(skinJsonPath)) return null
+        val skin = try {
+            EditorJson.instance.decodeFromString<SkinDefinition>(skinJsonPath.readText(Charsets.UTF_8))
+        } catch (_: Exception) {
+            return null
+        }
+        val atlasPath = repository.rootPath.resolve(skin.atlas)
+        if (!Files.isRegularFile(atlasPath)) return null
+        val atlas = try {
+            TextureAtlas(FileHandle(atlasPath.toFile()))
+        } catch (_: Exception) {
+            return null
+        }
+        return SkinPreviewActor(atlas, skin)
+    }
+
+    private fun disposePreview() {
+        currentPreview?.dispose()
+        currentPreview = null
     }
 
     private fun refreshIssues(selection: AssetSelection) {
@@ -379,6 +434,7 @@ class Inspector(
 
     companion object {
         private const val NONE_OPTION = "(none)"
+        private const val PREVIEW_SIZE = 160f
     }
 
     private fun stringListActor(table: VisTable, editor: StringListEditor, onChange: () -> Unit) {
