@@ -3,7 +3,6 @@ package com.faultory.editor.ui.inspector
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.graphics.g2d.TextureAtlas
 import com.badlogic.gdx.scenes.scene2d.Actor
-import com.badlogic.gdx.utils.Disposable
 import com.faultory.core.graphics.ActionClip
 import com.faultory.core.graphics.AnimationPlayer
 import com.faultory.core.graphics.AnimationState
@@ -17,7 +16,7 @@ class SkinPreviewActor(
     private val action: String = SkinActions.IDLE,
     private val orientation: Orientation = Orientation.SOUTH,
     private val previewId: String = "skin-preview",
-) : Actor(), Disposable {
+) : Actor() {
 
     private val clip: ActionClip? = skin.actions[action]
     private val player = AnimationPlayer()
@@ -54,9 +53,5 @@ class SkinPreviewActor(
         val drawX = x + (cellWidth - drawWidth) / 2f
         val drawY = y + (cellHeight - drawHeight) / 2f
         batch.draw(region, drawX, drawY, drawWidth, drawHeight)
-    }
-
-    override fun dispose() {
-        atlas.dispose()
     }
 }

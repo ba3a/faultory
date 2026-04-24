@@ -1,18 +1,17 @@
 package com.faultory.editor.ui.inspector
 
-import com.faultory.core.assets.AssetPaths as CoreAssetPaths
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.ProductDefinition
 import com.faultory.core.content.WorkerProfile
-import com.faultory.core.graphics.SkinDefinition
+import com.faultory.core.graphics.SkinActions
 import com.faultory.core.shop.ShopBlueprint
+import com.faultory.editor.graphics.ClipDurationPolicy
 import com.faultory.editor.model.EditorSession
 import com.faultory.editor.repository.EditorJson
+import com.faultory.editor.ui.inspector.animations.AnimationsPanel
 import com.faultory.editor.ui.tree.AssetSelection
 import com.faultory.editor.ui.tree.SelectionBus
-import com.badlogic.gdx.files.FileHandle
-import com.badlogic.gdx.graphics.g2d.TextureAtlas
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.badlogic.gdx.utils.Array as GdxArray
 import com.kotcrab.vis.ui.widget.VisCheckBox
@@ -27,8 +26,6 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.serializer
-import java.nio.file.Files
-import kotlin.io.path.readText
 
 class Inspector(
     private val session: EditorSession,
@@ -55,7 +52,9 @@ class Inspector(
     }
 
     private val listener: (AssetSelection?) -> Unit = { render(it) }
-    private var currentPreview: SkinPreviewActor? = null
+    private var currentAnimations: AnimationsPanel? = null
+    private var currentSelectionIssues: List<com.faultory.editor.validation.ValidationIssue> = emptyList()
+    private var currentSkinIssues: List<com.faultory.editor.validation.ValidationIssue> = emptyList()
 
     init {
         actor.top().left()
@@ -67,7 +66,7 @@ class Inspector(
 
     fun dispose() {
         bus.removeListener(listener)
-        disposePreview()
+        disposeAnimations()
     }
 
     private val repository get() = session.repository
@@ -75,16 +74,19 @@ class Inspector(
     private fun render(selection: AssetSelection?) {
         content.clear()
         issuePanel.clear()
-        disposePreview()
+        disposeAnimations()
+        currentSkinIssues = emptyList()
         if (selection == null) {
             content.add(VisLabel("No selection")).pad(8f)
-            publishIssues(emptyList())
+            currentSelectionIssues = emptyList()
+            republishIssues()
             return
         }
         val bundle = buildEditors(selection)
         if (bundle == null) {
             content.add(VisLabel("Unsupported selection")).pad(8f)
-            publishIssues(emptyList())
+            currentSelectionIssues = emptyList()
+            republishIssues()
             return
         }
         content.add(VisLabel(titleFor(selection))).colspan(2).left().pad(6f).row()
@@ -96,59 +98,72 @@ class Inspector(
             content.add(VisLabel(editor.fieldName)).left().pad(4f)
             content.add(actorFor(editor, onChangeWithValidation)).growX().pad(4f).row()
         }
-        appendSkinPreview(selection)
+        appendAnimations(selection)
         refreshIssues(selection)
     }
 
-    private fun appendSkinPreview(selection: AssetSelection) {
-        val skinValue = skinValueFor(selection)?.takeIf { it.isNotBlank() } ?: return
-        content.add(VisLabel("Preview")).colspan(2).left().pad(6f).row()
-        val preview = tryCreatePreview(skinValue)
-        if (preview == null) {
-            content.add(VisLabel("(skin '$skinValue' not baked yet)"))
-                .colspan(2).left().pad(4f).row()
-            return
-        }
-        currentPreview = preview
-        content.add(preview).colspan(2).size(PREVIEW_SIZE, PREVIEW_SIZE).left().pad(4f).row()
+    private fun appendAnimations(selection: AssetSelection) {
+        val spec = skinSpecFor(selection) ?: return
+        content.add(VisLabel("Animations")).colspan(2).left().pad(6f).row()
+        val panel = AnimationsPanel(
+            assetsRoot = repository.rootPath,
+            skinId = spec.skinId,
+            actionDurations = spec.actionDurations,
+            stageProvider = { actor.stage },
+            onValidationIssues = { issues ->
+                currentSkinIssues = issues
+                republishIssues()
+            },
+        )
+        currentAnimations = panel
+        content.add(panel.actor).colspan(2).growX().left().pad(4f).row()
     }
 
-    private fun skinValueFor(selection: AssetSelection): String? {
+    private data class SkinSpec(val skinId: String, val actionDurations: Map<String, Float>)
+
+    private fun skinSpecFor(selection: AssetSelection): SkinSpec? {
         return when (selection) {
-            is AssetSelection.Machine -> findMachine(selection.id)?.skin
-            is AssetSelection.Worker -> findWorker(selection.id)?.skin
+            is AssetSelection.Worker -> findWorker(selection.id)?.let { worker ->
+                worker.skin.takeIf { it.isNotBlank() }?.let { skinId ->
+                    SkinSpec(
+                        skinId = skinId,
+                        actionDurations = linkedMapOf(
+                            SkinActions.IDLE to ClipDurationPolicy.durationFor(worker, SkinActions.IDLE),
+                            SkinActions.WALK to ClipDurationPolicy.durationFor(worker, SkinActions.WALK),
+                        ),
+                    )
+                }
+            }
+            is AssetSelection.Machine -> findMachine(selection.id)?.let { machine ->
+                machine.skin.takeIf { it.isNotBlank() }?.let { skinId ->
+                    SkinSpec(
+                        skinId = skinId,
+                        actionDurations = linkedMapOf(
+                            SkinActions.IDLE to ClipDurationPolicy.durationFor(machine, SkinActions.IDLE),
+                            SkinActions.WORKING to ClipDurationPolicy.durationFor(machine, SkinActions.WORKING),
+                        ),
+                    )
+                }
+            }
             else -> null
         }
     }
 
-    private fun tryCreatePreview(skinId: String): SkinPreviewActor? {
-        val skinJsonPath = repository.rootPath.resolve(CoreAssetPaths.skinPath(skinId))
-        if (!Files.isRegularFile(skinJsonPath)) return null
-        val skin = try {
-            EditorJson.instance.decodeFromString<SkinDefinition>(skinJsonPath.readText(Charsets.UTF_8))
-        } catch (_: Exception) {
-            return null
-        }
-        val atlasPath = repository.rootPath.resolve(skin.atlas)
-        if (!Files.isRegularFile(atlasPath)) return null
-        val atlas = try {
-            TextureAtlas(FileHandle(atlasPath.toFile()))
-        } catch (_: Exception) {
-            return null
-        }
-        return SkinPreviewActor(atlas, skin)
+    private fun disposeAnimations() {
+        currentAnimations?.dispose()
+        currentAnimations = null
     }
 
-    private fun disposePreview() {
-        currentPreview?.dispose()
-        currentPreview = null
+    private fun republishIssues() {
+        val combined = currentSelectionIssues + currentSkinIssues
+        issuePanel.show(combined)
+        publishIssues(combined)
     }
 
     private fun refreshIssues(selection: AssetSelection) {
         val context = com.faultory.editor.validation.ValidationContext(repository, selection)
-        val issues = com.faultory.editor.validation.ValidatorRegistry.validate(selection, context)
-        issuePanel.show(issues)
-        publishIssues(issues)
+        currentSelectionIssues = com.faultory.editor.validation.ValidatorRegistry.validate(selection, context)
+        republishIssues()
     }
 
     private fun publishIssues(issues: List<com.faultory.editor.validation.ValidationIssue>) {
@@ -434,7 +449,6 @@ class Inspector(
 
     companion object {
         private const val NONE_OPTION = "(none)"
-        private const val PREVIEW_SIZE = 160f
     }
 
     private fun stringListActor(table: VisTable, editor: StringListEditor, onChange: () -> Unit) {
