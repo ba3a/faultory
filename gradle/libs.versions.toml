@@ -12,6 +12,7 @@ visUi = "1.5.5"
 kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 gdxCore = { module = "com.badlogicgames.gdx:gdx", version.ref = "gdx" }
 gdxBackendLwjgl3 = { module = "com.badlogicgames.gdx:gdx-backend-lwjgl3", version.ref = "gdx" }
+gdxTools = { module = "com.badlogicgames.gdx:gdx-tools", version.ref = "gdx" }
 kotlinxSerializationJson = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 visUi = { module = "com.kotcrab.vis:vis-ui", version.ref = "visUi" }
 
