@@ -1,0 +1,20 @@
+
+worker_float_tech.png
+size: 512, 512
+format: RGBA8888
+filter: Nearest, Nearest
+repeat: none
+idle_north_000
+  rotate: false
+  xy: 2, 2
+  size: 283, 400
+  orig: 283, 400
+  offset: 0, 0
+  index: -1
+walk_north_000
+  rotate: false
+  xy: 2, 2
+  size: 283, 400
+  orig: 283, 400
+  offset: 0, 0
+  index: -1

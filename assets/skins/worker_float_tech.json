@@ -1,0 +1,23 @@
+{
+  "atlas": "textures/worker_float_tech.atlas",
+  "actions": {
+    "idle": {
+      "frames": {
+        "NORTH": [
+          "idle_north_000"
+        ]
+      },
+      "fps": 1.0,
+      "loop": true
+    },
+    "walk": {
+      "frames": {
+        "NORTH": [
+          "walk_north_000"
+        ]
+      },
+      "fps": 148.0,
+      "loop": true
+    }
+  }
+}
