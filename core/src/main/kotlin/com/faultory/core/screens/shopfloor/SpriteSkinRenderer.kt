@@ -7,6 +7,7 @@ import com.faultory.core.graphics.MachineActionResolver
 import com.faultory.core.graphics.SkinActions
 import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.graphics.SkinRegistry
+import com.faultory.core.graphics.WorkerActionResolver
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
@@ -17,6 +18,7 @@ class SpriteSkinRenderer(
     private val geometry: ShopFloorGeometry
 ) : ShopFloorLayer {
     private val machineActionResolver = MachineActionResolver(shopFloor)
+    private val workerActionResolver = WorkerActionResolver()
 
     override fun drawSprite(ctx: ShopFloorRenderContext) {
         val skinRegistry = ctx.skinRegistry ?: return
@@ -29,10 +31,11 @@ class SpriteSkinRenderer(
             val action = actionFor(placedObject)
             val clip = definition.actions[action] ?: return@forEach
             val atlas = atlasFor(definition, ctx) ?: return@forEach
+            val orientation = orientationFor(placedObject)
             val state = ctx.animationPlayer.advance(
                 id = placedObject.id,
                 action = action,
-                orientation = placedObject.orientation,
+                orientation = orientation,
                 delta = delta
             )
             val regionName = ctx.animationPlayer.regionName(clip, state) ?: return@forEach
@@ -54,8 +57,13 @@ class SpriteSkinRenderer(
     private fun actionFor(placedObject: PlacedShopObject): String {
         return when (placedObject.kind) {
             PlacedShopObjectKind.MACHINE -> machineActionResolver.actionFor(placedObject)
-            PlacedShopObjectKind.WORKER -> SkinActions.IDLE
+            PlacedShopObjectKind.WORKER -> workerActionResolver.actionFor(placedObject)
         }
+    }
+
+    private fun orientationFor(placedObject: PlacedShopObject) = when (placedObject.kind) {
+        PlacedShopObjectKind.MACHINE -> placedObject.orientation
+        PlacedShopObjectKind.WORKER -> workerActionResolver.orientationFor(placedObject)
     }
 
     private fun atlasFor(definition: SkinDefinition, ctx: ShopFloorRenderContext) = ctx.atlasProvider(definition.atlas)
