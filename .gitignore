@@ -43,3 +43,5 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+/raw-art/
+/.claude/settings.local.json
