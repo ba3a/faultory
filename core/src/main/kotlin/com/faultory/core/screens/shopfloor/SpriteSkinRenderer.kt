@@ -24,7 +24,7 @@ class SpriteSkinRenderer(
         sortedPlacedObjects().forEach { placedObject ->
             val definition = skinDefinitionFor(placedObject, skinRegistry) ?: return@forEach
             val clip = definition.actions[SkinActions.IDLE] ?: return@forEach
-            val atlas = ctx.atlasProvider(definition.atlas) ?: return@forEach
+            val atlas = atlasFor(definition, ctx) ?: return@forEach
             val state = ctx.animationPlayer.advance(
                 id = placedObject.id,
                 action = SkinActions.IDLE,
@@ -46,6 +46,8 @@ class SpriteSkinRenderer(
                 .thenBy { geometry.renderPositionFor(it).worldX }
         )
     }
+
+    private fun atlasFor(definition: SkinDefinition, ctx: ShopFloorRenderContext) = ctx.atlasProvider(definition.atlas)
 
     private fun skinDefinitionFor(placedObject: PlacedShopObject, skinRegistry: SkinRegistry): SkinDefinition? {
         val skinId = when (placedObject.kind) {

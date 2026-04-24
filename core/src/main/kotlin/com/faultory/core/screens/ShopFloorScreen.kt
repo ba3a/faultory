@@ -61,7 +61,7 @@ class ShopFloorScreen(
     private val hoverState = HoverState()
     private val geometry = ShopFloorGeometry(shopFloor)
     private val animationPlayer = AnimationPlayer()
-    private val atlasProvider: (String) -> TextureAtlas? = { null }
+    private val atlasProvider: (String) -> TextureAtlas? = game::atlas
     private val machineDrag = MachineDragController(
         shopFloor = shopFloor,
         pointerState = pointerState,
