@@ -14,6 +14,7 @@ import com.faultory.editor.backup.BackupService
 import com.faultory.editor.model.Duplicator
 import com.faultory.editor.model.EditorSession
 import com.faultory.editor.model.ReferenceIndex
+import com.faultory.editor.ui.dialogs.BakeAtlasDialog
 import com.faultory.editor.ui.dialogs.ConfirmDialog
 import com.faultory.editor.ui.dialogs.DuplicateDialog
 import com.faultory.editor.ui.dialogs.FindReferencesDialog
@@ -102,6 +103,18 @@ class EditorScreen(
             }
         })
         menuBar.addMenu(editMenu)
+
+        val toolsMenu = Menu("Tools")
+        toolsMenu.addItem(menuItem("Bake atlas…") { openBakeAtlasDialog() })
+        menuBar.addMenu(toolsMenu)
+    }
+
+    private fun openBakeAtlasDialog() {
+        val session = session ?: run {
+            ConfirmDialog.info(stage, "Bake atlas", "No assets loaded.")
+            return
+        }
+        BakeAtlasDialog.open(stage, session.repository.rootPath)
     }
 
     private fun openRestoreDialog() {
