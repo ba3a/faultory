@@ -733,6 +733,9 @@ class ShopFloor(
             if (!config.accepts(product.productId)) {
                 continue
             }
+            if (machine.id in product.inspectedByObjectIds) {
+                continue
+            }
 
             holdProductForInspection(product.id, machine.id)
             mutableQaInspectionStates += QaInspectionState(
@@ -756,6 +759,9 @@ class ShopFloor(
             val beltTile = qaInspectionTileForWorker(worker) ?: continue
             val product = productAtBeltTile(beltTile) ?: continue
             if (!config.accepts(product.productId)) {
+                continue
+            }
+            if (worker.id in product.inspectedByObjectIds) {
                 continue
             }
 
@@ -790,6 +796,8 @@ class ShopFloor(
             mutableQaInspectionStates.removeAt(inspectionIndex)
             return
         }
+
+        markProductInspectedBy(product.id, inspector.id)
 
         val handled = when (state.classifiedAsFaulty) {
             true -> when (config.faultyProductStrategy) {
@@ -1329,6 +1337,20 @@ class ShopFloor(
 
     private fun productById(productId: String?): ShopProduct? {
         return mutableActiveProducts.firstOrNull { it.id == productId }
+    }
+
+    private fun markProductInspectedBy(productId: String, inspectorId: String) {
+        val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
+        if (productIndex < 0) {
+            return
+        }
+        val product = mutableActiveProducts[productIndex]
+        if (inspectorId in product.inspectedByObjectIds) {
+            return
+        }
+        mutableActiveProducts[productIndex] = product.copy(
+            inspectedByObjectIds = product.inspectedByObjectIds + inspectorId
+        )
     }
 
     private fun productAtBeltTile(tile: TileCoordinate): ShopProduct? {

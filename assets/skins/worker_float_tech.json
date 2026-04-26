@@ -5,6 +5,15 @@
       "frames": {
         "NORTH": [
           "idle_north_000"
+        ],
+        "SOUTH": [
+          "idle_south_000"
+        ],
+        "WEST": [
+          "idle_west_000"
+        ],
+        "EAST": [
+          "idle_east_000"
         ]
       },
       "fps": 1.0,
@@ -13,10 +22,35 @@
     "walk": {
       "frames": {
         "NORTH": [
-          "walk_north_000"
+          "walk_north_000",
+          "walk_north_001",
+          "walk_north_002",
+          "walk_north_003",
+          "walk_north_004"
+        ],
+        "EAST": [
+          "walk_east_000",
+          "walk_east_001",
+          "walk_east_002",
+          "walk_east_003",
+          "walk_east_004"
+        ],
+        "WEST": [
+          "walk_west_000",
+          "walk_west_001",
+          "walk_west_002",
+          "walk_west_003",
+          "walk_west_004"
+        ],
+        "SOUTH": [
+          "walk_south_000",
+          "walk_south_001",
+          "walk_south_002",
+          "walk_south_003",
+          "walk_south_004"
         ]
       },
-      "fps": 148.0,
+      "fps": 3700.0,
       "loop": true
     }
   }

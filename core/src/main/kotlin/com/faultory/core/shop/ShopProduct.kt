@@ -13,7 +13,8 @@ data class ShopProduct(
     val beltProgress: Float = 0f,
     val carrierWorkerId: String? = null,
     val holderObjectId: String? = null,
-    val reworkTargetMachineId: String? = null
+    val reworkTargetMachineId: String? = null,
+    val inspectedByObjectIds: Set<String> = emptySet()
 ) {
     val isFaulty: Boolean
         get() = faultReason != null
