@@ -17,11 +17,13 @@ class PlacedObjectRenderer(
     private val geometry: ShopFloorGeometry,
     private val workerAssignment: WorkerAssignmentController,
     private val failureBlink: FailureBlinkController,
-    private val hoverState: HoverState
+    private val hoverState: HoverState,
+    private val spriteDrawnIds: Set<String> = emptySet()
 ) : ShopFloorLayer {
     override fun drawFill(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
         for (placedObject in shopFloor.placedObjects) {
+            if (placedObject.id in spriteDrawnIds) continue
             drawPlacedObjectFill(renderer, placedObject)
         }
         for (product in shopFloor.activeProducts) {
@@ -32,6 +34,7 @@ class PlacedObjectRenderer(
     override fun drawLine(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
         for (placedObject in shopFloor.placedObjects) {
+            if (placedObject.id in spriteDrawnIds) continue
             drawPlacedObjectOutline(renderer, placedObject)
             drawOrientationMarker(renderer, placedObject)
         }

@@ -82,12 +82,13 @@ class ShopFloorScreen(
         bankPanel = bankPanel,
         shiftLifecycle = shiftLifecycle
     )
+    private val spriteDrawnIds = mutableSetOf<String>()
     private val view = ShopFloorView(
         listOf(
             GridBackgroundRenderer(shopFloor),
             PlacementPreviewRenderer(shopFloor, geometry, placement, hoverState),
-            SpriteSkinRenderer(shopFloor, catalogLookup, geometry),
-            PlacedObjectRenderer(shopFloor, catalogLookup, geometry, workerAssignment, failureBlink, hoverState),
+            SpriteSkinRenderer(shopFloor, catalogLookup, geometry, spriteDrawnIds),
+            PlacedObjectRenderer(shopFloor, catalogLookup, geometry, workerAssignment, failureBlink, hoverState, spriteDrawnIds),
             HudRenderer(level, shopFloor, catalogLookup, bankPanel, workerAssignment, shiftLifecycle, hoverState),
             BankPanelRenderer(bankPanel),
             WorkerContextMenuRenderer(workerAssignment),

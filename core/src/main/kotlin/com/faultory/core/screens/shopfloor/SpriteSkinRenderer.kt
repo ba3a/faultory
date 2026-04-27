@@ -15,12 +15,16 @@ import com.faultory.core.shop.ShopFloor
 class SpriteSkinRenderer(
     private val shopFloor: ShopFloor,
     private val catalogLookup: CatalogLookup,
-    private val geometry: ShopFloorGeometry
+    private val geometry: ShopFloorGeometry,
+    private val drawnIds: MutableSet<String> = mutableSetOf()
 ) : ShopFloorLayer {
     private val machineActionResolver = MachineActionResolver(shopFloor)
     private val workerActionResolver = WorkerActionResolver()
 
+    fun drawnIdsView(): Set<String> = drawnIds
+
     override fun drawSprite(ctx: ShopFloorRenderContext) {
+        drawnIds.clear()
         val skinRegistry = ctx.skinRegistry ?: return
         val batch = ctx.spriteBatch
         val delta = Gdx.graphics.deltaTime.coerceAtLeast(0f)
@@ -44,6 +48,7 @@ class SpriteSkinRenderer(
             val drawX = anchor.worldX + GameConfig.tileSize / 2f - region.regionWidth / 2f
             val drawY = anchor.worldY
             batch.draw(region, drawX, drawY)
+            drawnIds += placedObject.id
         }
     }
 
