@@ -16,7 +16,8 @@ data class LevelDefinition(
     val starThresholds: LevelStarThresholds,
     val recommendedNextLevelId: String? = null,
     val availableWorkerIds: List<String>,
-    val availableMachineIds: List<String>
+    val availableMachineIds: List<String>,
+    val startingCash: Int = 0
 )
 
 @Serializable

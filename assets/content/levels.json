@@ -19,7 +19,8 @@
         "bench-assembler",
         "camera-gate",
         "weight-checker"
-      ]
+      ],
+      "startingCash": 320
     },
     {
       "id": "rush-order-shop",
@@ -40,7 +41,8 @@
         "bench-assembler",
         "camera-gate",
         "weight-checker"
-      ]
+      ],
+      "startingCash": 380
     }
   ]
 }

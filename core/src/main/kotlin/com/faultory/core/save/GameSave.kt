@@ -16,13 +16,14 @@ data class GameSave(
     val lastCompletedRun: CompletedRunStats? = null
 ) {
     companion object {
-        const val CURRENT_VERSION = 9
+        const val CURRENT_VERSION = 10
 
         fun forLevel(
             slotId: String,
             shopId: String,
             unlockedWorkerIds: List<String>,
-            unlockedMachineIds: List<String>
+            unlockedMachineIds: List<String>,
+            startingCash: Int = 0
         ): GameSave {
             return GameSave(
                 slotId = slotId,
@@ -32,15 +33,15 @@ data class GameSave(
                     unlockedWorkerIds = unlockedWorkerIds,
                     unlockedMachineIds = unlockedMachineIds
                 ),
-                activeShift = ShiftSnapshot.fresh(shopId)
+                activeShift = ShiftSnapshot.fresh(shopId, startingCash)
             )
         }
     }
 
-    fun resetForReplay(shopId: String): GameSave {
+    fun resetForReplay(shopId: String, startingCash: Int = 0): GameSave {
         return copy(
             createdAtEpochMillis = System.currentTimeMillis(),
-            activeShift = ShiftSnapshot.fresh(shopId)
+            activeShift = ShiftSnapshot.fresh(shopId, startingCash)
         )
     }
 }
@@ -63,10 +64,11 @@ data class ShiftSnapshot(
     val placedObjects: List<PlacedShopObject>,
     val activeProducts: List<ShopProduct>,
     val machineProductionStates: List<MachineProductionState>,
-    val qaInspectionStates: List<QaInspectionState>
+    val qaInspectionStates: List<QaInspectionState>,
+    val cash: Int = 0
  ) {
     companion object {
-        fun fresh(shopId: String): ShiftSnapshot {
+        fun fresh(shopId: String, startingCash: Int = 0): ShiftSnapshot {
             return ShiftSnapshot(
                 shopId = shopId,
                 dayNumber = 1,
@@ -77,7 +79,8 @@ data class ShiftSnapshot(
                 placedObjects = emptyList(),
                 activeProducts = emptyList(),
                 machineProductionStates = emptyList(),
-                qaInspectionStates = emptyList()
+                qaInspectionStates = emptyList(),
+                cash = startingCash
             )
         }
     }

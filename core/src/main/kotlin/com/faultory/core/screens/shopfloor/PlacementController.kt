@@ -22,13 +22,30 @@ class PlacementController(
 
     fun attemptPlacement(tile: TileCoordinate): Boolean {
         val key = bankPanel.selectedKey ?: return false
+        val cost = costFor(key) ?: return false
+        if (shopFloor.cash < cost) {
+            return false
+        }
         val placedObject = placeablePlacementObject(key, tile) ?: return false
+        if (!shopFloor.tryDeductCash(cost)) {
+            return false
+        }
         if (!shopFloor.placeObject(placedObject)) {
+            shopFloor.creditCash(cost)
             return false
         }
         shiftLifecycle.persist()
         bankPanel.clearSelection()
         return true
+    }
+
+    private fun costFor(key: BankEntryKey): Int? {
+        return when (key.kind) {
+            PlacedShopObjectKind.WORKER ->
+                catalogLookup.workerProfilesById[key.catalogId]?.hireCost
+            PlacedShopObjectKind.MACHINE ->
+                catalogLookup.machineSpecsById[key.catalogId]?.installCost
+        }
     }
 
     private fun placeablePlacementObject(

@@ -50,7 +50,7 @@ class HudRenderer(
         font.color = Color(0.76f, 0.80f, 0.84f, 1f)
         hintLayout.setText(
             font,
-            "Good ${shiftLifecycle.dayDirector.deliveredGoodProducts}   Faulty ${shiftLifecycle.dayDirector.deliveredFaultyProducts}   " +
+            "Cash $${shopFloor.cash}   Good ${shiftLifecycle.dayDirector.deliveredGoodProducts}   Faulty ${shiftLifecycle.dayDirector.deliveredFaultyProducts}   " +
                 "Stars ${shiftLifecycle.dayDirector.earnedStars}/3"
         )
         font.draw(batch, hintLayout, 32f, GameConfig.virtualHeight - 52f)

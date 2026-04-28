@@ -8,6 +8,7 @@ import com.faultory.core.content.MachineSlotType
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.MachineType
 import com.faultory.core.content.Manuality
+import com.faultory.core.content.ProductDefinition
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import kotlin.math.abs
@@ -20,8 +21,14 @@ class ShopFloor(
     initialProducts: List<ShopProduct> = emptyList(),
     initialMachineProductionStates: List<MachineProductionState> = emptyList(),
     initialQaInspectionStates: List<QaInspectionState> = emptyList(),
+    private val productDefinitionsById: Map<String, ProductDefinition> = emptyMap(),
+    initialCash: Int = 0,
     private val random: Random = Random.Default
 ) : Disposable {
+
+    var cash: Int = initialCash
+        private set
+
     val grid = ShopGrid(blueprint)
 
     private val mutablePlacedObjects = initialPlacements.toMutableList()
@@ -69,6 +76,19 @@ class ShopFloor(
 
     fun consumeShipmentEvents(): List<ShipmentEvent> {
         return pendingShipmentEvents.toList().also { pendingShipmentEvents.clear() }
+    }
+
+    fun tryDeductCash(amount: Int): Boolean {
+        if (amount < 0 || cash < amount) {
+            return false
+        }
+        cash -= amount
+        return true
+    }
+
+    fun creditCash(amount: Int) {
+        if (amount <= 0) return
+        cash += amount
     }
 
     fun occupiedTilesFor(placedObject: PlacedShopObject): Set<TileCoordinate> {
@@ -1109,6 +1129,9 @@ class ShopFloor(
         val nextTile = grid.nextBeltTile(tile)
         if (nextTile == null) {
             mutableActiveProducts.removeAt(productIndex)
+            if (!product.isFaulty) {
+                productDefinitionsById[product.productId]?.saleValue?.let(::creditCash)
+            }
             pendingShipmentEvents += ShipmentEvent(product.productId, product.faultReason)
             return
         }

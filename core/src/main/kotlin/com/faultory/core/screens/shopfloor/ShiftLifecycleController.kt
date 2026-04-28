@@ -78,7 +78,8 @@ class ShiftLifecycleController(
                 placedObjects = shopFloor.placedObjects,
                 activeProducts = shopFloor.activeProducts,
                 machineProductionStates = shopFloor.machineProductionStates,
-                qaInspectionStates = shopFloor.qaInspectionStates
+                qaInspectionStates = shopFloor.qaInspectionStates,
+                cash = shopFloor.cash
             )
         )
         game.saveRepository.save(currentSave)
@@ -91,7 +92,7 @@ class ShiftLifecycleController(
     }
 
     fun replayLevel() {
-        currentSave = currentSave.resetForReplay(shopFloor.blueprint.id)
+        currentSave = currentSave.resetForReplay(shopFloor.blueprint.id, level.startingCash)
         game.saveRepository.save(currentSave)
         persistOnHide = false
         game.openLevel(level)

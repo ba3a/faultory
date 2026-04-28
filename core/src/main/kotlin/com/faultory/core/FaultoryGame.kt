@@ -84,14 +84,16 @@ class FaultoryGame : Game() {
         slotId: String,
         shopId: String,
         unlockedWorkerIds: List<String>,
-        unlockedMachineIds: List<String>
+        unlockedMachineIds: List<String>,
+        startingCash: Int = 0
     ): GameSave {
         return saveRepository.load(slotId)
             ?: GameSave.forLevel(
                 slotId = slotId,
                 shopId = shopId,
                 unlockedWorkerIds = unlockedWorkerIds,
-                unlockedMachineIds = unlockedMachineIds
+                unlockedMachineIds = unlockedMachineIds,
+                startingCash = startingCash
             ).also(saveRepository::save)
     }
 
