@@ -18,21 +18,28 @@ walk_east_000
   orig: 40, 60
   offset: 0, 0
   index: -1
-walk_east_001
+idle_south_000
   rotate: false
   xy: 44, 2
   size: 40, 60
   orig: 40, 60
   offset: 0, 0
   index: -1
-walk_east_002
+walk_east_003
+  rotate: false
+  xy: 44, 2
+  size: 40, 60
+  orig: 40, 60
+  offset: 0, 0
+  index: -1
+walk_east_001
   rotate: false
   xy: 86, 2
   size: 40, 60
   orig: 40, 60
   offset: 0, 0
   index: -1
-walk_east_003
+walk_east_002
   rotate: false
   xy: 128, 2
   size: 40, 60
