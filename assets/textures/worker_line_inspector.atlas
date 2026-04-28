@@ -1,0 +1,48 @@
+
+worker_line_inspector.png
+size: 256, 64
+format: RGBA8888
+filter: Nearest, Nearest
+repeat: none
+idle_east_000
+  rotate: false
+  xy: 2, 2
+  size: 40, 60
+  orig: 40, 60
+  offset: 0, 0
+  index: -1
+walk_east_000
+  rotate: false
+  xy: 2, 2
+  size: 40, 60
+  orig: 40, 60
+  offset: 0, 0
+  index: -1
+walk_east_001
+  rotate: false
+  xy: 44, 2
+  size: 40, 60
+  orig: 40, 60
+  offset: 0, 0
+  index: -1
+walk_east_002
+  rotate: false
+  xy: 86, 2
+  size: 40, 60
+  orig: 40, 60
+  offset: 0, 0
+  index: -1
+walk_east_003
+  rotate: false
+  xy: 128, 2
+  size: 40, 60
+  orig: 40, 60
+  offset: 0, 0
+  index: -1
+walk_east_004
+  rotate: false
+  xy: 170, 2
+  size: 40, 60
+  orig: 40, 60
+  offset: 0, 0
+  index: -1

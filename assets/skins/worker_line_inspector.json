@@ -15,7 +15,9 @@
         "WEST": [
           "idle_west_000"
         ]
-      }
+      },
+      "fps": 8.0,
+      "loop": true
     },
     "walk": {
       "frames": {
@@ -25,7 +27,10 @@
         ],
         "EAST": [
           "walk_east_000",
-          "walk_east_001"
+          "walk_east_001",
+          "walk_east_002",
+          "walk_east_003",
+          "walk_east_004"
         ],
         "SOUTH": [
           "walk_south_000",
@@ -36,7 +41,8 @@
           "walk_west_001"
         ]
       },
-      "fps": 12.0
+      "fps": 1280.0,
+      "loop": true
     }
   }
 }
