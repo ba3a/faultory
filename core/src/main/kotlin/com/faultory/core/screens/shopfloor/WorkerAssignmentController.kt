@@ -15,11 +15,12 @@ class WorkerAssignmentController(
     private val catalogLookup: CatalogLookup,
     private val bankPanel: BankPanel,
     private val failureBlink: FailureBlinkController,
-    private val shiftLifecycle: ShiftLifecycleController
+    private val shiftLifecycle: ShiftLifecycleController,
+    private val upgradeFlow: UpgradeFlowController
 ) {
-    var contextMenu: WorkerContextMenuState? = null
+    var contextMenu: ObjectContextMenuState? = null
         private set
-    var hoveredContextAction: WorkerContextAction? = null
+    var hoveredContextAction: ObjectContextAction? = null
         private set
     var assignmentPendingWorkerId: String? = null
         private set
@@ -61,18 +62,24 @@ class WorkerAssignmentController(
         contextMenu = null
         hoveredContextAction = null
         return when (selectedAction) {
-            WorkerContextAction.ASSIGN_TO_MACHINE -> {
-                assignmentPendingWorkerId = menu.workerId
+            ObjectContextAction.ASSIGN_TO_MACHINE -> {
+                assignmentPendingWorkerId = menu.objectId
                 bankPanel.clearSelection()
                 true
             }
 
-            WorkerContextAction.ASSIGN_TO_QA -> {
+            ObjectContextAction.ASSIGN_TO_QA -> {
                 bankPanel.clearSelection()
-                when (shopFloor.assignWorkerToQa(menu.workerId, catalogLookup.workerProfilesById)) {
+                when (shopFloor.assignWorkerToQa(menu.objectId, catalogLookup.workerProfilesById)) {
                     is WorkerAssignmentResult.Success -> shiftLifecycle.persist()
                     is WorkerAssignmentResult.Failure -> {}
                 }
+                true
+            }
+
+            ObjectContextAction.UPGRADE -> {
+                bankPanel.clearSelection()
+                upgradeFlow.beginUpgrade(menu.objectId)
                 true
             }
 
@@ -113,43 +120,60 @@ class WorkerAssignmentController(
         }
     }
 
-    fun openContextMenuFor(workerId: String) {
+    fun openContextMenuForWorker(workerId: String) {
         val worker = shopFloor.findObjectById(workerId) ?: return
+        if (worker.kind != PlacedShopObjectKind.WORKER) return
         val workerProfile = catalogLookup.workerProfilesById[worker.catalogId] ?: return
         val actions = buildList {
-            add(WorkerContextAction.ASSIGN_TO_MACHINE)
+            add(ObjectContextAction.ASSIGN_TO_MACHINE)
             val qaRole = workerProfile.profileFor(WorkerRole.QA)
             if (qaRole?.inspectionDurationSeconds != null &&
                 qaRole.detectionAccuracy != null &&
                 qaRole.faultyProductStrategy != null
             ) {
-                add(WorkerContextAction.ASSIGN_TO_QA)
+                add(ObjectContextAction.ASSIGN_TO_QA)
+            }
+            if (upgradeFlow.hasUpgradesFor(workerId)) {
+                add(ObjectContextAction.UPGRADE)
             }
         }
-        if (actions.isEmpty()) {
-            return
-        }
+        if (actions.isEmpty()) return
+        contextMenu = buildMenu(workerId, PlacedShopObjectKind.WORKER, actions)
+        hoveredContextAction = contextMenu?.options?.firstOrNull()?.action
+    }
 
+    fun openContextMenuForMachine(machineId: String) {
+        val machine = shopFloor.findObjectById(machineId) ?: return
+        if (machine.kind != PlacedShopObjectKind.MACHINE) return
+        if (!upgradeFlow.hasUpgradesFor(machineId)) return
+        val actions = listOf(ObjectContextAction.UPGRADE)
+        contextMenu = buildMenu(machineId, PlacedShopObjectKind.MACHINE, actions)
+        hoveredContextAction = contextMenu?.options?.firstOrNull()?.action
+    }
+
+    private fun buildMenu(
+        objectId: String,
+        kind: PlacedShopObjectKind,
+        actions: List<ObjectContextAction>
+    ): ObjectContextMenuState {
         val width = 188f
         val optionHeight = 38f
         val optionGap = 6f
         val padding = 6f
-        val height = padding * 2f + actions.size * optionHeight + (actions.size - 1) * optionGap
+        val height = padding * 2f + actions.size * optionHeight + (actions.size - 1).coerceAtLeast(0) * optionGap
         val x = pointerState.worldX.coerceIn(12f, GameConfig.virtualWidth - width - 12f)
         val y = pointerState.worldY.coerceIn(
             GameConfig.bankHeight + 12f,
             GameConfig.virtualHeight - GameConfig.hudHeight - height - 12f
         )
-        val menu = WorkerContextMenuState(
-            workerId = workerId,
+        return ObjectContextMenuState(
+            objectId = objectId,
+            kind = kind,
             bounds = Rectangle(x, y, width, height),
             options = actions.mapIndexed { index, action ->
-                WorkerContextMenuOption(
+                ObjectContextMenuOption(
                     action = action,
-                    label = when (action) {
-                        WorkerContextAction.ASSIGN_TO_MACHINE -> "Assign To Machine"
-                        WorkerContextAction.ASSIGN_TO_QA -> "Assign To QA"
-                    },
+                    label = labelFor(action),
                     bounds = Rectangle(
                         x + padding,
                         y + height - padding - optionHeight - index * (optionHeight + optionGap),
@@ -159,24 +183,11 @@ class WorkerAssignmentController(
                 )
             }
         )
-        contextMenu = menu
-        hoveredContextAction = menu.options.firstOrNull()?.action
     }
-}
 
-data class WorkerContextMenuState(
-    val workerId: String,
-    val bounds: Rectangle,
-    val options: List<WorkerContextMenuOption>
-)
-
-data class WorkerContextMenuOption(
-    val action: WorkerContextAction,
-    val label: String,
-    val bounds: Rectangle
-)
-
-enum class WorkerContextAction {
-    ASSIGN_TO_MACHINE,
-    ASSIGN_TO_QA
+    private fun labelFor(action: ObjectContextAction): String = when (action) {
+        ObjectContextAction.ASSIGN_TO_MACHINE -> "Assign To Machine"
+        ObjectContextAction.ASSIGN_TO_QA -> "Assign To QA"
+        ObjectContextAction.UPGRADE -> "Upgrade"
+    }
 }

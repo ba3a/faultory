@@ -13,13 +13,18 @@ class ShopFloorInput(
     private val placement: PlacementController,
     private val workerAssignment: WorkerAssignmentController,
     private val machineDrag: MachineDragController,
-    private val shiftLifecycle: ShiftLifecycleController
+    private val shiftLifecycle: ShiftLifecycleController,
+    private val upgradeFlow: UpgradeFlowController
 ) : InputAdapter() {
     override fun keyDown(keycode: Int): Boolean {
         if (shiftLifecycle.isShiftEnded) {
             return false
         }
         if (keycode == Input.Keys.ESCAPE) {
+            if (upgradeFlow.isModalOpen) {
+                upgradeFlow.closeModal()
+                return true
+            }
             shiftLifecycle.returnToLevelSelection()
             return true
         }
@@ -31,7 +36,8 @@ class ShopFloorInput(
         if (shiftLifecycle.isShiftEnded) {
             return hoverState.hoveredCompletionAction != null
         }
-        return bankPanel.hoveredKey != null ||
+        return upgradeFlow.isModalOpen ||
+            bankPanel.hoveredKey != null ||
             hoverState.hoveredTile != null ||
             hoverState.isBackButtonHovered ||
             workerAssignment.isContextMenuOpen ||
@@ -76,9 +82,13 @@ class ShopFloorInput(
         hoverState.clearForShiftEnd()
         workerAssignment.clear()
         machineDrag.cancel()
+        upgradeFlow.closeModal()
     }
 
     private fun handleLeftPress(): Boolean {
+        if (upgradeFlow.isModalOpen) {
+            return upgradeFlow.handleClick(pointerState.worldX, pointerState.worldY)
+        }
         if (canStartMachineDrag() && machineDrag.tryStart(hoverState.hoveredTile)) {
             return true
         }
@@ -118,19 +128,24 @@ class ShopFloorInput(
     }
 
     private fun handleRightClick(): Boolean {
-        val worker = hoverState.hoveredTile
-            ?.let(shopFloor::objectAt)
-            ?.takeIf { it.kind == PlacedShopObjectKind.WORKER }
+        if (upgradeFlow.isModalOpen) {
+            upgradeFlow.closeModal()
+            return true
+        }
+        val target = hoverState.hoveredTile?.let(shopFloor::objectAt)
         val hadContextMenu = workerAssignment.closeContextMenuIfOpen()
 
-        if (worker == null) {
+        if (target == null) {
             return hadContextMenu
         }
 
         bankPanel.clearSelection()
         workerAssignment.cancelPendingAssignment()
         machineDrag.cancel()
-        workerAssignment.openContextMenuFor(worker.id)
+        when (target.kind) {
+            PlacedShopObjectKind.WORKER -> workerAssignment.openContextMenuForWorker(target.id)
+            PlacedShopObjectKind.MACHINE -> workerAssignment.openContextMenuForMachine(target.id)
+        }
         return true
     }
 
@@ -167,6 +182,17 @@ class ShopFloorInput(
             hoverState.isBackButtonHovered = false
             bankPanel.clearHover()
             hoverState.hoveredTile = null
+            upgradeFlow.closeModal()
+            return
+        }
+
+        val isUpgradeModalHovered = upgradeFlow.updateHover(pointerState.worldX, pointerState.worldY)
+        if (isUpgradeModalHovered) {
+            workerAssignment.clearHover()
+            bankPanel.clearHover()
+            hoverState.isBackButtonHovered = false
+            hoverState.hoveredTile = null
+            hoverState.hoveredCompletionAction = null
             return
         }
 

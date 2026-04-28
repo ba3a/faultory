@@ -2,7 +2,7 @@ package com.faultory.core.screens.shopfloor
 
 import com.badlogic.gdx.graphics.Color
 
-class WorkerContextMenuRenderer(
+class ObjectContextMenuRenderer(
     private val workerAssignment: WorkerAssignmentController
 ) : ShopFloorLayer {
     override fun drawFill(ctx: ShopFloorRenderContext) {

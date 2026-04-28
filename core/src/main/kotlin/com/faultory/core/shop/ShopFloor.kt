@@ -91,6 +91,29 @@ class ShopFloor(
         cash += amount
     }
 
+    fun tryUpgradeObject(
+        objectId: String,
+        targetCatalogId: String,
+        cost: Int
+    ): Boolean {
+        val index = mutablePlacedObjects.indexOfFirst { it.id == objectId }
+        if (index < 0) return false
+        val current = mutablePlacedObjects[index]
+        if (current.catalogId == targetCatalogId) return false
+
+        if (current.kind == PlacedShopObjectKind.MACHINE) {
+            val upgradedSpec = machineSpecsById[targetCatalogId] ?: return false
+            val upgraded = current.copy(catalogId = targetCatalogId)
+            // Validate the upgraded shape still fits where it stands.
+            if (upgradedSpec.shape.isEmpty()) return false
+            if (!canPlaceObject(upgraded, ignoreObjectId = current.id)) return false
+        }
+
+        if (cost > 0 && !tryDeductCash(cost)) return false
+        mutablePlacedObjects[index] = current.copy(catalogId = targetCatalogId)
+        return true
+    }
+
     fun occupiedTilesFor(placedObject: PlacedShopObject): Set<TileCoordinate> {
         return when (placedObject.kind) {
             PlacedShopObjectKind.WORKER -> setOf(placedObject.position)

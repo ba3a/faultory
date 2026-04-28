@@ -30,8 +30,10 @@ import com.faultory.core.screens.shopfloor.ShopFloorInput
 import com.faultory.core.screens.shopfloor.ShopFloorRenderContext
 import com.faultory.core.screens.shopfloor.ShopFloorView
 import com.faultory.core.screens.shopfloor.SpriteSkinRenderer
+import com.faultory.core.screens.shopfloor.ObjectContextMenuRenderer
+import com.faultory.core.screens.shopfloor.UpgradeFlowController
+import com.faultory.core.screens.shopfloor.UpgradeModalRenderer
 import com.faultory.core.screens.shopfloor.WorkerAssignmentController
-import com.faultory.core.screens.shopfloor.WorkerContextMenuRenderer
 import com.faultory.core.save.GameSave
 import com.faultory.core.shop.ShopFloor
 
@@ -68,13 +70,19 @@ class ShopFloorScreen(
         failureBlink = failureBlink,
         shiftLifecycle = shiftLifecycle
     )
+    private val upgradeFlow = UpgradeFlowController(
+        shopFloor = shopFloor,
+        catalogLookup = catalogLookup,
+        shiftLifecycle = shiftLifecycle
+    )
     private val workerAssignment = WorkerAssignmentController(
         shopFloor = shopFloor,
         pointerState = pointerState,
         catalogLookup = catalogLookup,
         bankPanel = bankPanel,
         failureBlink = failureBlink,
-        shiftLifecycle = shiftLifecycle
+        shiftLifecycle = shiftLifecycle,
+        upgradeFlow = upgradeFlow
     )
     private val placement = PlacementController(
         shopFloor = shopFloor,
@@ -91,7 +99,8 @@ class ShopFloorScreen(
             PlacedObjectRenderer(shopFloor, catalogLookup, geometry, workerAssignment, failureBlink, hoverState, spriteDrawnIds),
             HudRenderer(level, shopFloor, catalogLookup, bankPanel, workerAssignment, shiftLifecycle, hoverState),
             BankPanelRenderer(bankPanel),
-            WorkerContextMenuRenderer(workerAssignment),
+            ObjectContextMenuRenderer(workerAssignment),
+            UpgradeModalRenderer(upgradeFlow, shopFloor),
             CompletionModalRenderer(level, catalogLookup, shiftLifecycle, hoverState)
         )
     )
@@ -103,7 +112,8 @@ class ShopFloorScreen(
         placement = placement,
         workerAssignment = workerAssignment,
         machineDrag = machineDrag,
-        shiftLifecycle = shiftLifecycle
+        shiftLifecycle = shiftLifecycle,
+        upgradeFlow = upgradeFlow
     )
 
     override fun show() {
