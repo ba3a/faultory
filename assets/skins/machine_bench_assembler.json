@@ -1,0 +1,23 @@
+{
+  "atlas": "textures/machine_bench_assembler.atlas",
+  "actions": {
+    "working": {
+      "frames": {
+        "NORTH": [
+          "working_north_000"
+        ],
+        "EAST": [
+          "working_east_000"
+        ],
+        "SOUTH": [
+          "working_south_000"
+        ],
+        "WEST": [
+          "working_west_000"
+        ]
+      },
+      "fps": 0.5555556,
+      "loop": true
+    }
+  }
+}
