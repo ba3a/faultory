@@ -340,6 +340,7 @@ class Inspector(
             CatalogType.PRODUCT -> repository.shopCatalog.products.map { it.id }
             CatalogType.WORKER -> repository.shopCatalog.workers.map { it.id }
             CatalogType.MACHINE -> repository.shopCatalog.machines.map { it.id }
+            CatalogType.LEVEL -> repository.levelCatalog.levels.map { it.id }
         }
     }
 

@@ -12,6 +12,7 @@ enum class CatalogType {
     PRODUCT,
     WORKER,
     MACHINE,
+    LEVEL,
 }
 
 object IdReferenceRegistry {
@@ -23,6 +24,7 @@ object IdReferenceRegistry {
         put(key(MachineSpec::class, "minimumOperatorWorkerIds"), CatalogType.WORKER)
         put(key(LevelDefinition::class, "availableWorkerIds"), CatalogType.WORKER)
         put(key(LevelDefinition::class, "availableMachineIds"), CatalogType.MACHINE)
+        put(key(LevelDefinition::class, "requiredLevelIds"), CatalogType.LEVEL)
         put(key(WorkerProfile::class, BinaryUpgradeTree::class, "leftUpgradeId"), CatalogType.WORKER)
         put(key(WorkerProfile::class, BinaryUpgradeTree::class, "rightUpgradeId"), CatalogType.WORKER)
         put(key(MachineSpec::class, BinaryUpgradeTree::class, "leftUpgradeId"), CatalogType.MACHINE)

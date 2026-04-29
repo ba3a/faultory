@@ -16,6 +16,7 @@ import com.faultory.core.assets.AssetPaths
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.LevelDefinition
+import com.faultory.core.content.LevelUnlockResolver
 
 class LevelSelectionScreen(
     private val game: FaultoryGame
@@ -27,7 +28,10 @@ class LevelSelectionScreen(
     private val hintLayout = GlyphLayout()
     private val cardBounds = mutableListOf<Rectangle>()
     private lateinit var levelCatalog: LevelCatalog
+    private var lockedLevelIds: Set<String> = emptySet()
+    private val missingPrereqsByLevelId = mutableMapOf<String, List<String>>()
     private var selectedIndex = 0
+    private var lockedMessageTimer = 0f
 
     private val inputProcessor = object : InputAdapter() {
         override fun keyDown(keycode: Int): Boolean {
@@ -80,6 +84,7 @@ class LevelSelectionScreen(
     override fun show() {
         viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
         levelCatalog = game.assetManager.get(AssetPaths.levelCatalog, LevelCatalog::class.java)
+        refreshLockState()
         cardBounds.clear()
         layoutCards(levelCatalog.levels)
         selectedIndex = if (levelCatalog.levels.isEmpty()) {
@@ -88,6 +93,19 @@ class LevelSelectionScreen(
             selectedIndex.coerceIn(0, levelCatalog.levels.lastIndex)
         }
         Gdx.input.inputProcessor = inputProcessor
+    }
+
+    private fun refreshLockState() {
+        missingPrereqsByLevelId.clear()
+        val locked = mutableSetOf<String>()
+        for (level in levelCatalog.levels) {
+            val missing = LevelUnlockResolver.missingPrerequisites(level, game.saveRepository)
+            if (missing.isNotEmpty()) {
+                locked += level.id
+                missingPrereqsByLevelId[level.id] = missing
+            }
+        }
+        lockedLevelIds = locked
     }
 
     override fun hide() {
@@ -104,6 +122,9 @@ class LevelSelectionScreen(
     }
 
     override fun render(delta: Float) {
+        if (lockedMessageTimer > 0f) {
+            lockedMessageTimer = (lockedMessageTimer - delta).coerceAtLeast(0f)
+        }
         ScreenUtils.clear(0.05f, 0.06f, 0.08f, 1f)
         viewport.apply()
         viewport.camera.update()
@@ -124,18 +145,21 @@ class LevelSelectionScreen(
         renderer.rect(72f, GameConfig.virtualHeight - 180f, GameConfig.virtualWidth - 144f, 96f)
 
         for (index in levelCatalog.levels.indices) {
+            val level = levelCatalog.levels[index]
+            val locked = level.id in lockedLevelIds
             val bounds = cardBounds[index]
-            renderer.color = if (index == selectedIndex) {
-                Color(0.22f, 0.58f, 0.62f, 1f)
-            } else {
-                Color(0.18f, 0.21f, 0.24f, 1f)
+            renderer.color = when {
+                locked && index == selectedIndex -> Color(0.20f, 0.20f, 0.22f, 1f)
+                locked -> Color(0.13f, 0.14f, 0.16f, 1f)
+                index == selectedIndex -> Color(0.22f, 0.58f, 0.62f, 1f)
+                else -> Color(0.18f, 0.21f, 0.24f, 1f)
             }
             renderer.rect(bounds.x, bounds.y, bounds.width, bounds.height)
 
-            renderer.color = if (index == selectedIndex) {
-                Color(0.90f, 0.74f, 0.29f, 1f)
-            } else {
-                Color(0.32f, 0.38f, 0.42f, 1f)
+            renderer.color = when {
+                locked -> Color(0.28f, 0.24f, 0.20f, 1f)
+                index == selectedIndex -> Color(0.90f, 0.74f, 0.29f, 1f)
+                else -> Color(0.32f, 0.38f, 0.42f, 1f)
             }
             renderer.rect(bounds.x, bounds.y + bounds.height - 14f, bounds.width, 14f)
         }
@@ -143,11 +167,13 @@ class LevelSelectionScreen(
 
         renderer.begin(ShapeRenderer.ShapeType.Line)
         for (index in levelCatalog.levels.indices) {
+            val level = levelCatalog.levels[index]
+            val locked = level.id in lockedLevelIds
             val bounds = cardBounds[index]
-            renderer.color = if (index == selectedIndex) {
-                Color(0.98f, 0.88f, 0.61f, 1f)
-            } else {
-                Color(0.43f, 0.49f, 0.54f, 1f)
+            renderer.color = when {
+                locked -> Color(0.32f, 0.34f, 0.38f, 1f)
+                index == selectedIndex -> Color(0.98f, 0.88f, 0.61f, 1f)
+                else -> Color(0.43f, 0.49f, 0.54f, 1f)
             }
             renderer.rect(bounds.x, bounds.y, bounds.width, bounds.height)
         }
@@ -170,25 +196,49 @@ class LevelSelectionScreen(
 
         for (index in levelCatalog.levels.indices) {
             val level = levelCatalog.levels[index]
+            val locked = level.id in lockedLevelIds
             val bounds = cardBounds[index]
 
-            font.color = Color(0.98f, 0.99f, 1f, 1f)
+            font.color = if (locked) Color(0.62f, 0.64f, 0.68f, 1f) else Color(0.98f, 0.99f, 1f, 1f)
             titleLayout.setText(font, level.displayName)
             font.draw(batch, titleLayout, bounds.x + 28f, bounds.y + bounds.height - 42f)
 
-            font.color = Color(0.83f, 0.87f, 0.90f, 1f)
+            font.color = if (locked) Color(0.55f, 0.58f, 0.62f, 1f) else Color(0.83f, 0.87f, 0.90f, 1f)
             subtitleLayout.setText(font, level.subtitle)
             font.draw(batch, subtitleLayout, bounds.x + 28f, bounds.y + bounds.height - 74f)
 
-            font.color = if (index == selectedIndex) {
-                Color(1f, 0.92f, 0.68f, 1f)
-            } else {
-                Color(0.74f, 0.78f, 0.82f, 1f)
+            font.color = when {
+                locked -> Color(0.78f, 0.66f, 0.42f, 1f)
+                index == selectedIndex -> Color(1f, 0.92f, 0.68f, 1f)
+                else -> Color(0.74f, 0.78f, 0.82f, 1f)
             }
-            hintLayout.setText(font, "Open Level")
+            val footerText = if (locked) {
+                val missing = missingPrereqsByLevelId[level.id].orEmpty()
+                "Locked - requires: ${missing.joinToString(", ")}"
+            } else {
+                "Open Level"
+            }
+            hintLayout.setText(font, footerText)
             font.draw(batch, hintLayout, bounds.x + 28f, bounds.y + 42f)
         }
+
+        if (lockedMessageTimer > 0f) {
+            font.color = Color(1f, 0.78f, 0.46f, 1f)
+            val message = lockedSelectionMessage()
+            if (message != null) {
+                hintLayout.setText(font, message)
+                val x = (GameConfig.virtualWidth - hintLayout.width) / 2f
+                font.draw(batch, hintLayout, x, 220f)
+            }
+        }
         batch.end()
+    }
+
+    private fun lockedSelectionMessage(): String? {
+        if (selectedIndex !in levelCatalog.levels.indices) return null
+        val level = levelCatalog.levels[selectedIndex]
+        val missing = missingPrereqsByLevelId[level.id] ?: return null
+        return "Locked - finish ${missing.joinToString(", ")} with at least one star to unlock."
     }
 
     private fun layoutCards(levels: List<LevelDefinition>) {
@@ -222,7 +272,12 @@ class LevelSelectionScreen(
         if (levelCatalog.levels.isEmpty()) {
             return
         }
-        game.openLevel(levelCatalog.levels[selectedIndex])
+        val level = levelCatalog.levels[selectedIndex]
+        if (level.id in lockedLevelIds) {
+            lockedMessageTimer = 2.5f
+            return
+        }
+        game.openLevel(level)
     }
 
     private fun levelIndexAt(screenX: Int, screenY: Int): Int {

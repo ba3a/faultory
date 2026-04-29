@@ -11,6 +11,7 @@
         "threeStar": 9
       },
       "recommendedNextLevelId": "rush-order-shop",
+      "requiredLevelIds": [],
       "availableWorkerIds": [
         "line-inspector",
         "float-tech"
@@ -33,6 +34,9 @@
         "threeStar": 12
       },
       "recommendedNextLevelId": null,
+      "requiredLevelIds": [
+        "tutorial-shop"
+      ],
       "availableWorkerIds": [
         "line-inspector",
         "float-tech"

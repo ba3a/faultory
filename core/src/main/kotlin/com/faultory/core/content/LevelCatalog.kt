@@ -15,6 +15,7 @@ data class LevelDefinition(
     val shopAssetPath: String,
     val starThresholds: LevelStarThresholds,
     val recommendedNextLevelId: String? = null,
+    val requiredLevelIds: List<String> = emptyList(),
     val availableWorkerIds: List<String>,
     val availableMachineIds: List<String>,
     val startingCash: Int = 0

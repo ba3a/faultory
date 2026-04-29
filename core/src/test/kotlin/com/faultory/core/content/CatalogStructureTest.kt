@@ -69,6 +69,10 @@ class CatalogStructureTest {
         assertEquals("rush-order-shop", tutorialLevel.recommendedNextLevelId)
         assertTrue(tutorialLevel.availableWorkerIds.contains("line-inspector"))
         assertTrue(tutorialLevel.availableMachineIds.contains("bench-assembler"))
+        assertTrue(tutorialLevel.requiredLevelIds.isEmpty())
+
+        val rushLevel = assertNotNull(levelCatalog.levels.firstOrNull { it.id == "rush-order-shop" })
+        assertEquals(listOf("tutorial-shop"), rushLevel.requiredLevelIds)
     }
 
     @Test

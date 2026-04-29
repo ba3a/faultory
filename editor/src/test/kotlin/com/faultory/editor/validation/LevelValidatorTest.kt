@@ -84,6 +84,35 @@ class LevelValidatorTest {
         assertTrue(issues.any { it.fieldName == "shopAssetPath" })
     }
 
+    @Test
+    fun `unresolved required level id is an error`() {
+        replaceSingleLevel { it.copy(requiredLevelIds = listOf("does-not-exist")) }
+        val issues = validate(AssetSelection.Level("tutorial-shop"))
+        assertTrue(issues.any { it.fieldName == "requiredLevelIds[0]" })
+    }
+
+    @Test
+    fun `self referential required level id is an error`() {
+        replaceSingleLevel { it.copy(requiredLevelIds = listOf("tutorial-shop")) }
+        val issues = validate(AssetSelection.Level("tutorial-shop"))
+        assertTrue(issues.any { it.fieldName == "requiredLevelIds[0]" && it.message.contains("references itself") })
+    }
+
+    @Test
+    fun `cyclic required level ids are an error`() {
+        val original = repository.levelCatalog.levels.single()
+        val tutorial = original.copy(requiredLevelIds = listOf("rush-order-shop"))
+        val rush = original.copy(id = "rush-order-shop", requiredLevelIds = listOf("tutorial-shop"))
+        repository.levelCatalog = repository.levelCatalog.copy(levels = listOf(tutorial, rush))
+
+        val issues = validate(AssetSelection.Level("tutorial-shop"))
+
+        assertTrue(
+            issues.any { it.fieldName == "requiredLevelIds" && it.message.contains("cycle") },
+            "expected cycle issue but got $issues",
+        )
+    }
+
     private fun validate(selection: AssetSelection.Level): List<ValidationIssue> {
         return LevelValidator.validate(selection, ValidationContext(repository, selection))
     }
