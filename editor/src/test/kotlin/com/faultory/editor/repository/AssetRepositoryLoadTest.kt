@@ -25,7 +25,6 @@ class AssetRepositoryLoadTest {
         val repo = AssetRepository(fixtureRoot())
 
         assertEquals(listOf("ceramic-mug"), repo.shopCatalog.products.map { it.id })
-        assertEquals("Ceramic Mug", repo.shopCatalog.products.single().displayName)
         assertEquals(22, repo.shopCatalog.products.single().saleValue)
 
         val worker = repo.shopCatalog.workers.single()
@@ -76,10 +75,10 @@ class AssetRepositoryLoadTest {
         try {
             val repo = AssetRepository(tempRoot)
 
-            val mutatedProduct = repo.shopCatalog.products.single().copy(displayName = "Glazed Mug", saleValue = 99)
+            val mutatedProduct = repo.shopCatalog.products.single().copy(saleValue = 99)
             repo.shopCatalog = repo.shopCatalog.copy(products = listOf(mutatedProduct))
 
-            val mutatedLevel = repo.levelCatalog.levels.single().copy(subtitle = "Edited in editor")
+            val mutatedLevel = repo.levelCatalog.levels.single().copy(shopAssetPath = "shops/edited.json")
             repo.levelCatalog = repo.levelCatalog.copy(levels = listOf(mutatedLevel))
 
             val blueprintKey = repo.blueprints.keys.single()
@@ -93,9 +92,8 @@ class AssetRepositoryLoadTest {
             assertEquals(repo.shopCatalog, reloaded.shopCatalog)
             assertEquals(repo.levelCatalog, reloaded.levelCatalog)
             assertEquals(repo.blueprints.toMap(), reloaded.blueprints.toMap())
-            assertEquals("Glazed Mug", reloaded.shopCatalog.products.single().displayName)
             assertEquals(99, reloaded.shopCatalog.products.single().saleValue)
-            assertEquals("Edited in editor", reloaded.levelCatalog.levels.single().subtitle)
+            assertEquals("shops/edited.json", reloaded.levelCatalog.levels.single().shopAssetPath)
             assertEquals("Tutorial (edited)", reloaded.blueprints.getValue(blueprintKey).displayName)
         } finally {
             tempRoot.toFile().deleteRecursively()

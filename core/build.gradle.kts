@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     implementation(libs.gdxCore)
+    implementation(libs.gdxFreetype)
     implementation(libs.kotlinxSerializationJson)
     testImplementation(kotlin("test"))
 }

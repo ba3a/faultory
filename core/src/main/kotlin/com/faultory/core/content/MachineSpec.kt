@@ -8,7 +8,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class MachineSpec(
     val id: String,
-    val displayName: String,
     val level: Int,
     val type: MachineType,
     val manuality: Manuality,

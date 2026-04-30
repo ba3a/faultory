@@ -114,7 +114,6 @@ class ClipDurationPolicyTest {
 
     private fun worker(walkSpeed: Float): WorkerProfile = WorkerProfile(
         id = "w",
-        displayName = "W",
         level = 1,
         hireCost = 0,
         walkSpeed = walkSpeed,
@@ -124,7 +123,6 @@ class ClipDurationPolicyTest {
 
     private fun machine(operationDurationSeconds: Float): MachineSpec = MachineSpec(
         id = "m",
-        displayName = "M",
         level = 1,
         type = MachineType.PRODUCER,
         manuality = Manuality.AUTOMATIC,

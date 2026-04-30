@@ -5,6 +5,9 @@ import com.badlogic.gdx.math.Rectangle
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.MachineType
+import com.faultory.core.i18n.LocaleManager
+import com.faultory.core.i18n.MessageKey
+import com.faultory.core.i18n.Messages
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
 
@@ -25,6 +28,13 @@ class HudRenderer(
             Color(0.16f, 0.20f, 0.24f, 1f)
         }
         renderer.rect(BACK_BUTTON_BOUNDS.x, BACK_BUTTON_BOUNDS.y, BACK_BUTTON_BOUNDS.width, BACK_BUTTON_BOUNDS.height)
+
+        renderer.color = if (hoverState.isLanguageButtonHovered) {
+            Color(0.24f, 0.31f, 0.37f, 1f)
+        } else {
+            Color(0.16f, 0.20f, 0.24f, 1f)
+        }
+        renderer.rect(LANGUAGE_BUTTON_BOUNDS.x, LANGUAGE_BUTTON_BOUNDS.y, LANGUAGE_BUTTON_BOUNDS.width, LANGUAGE_BUTTON_BOUNDS.height)
     }
 
     override fun drawLine(ctx: ShopFloorRenderContext) {
@@ -35,6 +45,13 @@ class HudRenderer(
             Color(0.55f, 0.61f, 0.66f, 1f)
         }
         renderer.rect(BACK_BUTTON_BOUNDS.x, BACK_BUTTON_BOUNDS.y, BACK_BUTTON_BOUNDS.width, BACK_BUTTON_BOUNDS.height)
+
+        renderer.color = if (hoverState.isLanguageButtonHovered) {
+            Color(0.98f, 0.88f, 0.61f, 1f)
+        } else {
+            Color(0.55f, 0.61f, 0.66f, 1f)
+        }
+        renderer.rect(LANGUAGE_BUTTON_BOUNDS.x, LANGUAGE_BUTTON_BOUNDS.y, LANGUAGE_BUTTON_BOUNDS.width, LANGUAGE_BUTTON_BOUNDS.height)
     }
 
     override fun drawText(ctx: ShopFloorRenderContext) {
@@ -44,20 +61,32 @@ class HudRenderer(
         val hintLayout = ctx.hintLayout
 
         font.color = Color(0.95f, 0.96f, 0.97f, 1f)
-        titleLayout.setText(font, level.displayName)
+        titleLayout.setText(font, Messages.catalog(MessageKey.LEVEL_DISPLAYNAME, level.id))
         font.draw(batch, titleLayout, 32f, GameConfig.virtualHeight - 28f)
 
         font.color = Color(0.76f, 0.80f, 0.84f, 1f)
         hintLayout.setText(
             font,
-            "Cash $${shopFloor.cash}   Good ${shiftLifecycle.dayDirector.deliveredGoodProducts}   Faulty ${shiftLifecycle.dayDirector.deliveredFaultyProducts}   " +
-                "Stars ${shiftLifecycle.dayDirector.earnedStars}/3"
+            Messages.format(
+                MessageKey.HUD_STATUS,
+                shopFloor.cash,
+                shiftLifecycle.dayDirector.deliveredGoodProducts,
+                shiftLifecycle.dayDirector.deliveredFaultyProducts,
+                shiftLifecycle.dayDirector.earnedStars
+            )
         )
         font.draw(batch, hintLayout, 32f, GameConfig.virtualHeight - 52f)
 
         hintLayout.setText(
             font,
-            "Shift ${(shiftLifecycle.dayDirector.shiftProgress * 100f).toInt()}%   1* ${level.starThresholds.oneStar}  2* ${level.starThresholds.twoStar}  3* ${level.starThresholds.threeStar}   ${selectedItemText()}"
+            Messages.format(
+                MessageKey.HUD_PROGRESS,
+                (shiftLifecycle.dayDirector.shiftProgress * 100f).toInt(),
+                level.starThresholds.oneStar,
+                level.starThresholds.twoStar,
+                level.starThresholds.threeStar,
+                selectedItemText()
+            )
         )
         font.draw(batch, hintLayout, 32f, GameConfig.virtualHeight - 76f)
 
@@ -66,31 +95,55 @@ class HudRenderer(
         } else {
             Color(0.90f, 0.93f, 0.95f, 1f)
         }
-        titleLayout.setText(font, "Back To Level Selection")
+        titleLayout.setText(font, Messages.text(MessageKey.HUD_BACK_TO_LEVELS))
         font.draw(batch, titleLayout, BACK_BUTTON_BOUNDS.x + 16f, BACK_BUTTON_BOUNDS.y + 26f)
+
+        font.color = if (hoverState.isLanguageButtonHovered) {
+            Color(1f, 0.94f, 0.71f, 1f)
+        } else {
+            Color(0.90f, 0.93f, 0.95f, 1f)
+        }
+        val languageLabel = LocaleManager.currentLocale.toLanguageTag().uppercase()
+        titleLayout.setText(font, languageLabel)
+        font.draw(
+            batch,
+            titleLayout,
+            LANGUAGE_BUTTON_BOUNDS.x + (LANGUAGE_BUTTON_BOUNDS.width - titleLayout.width) / 2f,
+            LANGUAGE_BUTTON_BOUNDS.y + 26f
+        )
     }
 
     private fun selectedItemText(): String {
         if (shiftLifecycle.isShiftEnded) {
-            return "Shift complete. Review the results window."
+            return Messages.text(MessageKey.HUD_SHIFT_COMPLETE)
         }
         val assignmentWorker = workerAssignment.assignmentPendingWorkerId
             ?.let(shopFloor::findObjectById)
-            ?.let { catalogLookup.workerProfilesById[it.catalogId]?.displayName ?: "Worker" }
+            ?.let {
+                if (catalogLookup.workerProfilesById[it.catalogId] != null) {
+                    Messages.catalog(MessageKey.WORKER_DISPLAYNAME, it.catalogId)
+                } else {
+                    Messages.text(MessageKey.HUD_WORKER_FALLBACK)
+                }
+            }
         if (assignmentWorker != null) {
-            return "Assigning $assignmentWorker: click a machine to assign, or click anywhere else to cancel."
+            return Messages.format(MessageKey.HUD_ASSIGNING, assignmentWorker)
         }
 
         val entry = bankPanel.selectedEntry()
-            ?: return "Left click a bank item to place it. Right click a worker to assign. Drag a placed machine to rotate it."
+            ?: return Messages.text(MessageKey.HUD_HELP_DEFAULT)
+        val displayName = when (entry.key.kind) {
+            PlacedShopObjectKind.WORKER -> Messages.catalog(MessageKey.WORKER_DISPLAYNAME, entry.key.catalogId)
+            PlacedShopObjectKind.MACHINE -> Messages.catalog(MessageKey.MACHINE_DISPLAYNAME, entry.key.catalogId)
+        }
         return when (entry.key.kind) {
-            PlacedShopObjectKind.WORKER -> "Selected: ${entry.displayName}. Workers use one tile and turn while moving."
+            PlacedShopObjectKind.WORKER -> Messages.format(MessageKey.HUD_HELP_WORKER, displayName)
             PlacedShopObjectKind.MACHINE -> {
                 val machine = catalogLookup.machineSpecsById[entry.key.catalogId]
                 if (machine?.type == MachineType.QA) {
-                    "Selected: ${entry.displayName}. QA machines place next to the belt and auto-face it. Drag placed machines to rotate."
+                    Messages.format(MessageKey.HUD_HELP_QA, displayName)
                 } else {
-                    "Selected: ${entry.displayName}. Producer machines stay off the belt. Drag placed machines to rotate."
+                    Messages.format(MessageKey.HUD_HELP_PRODUCER, displayName)
                 }
             }
         }
@@ -101,6 +154,13 @@ class HudRenderer(
             GameConfig.virtualWidth - 248f,
             GameConfig.virtualHeight - 70f,
             216f,
+            40f
+        )
+
+        val LANGUAGE_BUTTON_BOUNDS: Rectangle = Rectangle(
+            GameConfig.virtualWidth - 336f,
+            GameConfig.virtualHeight - 70f,
+            80f,
             40f
         )
     }

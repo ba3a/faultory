@@ -80,7 +80,6 @@ class UpgradeFlowController(
                     val upgraded = catalogLookup.workerProfilesById[upgradeId] ?: return@mapNotNull null
                     UpgradeOption(
                         targetCatalogId = upgraded.id,
-                        displayName = upgraded.displayName,
                         kind = PlacedShopObjectKind.WORKER,
                         cost = upgraded.hireCost
                     )
@@ -93,7 +92,6 @@ class UpgradeFlowController(
                     val upgraded = catalogLookup.machineSpecsById[upgradeId] ?: return@mapNotNull null
                     UpgradeOption(
                         targetCatalogId = upgraded.id,
-                        displayName = upgraded.displayName,
                         kind = PlacedShopObjectKind.MACHINE,
                         cost = upgraded.installCost
                     )
@@ -110,7 +108,6 @@ class UpgradeFlowController(
 
 data class UpgradeOption(
     val targetCatalogId: String,
-    val displayName: String,
     val kind: PlacedShopObjectKind,
     val cost: Int,
     val bounds: Rectangle = Rectangle()

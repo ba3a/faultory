@@ -39,12 +39,11 @@ class EditorSessionTest {
     @Test
     fun `updateProduct replaces entry by id and marks dirty`() {
         val originalProduct = repository.shopCatalog.products.single()
-        val updated = originalProduct.copy(displayName = "Renamed", saleValue = 99)
+        val updated = originalProduct.copy(saleValue = 99)
 
         session.updateProduct(originalProduct.id, updated)
 
         assertTrue(session.isDirty)
-        assertEquals("Renamed", repository.shopCatalog.products.single().displayName)
         assertEquals(99, repository.shopCatalog.products.single().saleValue)
     }
 
@@ -84,12 +83,12 @@ class EditorSessionTest {
     @Test
     fun `updateLevel marks dirty and mutates catalog`() {
         val level = repository.levelCatalog.levels.single()
-        val updated = level.copy(subtitle = "Second shift")
+        val updated = level.copy(shopAssetPath = "shops/other.json")
 
         session.updateLevel(level.id, updated)
 
         assertTrue(session.isDirty)
-        assertEquals("Second shift", repository.levelCatalog.levels.single().subtitle)
+        assertEquals("shops/other.json", repository.levelCatalog.levels.single().shopAssetPath)
     }
 
     @Test

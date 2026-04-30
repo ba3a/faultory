@@ -54,7 +54,7 @@ class WorkerValidatorTest {
     fun `duplicate id is an error`() {
         val original = repository.shopCatalog.workers.single()
         repository.shopCatalog = repository.shopCatalog.copy(
-            workers = listOf(original, original.copy(displayName = "Second Inspector")),
+            workers = listOf(original, original.copy(hireCost = 999)),
         )
 
         val issues = validate(AssetSelection.Worker(original.id))

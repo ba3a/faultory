@@ -17,6 +17,9 @@ import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.LevelUnlockResolver
+import com.faultory.core.i18n.LocaleManager
+import com.faultory.core.i18n.MessageKey
+import com.faultory.core.i18n.Messages
 
 class LevelSelectionScreen(
     private val game: FaultoryGame
@@ -27,6 +30,7 @@ class LevelSelectionScreen(
     private val subtitleLayout = GlyphLayout()
     private val hintLayout = GlyphLayout()
     private val cardBounds = mutableListOf<Rectangle>()
+    private val languageButtonBounds = Rectangle(GameConfig.virtualWidth - 132f, GameConfig.virtualHeight - 80f, 96f, 40f)
     private lateinit var levelCatalog: LevelCatalog
     private var lockedLevelIds: Set<String> = emptySet()
     private val missingPrereqsByLevelId = mutableMapOf<String, List<String>>()
@@ -71,6 +75,11 @@ class LevelSelectionScreen(
                 return false
             }
 
+            if (languageButtonContains(screenX, screenY)) {
+                LocaleManager.cycleLocale()
+                return true
+            }
+
             val hoveredIndex = levelIndexAt(screenX, screenY)
             if (hoveredIndex >= 0) {
                 selectedIndex = hoveredIndex
@@ -79,6 +88,12 @@ class LevelSelectionScreen(
             }
             return false
         }
+    }
+
+    private fun languageButtonContains(screenX: Int, screenY: Int): Boolean {
+        scratchVector.set(screenX.toFloat(), screenY.toFloat(), 0f)
+        viewport.unproject(scratchVector)
+        return languageButtonBounds.contains(scratchVector.x, scratchVector.y)
     }
 
     override fun show() {
@@ -144,6 +159,9 @@ class LevelSelectionScreen(
         renderer.color = Color(0.14f, 0.17f, 0.20f, 1f)
         renderer.rect(72f, GameConfig.virtualHeight - 180f, GameConfig.virtualWidth - 144f, 96f)
 
+        renderer.color = Color(0.16f, 0.20f, 0.24f, 1f)
+        renderer.rect(languageButtonBounds.x, languageButtonBounds.y, languageButtonBounds.width, languageButtonBounds.height)
+
         for (index in levelCatalog.levels.indices) {
             val level = levelCatalog.levels[index]
             val locked = level.id in lockedLevelIds
@@ -166,6 +184,8 @@ class LevelSelectionScreen(
         renderer.end()
 
         renderer.begin(ShapeRenderer.ShapeType.Line)
+        renderer.color = Color(0.55f, 0.61f, 0.66f, 1f)
+        renderer.rect(languageButtonBounds.x, languageButtonBounds.y, languageButtonBounds.width, languageButtonBounds.height)
         for (index in levelCatalog.levels.indices) {
             val level = levelCatalog.levels[index]
             val locked = level.id in lockedLevelIds
@@ -187,12 +207,22 @@ class LevelSelectionScreen(
 
         batch.begin()
         font.color = Color(0.94f, 0.95f, 0.96f, 1f)
-        titleLayout.setText(font, "Choose Shop")
+        titleLayout.setText(font, Messages.text(MessageKey.LEVEL_SELECT_TITLE))
         font.draw(batch, titleLayout, 96f, GameConfig.virtualHeight - 118f)
 
         font.color = Color(0.76f, 0.80f, 0.84f, 1f)
-        subtitleLayout.setText(font, "Arrow keys move selection. Enter, Space, or click starts a level.")
+        subtitleLayout.setText(font, Messages.text(MessageKey.LEVEL_SELECT_HINT))
         font.draw(batch, subtitleLayout, 96f, GameConfig.virtualHeight - 146f)
+
+        font.color = Color(0.90f, 0.93f, 0.95f, 1f)
+        val languageLabel = LocaleManager.currentLocale.toLanguageTag().uppercase()
+        titleLayout.setText(font, languageLabel)
+        font.draw(
+            batch,
+            titleLayout,
+            languageButtonBounds.x + (languageButtonBounds.width - titleLayout.width) / 2f,
+            languageButtonBounds.y + 26f
+        )
 
         for (index in levelCatalog.levels.indices) {
             val level = levelCatalog.levels[index]
@@ -200,11 +230,11 @@ class LevelSelectionScreen(
             val bounds = cardBounds[index]
 
             font.color = if (locked) Color(0.62f, 0.64f, 0.68f, 1f) else Color(0.98f, 0.99f, 1f, 1f)
-            titleLayout.setText(font, level.displayName)
+            titleLayout.setText(font, Messages.catalog(MessageKey.LEVEL_DISPLAYNAME, level.id))
             font.draw(batch, titleLayout, bounds.x + 28f, bounds.y + bounds.height - 42f)
 
             font.color = if (locked) Color(0.55f, 0.58f, 0.62f, 1f) else Color(0.83f, 0.87f, 0.90f, 1f)
-            subtitleLayout.setText(font, level.subtitle)
+            subtitleLayout.setText(font, Messages.catalog(MessageKey.LEVEL_SUBTITLE, level.id))
             font.draw(batch, subtitleLayout, bounds.x + 28f, bounds.y + bounds.height - 74f)
 
             font.color = when {
@@ -214,9 +244,9 @@ class LevelSelectionScreen(
             }
             val footerText = if (locked) {
                 val missing = missingPrereqsByLevelId[level.id].orEmpty()
-                "Locked - requires: ${missing.joinToString(", ")}"
+                Messages.format(MessageKey.LEVEL_SELECT_LOCKED_REQUIRES, missing.joinToString(", "))
             } else {
-                "Open Level"
+                Messages.text(MessageKey.LEVEL_SELECT_OPEN)
             }
             hintLayout.setText(font, footerText)
             font.draw(batch, hintLayout, bounds.x + 28f, bounds.y + 42f)
@@ -238,7 +268,7 @@ class LevelSelectionScreen(
         if (selectedIndex !in levelCatalog.levels.indices) return null
         val level = levelCatalog.levels[selectedIndex]
         val missing = missingPrereqsByLevelId[level.id] ?: return null
-        return "Locked - finish ${missing.joinToString(", ")} with at least one star to unlock."
+        return Messages.format(MessageKey.LEVEL_SELECT_LOCKED_HINT, missing.joinToString(", "))
     }
 
     private fun layoutCards(levels: List<LevelDefinition>) {

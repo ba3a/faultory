@@ -46,7 +46,7 @@ class LevelValidatorTest {
     fun `duplicate id is an error`() {
         val original = repository.levelCatalog.levels.single()
         repository.levelCatalog = repository.levelCatalog.copy(
-            levels = listOf(original, original.copy(displayName = "Second Run")),
+            levels = listOf(original, original.copy(shopAssetPath = "shops/other.json")),
         )
 
         val issues = validate(AssetSelection.Level(original.id))

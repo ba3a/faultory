@@ -1,12 +1,15 @@
 package com.faultory.core
 
 import com.badlogic.gdx.Game
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.g2d.TextureAtlas
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter
 import com.faultory.core.assets.AssetPaths
 import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.LevelCatalogAssetLoader
@@ -16,14 +19,21 @@ import com.faultory.core.content.ShopCatalogAssetLoader
 import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.graphics.SkinDefinitionAssetLoader
 import com.faultory.core.graphics.SkinRegistry
+import com.faultory.core.i18n.CatalogTranslations
+import com.faultory.core.i18n.LocaleManager
+import com.faultory.core.i18n.SupportedLocale
 import com.faultory.core.render.RenderContext
 import com.faultory.core.save.GameSave
+import com.faultory.core.save.LocalPlayerPreferencesRepository
 import com.faultory.core.save.LocalSaveRepository
+import com.faultory.core.save.PlayerPreferences
+import com.faultory.core.save.PlayerPreferencesRepository
 import com.faultory.core.save.SaveRepository
 import com.faultory.core.screens.BootScreen
 import com.faultory.core.screens.LevelSelectionScreen
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopBlueprintAssetLoader
+import kotlin.text.Charsets
 
 class FaultoryGame : Game() {
     lateinit var renderContext: RenderContext
@@ -38,13 +48,29 @@ class FaultoryGame : Game() {
     lateinit var skinRegistry: SkinRegistry
         private set
 
+    lateinit var preferencesRepository: PlayerPreferencesRepository
+        private set
+
     override fun create() {
         renderContext = RenderContext(
             spriteBatch = SpriteBatch(),
-            uiFont = BitmapFont(),
+            uiFont = createUiFont(),
             shapeRenderer = ShapeRenderer()
         )
         saveRepository = LocalSaveRepository()
+        preferencesRepository = LocalPlayerPreferencesRepository()
+        val preferences = preferencesRepository.load()
+        val translations = CatalogTranslations(resourceReader = { path ->
+            val handle = Gdx.files.internal(path)
+            if (handle.exists()) handle.readString(Charsets.UTF_8.name()) else null
+        })
+        LocaleManager.init(
+            translations = translations,
+            initialLocale = SupportedLocale.resolve(preferences.localeTag),
+            persist = { locale ->
+                preferencesRepository.save(PlayerPreferences(locale.toLanguageTag()))
+            }
+        )
 
         val fileHandleResolver = InternalFileHandleResolver()
         assetManager = AssetManager(fileHandleResolver).apply {
@@ -95,6 +121,30 @@ class FaultoryGame : Game() {
                 unlockedMachineIds = unlockedMachineIds,
                 startingCash = startingCash
             ).also(saveRepository::save)
+    }
+
+    private fun createUiFont(): BitmapFont {
+        val handle = Gdx.files.internal(AssetPaths.uiFont)
+        if (!handle.exists()) {
+            return BitmapFont()
+        }
+        val generator = FreeTypeFontGenerator(handle)
+        try {
+            val parameter = FreeTypeFontParameter().apply {
+                size = 16
+                characters = FreeTypeFontGenerator.DEFAULT_CHARS +
+                    "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ" +
+                    "абвгдеёжзийклмнопрстуфхцчшщъыьэюя" +
+                    "«»№—–"
+                minFilter = com.badlogic.gdx.graphics.Texture.TextureFilter.Nearest
+                magFilter = com.badlogic.gdx.graphics.Texture.TextureFilter.Nearest
+                mono = true
+                hinting = FreeTypeFontGenerator.Hinting.None
+            }
+            return generator.generateFont(parameter)
+        } finally {
+            generator.dispose()
+        }
     }
 
     private fun AssetManager.enqueueSkinDefinitions(fileHandleResolver: InternalFileHandleResolver) {

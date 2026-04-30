@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 class EditorJsonTest {
     @Test
     fun `encoding the same model twice produces byte-equal output`() {
-        val product = ProductDefinition(id = "ceramic-mug", displayName = "Ceramic Mug", saleValue = 12)
+        val product = ProductDefinition(id = "ceramic-mug", saleValue = 12)
 
         val first = EditorJson.instance.encodeToString(product)
         val second = EditorJson.instance.encodeToString(product)
@@ -19,7 +19,7 @@ class EditorJsonTest {
 
     @Test
     fun `pretty-print uses two-space indent`() {
-        val product = ProductDefinition(id = "ceramic-mug", displayName = "Ceramic Mug", saleValue = 12)
+        val product = ProductDefinition(id = "ceramic-mug", saleValue = 12)
 
         val encoded = EditorJson.instance.encodeToString(product)
 

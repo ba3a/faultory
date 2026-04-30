@@ -9,6 +9,7 @@ dependencies {
     implementation(project(":core"))
     implementation(libs.gdxBackendLwjgl3)
     runtimeOnly("com.badlogicgames.gdx:gdx-platform:${libs.versions.gdx.get()}:natives-desktop")
+    runtimeOnly("com.badlogicgames.gdx:gdx-freetype-platform:${libs.versions.gdx.get()}:natives-desktop")
 }
 
 application {

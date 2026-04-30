@@ -5,7 +5,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class WorkerProfile(
     val id: String,
-    val displayName: String,
     val level: Int,
     val hireCost: Int,
     val walkSpeed: Float,

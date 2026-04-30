@@ -3,6 +3,8 @@ package com.faultory.core.screens.shopfloor
 import com.badlogic.gdx.graphics.Color
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelDefinition
+import com.faultory.core.i18n.MessageKey
+import com.faultory.core.i18n.Messages
 
 class CompletionModalRenderer(
     private val level: LevelDefinition,
@@ -68,29 +70,42 @@ class CompletionModalRenderer(
         var currentY = bounds.y + bounds.height - 34f
 
         font.color = Color(0.96f, 0.97f, 0.98f, 1f)
-        titleLayout.setText(font, if (completedRun.passed) "Shift Passed" else "Shift Failed")
+        titleLayout.setText(font, Messages.text(if (completedRun.passed) MessageKey.COMPLETION_PASSED else MessageKey.COMPLETION_FAILED))
         font.draw(batch, titleLayout, modalLeft, currentY)
 
         currentY -= 28f
         font.color = Color(0.80f, 0.84f, 0.88f, 1f)
-        hintLayout.setText(font, "Good delivered ${completedRun.goodProductsDelivered}   Faulty delivered ${completedRun.faultyProductsDelivered}   Total ${completedRun.goodProductsDelivered + completedRun.faultyProductsDelivered}")
+        hintLayout.setText(
+            font,
+            Messages.format(
+                MessageKey.COMPLETION_DELIVERY,
+                completedRun.goodProductsDelivered,
+                completedRun.faultyProductsDelivered,
+                completedRun.goodProductsDelivered + completedRun.faultyProductsDelivered
+            )
+        )
         font.draw(batch, hintLayout, modalLeft, currentY)
 
         currentY -= 28f
         hintLayout.setText(
             font,
-            "Thresholds 1* ${level.starThresholds.oneStar}   2* ${level.starThresholds.twoStar}   3* ${level.starThresholds.threeStar}"
+            Messages.format(
+                MessageKey.COMPLETION_THRESHOLDS,
+                level.starThresholds.oneStar,
+                level.starThresholds.twoStar,
+                level.starThresholds.threeStar
+            )
         )
         font.draw(batch, hintLayout, modalLeft, currentY)
 
         currentY -= 32f
         font.color = Color(1f, 0.94f, 0.71f, 1f)
-        titleLayout.setText(font, "Stars ${starMeterText(completedRun.starsEarned)}")
+        titleLayout.setText(font, Messages.format(MessageKey.COMPLETION_STARS, starMeterText(completedRun.starsEarned)))
         font.draw(batch, titleLayout, modalLeft, currentY)
 
         currentY -= 38f
         font.color = Color(0.92f, 0.95f, 0.97f, 1f)
-        titleLayout.setText(font, "Delivered product mix")
+        titleLayout.setText(font, Messages.text(MessageKey.COMPLETION_MIX))
         font.draw(batch, titleLayout, modalLeft, currentY)
 
         currentY -= 30f
@@ -98,7 +113,13 @@ class CompletionModalRenderer(
         for (stats in completedRun.productDeliveryStats.sortedBy { productDisplayName(it.productId) }) {
             hintLayout.setText(
                 font,
-                "${productDisplayName(stats.productId)}   Good ${stats.goodCount}   Defect ${stats.productionDefectCount}   Sabotage ${stats.sabotageCount}"
+                Messages.format(
+                    MessageKey.COMPLETION_PRODUCT_LINE,
+                    productDisplayName(stats.productId),
+                    stats.goodCount,
+                    stats.productionDefectCount,
+                    stats.sabotageCount
+                )
             )
             font.draw(batch, hintLayout, modalLeft, currentY)
             currentY -= 24f
@@ -121,7 +142,7 @@ class CompletionModalRenderer(
     }
 
     private fun productDisplayName(productId: String): String {
-        return catalogLookup.productDefinitionsById[productId]?.displayName ?: productId
+        return Messages.catalog(MessageKey.PRODUCT_DISPLAYNAME, productId)
     }
 
     private fun starMeterText(starsEarned: Int): String {

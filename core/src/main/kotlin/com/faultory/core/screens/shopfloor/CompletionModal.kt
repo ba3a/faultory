@@ -1,6 +1,8 @@
 package com.faultory.core.screens.shopfloor
 
 import com.badlogic.gdx.math.Rectangle
+import com.faultory.core.i18n.MessageKey
+import com.faultory.core.i18n.Messages
 
 enum class CompletionAction {
     REPLAY_LEVEL,
@@ -35,9 +37,9 @@ object CompletionModalLayout {
             CompletionButton(
                 action = action,
                 label = when (action) {
-                    CompletionAction.REPLAY_LEVEL -> "Replay Level"
-                    CompletionAction.NEXT_LEVEL -> "Next Level"
-                    CompletionAction.BACK_TO_LEVEL_SELECTION -> "Back To Level Selection"
+                    CompletionAction.REPLAY_LEVEL -> Messages.text(MessageKey.COMPLETION_REPLAY)
+                    CompletionAction.NEXT_LEVEL -> Messages.text(MessageKey.COMPLETION_NEXT)
+                    CompletionAction.BACK_TO_LEVEL_SELECTION -> Messages.text(MessageKey.COMPLETION_BACK)
                 },
                 bounds = Rectangle(
                     startX + index * (buttonWidth + gap),

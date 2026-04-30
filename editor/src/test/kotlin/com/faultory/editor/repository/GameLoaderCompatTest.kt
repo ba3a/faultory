@@ -27,10 +27,10 @@ class GameLoaderCompatTest {
         try {
             val repo = AssetRepository(tempRoot)
 
-            val mutatedProduct = repo.shopCatalog.products.single().copy(displayName = "Glazed Mug", saleValue = 99)
+            val mutatedProduct = repo.shopCatalog.products.single().copy(saleValue = 99)
             repo.shopCatalog = repo.shopCatalog.copy(products = listOf(mutatedProduct))
 
-            val mutatedLevel = repo.levelCatalog.levels.single().copy(subtitle = "Edited in editor")
+            val mutatedLevel = repo.levelCatalog.levels.single().copy(shopAssetPath = "shops/edited.json")
             repo.levelCatalog = repo.levelCatalog.copy(levels = listOf(mutatedLevel))
 
             val blueprintKey = repo.blueprints.keys.single()

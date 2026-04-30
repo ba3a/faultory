@@ -58,7 +58,7 @@ class ProductValidatorTest {
     fun `duplicate id is an error`() {
         val original = repository.shopCatalog.products.single()
         repository.shopCatalog = repository.shopCatalog.copy(
-            products = listOf(original, original.copy(displayName = "Second Mug")),
+            products = listOf(original, original.copy(saleValue = 999)),
         )
 
         val issues = validate(AssetSelection.Product(original.id))

@@ -19,7 +19,6 @@ class ReflectionFormTest {
     fun `ProductDefinition produces string and int editors in declared order`() {
         val product = ProductDefinition(
             id = "gear",
-            displayName = "Gear",
             saleValue = 12,
         )
 
@@ -28,7 +27,6 @@ class ReflectionFormTest {
         assertEquals(
             listOf(
                 StringEditor("id", "gear"),
-                StringEditor("displayName", "Gear"),
                 IntEditor("saleValue", 12),
             ),
             editors,
@@ -39,7 +37,6 @@ class ReflectionFormTest {
     fun `MachineSpec renders enum editors for type and manuality`() {
         val machine = MachineSpec(
             id = "press",
-            displayName = "Press",
             level = 1,
             type = MachineType.PRODUCER,
             manuality = Manuality.HUMAN_OPERATED,
@@ -64,7 +61,6 @@ class ReflectionFormTest {
     fun `MachineSpec nullable fields with null values produce NullableEditor`() {
         val machine = MachineSpec(
             id = "press",
-            displayName = "Press",
             level = 1,
             type = MachineType.PRODUCER,
             manuality = Manuality.AUTOMATIC,
@@ -94,7 +90,6 @@ class ReflectionFormTest {
     fun `MachineSpec nested classes produce ClassEditor with recursive fields`() {
         val machine = MachineSpec(
             id = "press",
-            displayName = "Press",
             level = 1,
             type = MachineType.PRODUCER,
             manuality = Manuality.HUMAN_OPERATED,
@@ -152,7 +147,6 @@ class ReflectionFormTest {
     fun `MachineSpec id-reference list fields produce IdReferenceListEditor`() {
         val machine = MachineSpec(
             id = "press",
-            displayName = "Press",
             level = 1,
             type = MachineType.PRODUCER,
             manuality = Manuality.HUMAN_OPERATED,
@@ -183,8 +177,6 @@ class ReflectionFormTest {
     fun `LevelDefinition availableWorkerIds and availableMachineIds produce IdReferenceListEditor`() {
         val level = LevelDefinition(
             id = "tutorial",
-            displayName = "Tutorial",
-            subtitle = "First shift",
             shopAssetPath = "shops/tutorial.json",
             starThresholds = LevelStarThresholds(oneStar = 1, twoStar = 2, threeStar = 3),
             availableWorkerIds = listOf("apprentice", "senior"),

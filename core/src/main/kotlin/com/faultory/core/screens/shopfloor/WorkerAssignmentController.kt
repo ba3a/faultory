@@ -3,6 +3,8 @@ package com.faultory.core.screens.shopfloor
 import com.badlogic.gdx.math.Rectangle
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.WorkerRole
+import com.faultory.core.i18n.MessageKey
+import com.faultory.core.i18n.Messages
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.TileCoordinate
@@ -186,8 +188,8 @@ class WorkerAssignmentController(
     }
 
     private fun labelFor(action: ObjectContextAction): String = when (action) {
-        ObjectContextAction.ASSIGN_TO_MACHINE -> "Assign To Machine"
-        ObjectContextAction.ASSIGN_TO_QA -> "Assign To QA"
-        ObjectContextAction.UPGRADE -> "Upgrade"
+        ObjectContextAction.ASSIGN_TO_MACHINE -> Messages.text(MessageKey.CONTEXT_ASSIGN_MACHINE)
+        ObjectContextAction.ASSIGN_TO_QA -> Messages.text(MessageKey.CONTEXT_ASSIGN_QA)
+        ObjectContextAction.UPGRADE -> Messages.text(MessageKey.CONTEXT_UPGRADE)
     }
 }

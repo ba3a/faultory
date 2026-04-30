@@ -27,7 +27,6 @@ class OperatorEligibilityTest {
     fun `human operated machine also requires the matching worker role`() {
         val machine = MachineSpec(
             id = "human-qa-station",
-            displayName = "Human QA Station",
             level = 1,
             type = MachineType.QA,
             manuality = Manuality.HUMAN_OPERATED,
@@ -53,7 +52,6 @@ class OperatorEligibilityTest {
         )
         val worker = WorkerProfile(
             id = "producer-only-rookie",
-            displayName = "Producer Only Rookie",
             level = 1,
             hireCost = 10,
             walkSpeed = 110f,

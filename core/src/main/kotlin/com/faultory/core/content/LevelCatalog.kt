@@ -10,8 +10,6 @@ data class LevelCatalog(
 @Serializable
 data class LevelDefinition(
     val id: String,
-    val displayName: String,
-    val subtitle: String,
     val shopAssetPath: String,
     val starThresholds: LevelStarThresholds,
     val recommendedNextLevelId: String? = null,

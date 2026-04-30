@@ -2,7 +2,6 @@
   "workers": [
     {
       "id": "line-inspector",
-      "displayName": "Line Inspector",
       "level": 1,
       "hireCost": 60,
       "walkSpeed": 128.0,
@@ -42,7 +41,6 @@
     },
     {
       "id": "line-inspector-lead",
-      "displayName": "Line Lead",
       "level": 2,
       "hireCost": 96,
       "walkSpeed": 134.0,
@@ -79,7 +77,6 @@
     },
     {
       "id": "float-tech",
-      "displayName": "Float Tech",
       "level": 1,
       "hireCost": 85,
       "walkSpeed": 148.0,
@@ -119,7 +116,6 @@
     },
     {
       "id": "line-inspector-rover",
-      "displayName": "Line Rover",
       "level": 2,
       "hireCost": 102,
       "walkSpeed": 168.0,
@@ -156,7 +152,6 @@
     },
     {
       "id": "float-tech-analyst",
-      "displayName": "Float Analyst",
       "level": 2,
       "hireCost": 124,
       "walkSpeed": 154.0,
@@ -193,7 +188,6 @@
     },
     {
       "id": "float-tech-foreman",
-      "displayName": "Float Foreman",
       "level": 2,
       "hireCost": 130,
       "walkSpeed": 176.0,
@@ -232,7 +226,6 @@
   "machines": [
     {
       "id": "bench-assembler",
-      "displayName": "Bench Assembler",
       "level": 1,
       "type": "PRODUCER",
       "manuality": "HUMAN_OPERATED",
@@ -270,7 +263,6 @@
     },
     {
       "id": "servo-assembler",
-      "displayName": "Servo Assembler",
       "level": 2,
       "type": "PRODUCER",
       "manuality": "AUTOMATIC",
@@ -296,7 +288,6 @@
     },
     {
       "id": "precision-assembler",
-      "displayName": "Precision Assembler",
       "level": 2,
       "type": "PRODUCER",
       "manuality": "AUTOMATIC",
@@ -322,7 +313,6 @@
     },
     {
       "id": "camera-gate",
-      "displayName": "Camera Gate",
       "level": 1,
       "type": "QA",
       "manuality": "AUTOMATIC",
@@ -367,7 +357,6 @@
     },
     {
       "id": "spectral-camera-gate",
-      "displayName": "Spectral Camera Gate",
       "level": 2,
       "type": "QA",
       "manuality": "AUTOMATIC",
@@ -409,7 +398,6 @@
     },
     {
       "id": "multi-angle-camera-gate",
-      "displayName": "Multi-Angle Camera Gate",
       "level": 2,
       "type": "QA",
       "manuality": "AUTOMATIC",
@@ -451,7 +439,6 @@
     },
     {
       "id": "weight-checker",
-      "displayName": "Weight Checker",
       "level": 1,
       "type": "QA",
       "manuality": "AUTOMATIC",
@@ -494,17 +481,14 @@
   "products": [
     {
       "id": "ceramic-mug",
-      "displayName": "Ceramic Mug",
       "saleValue": 22
     },
     {
       "id": "glass-jar",
-      "displayName": "Glass Jar",
       "saleValue": 18
     },
     {
       "id": "tea-kettle",
-      "displayName": "Tea Kettle",
       "saleValue": 35
     }
   ]

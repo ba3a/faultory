@@ -19,7 +19,7 @@ object TreeNodeFactories {
             .sortedBy { it.id }
             .forEach { level ->
                 val levelNode = AssetTreeNode(
-                    label = "${level.id} — ${level.displayName}",
+                    label = level.id,
                     selection = AssetSelection.Level(level.id),
                 )
                 levelNode.add(

@@ -19,15 +19,13 @@ class BankPanel(private val catalogLookup: CatalogLookup) {
         for (workerId in level.availableWorkerIds) {
             val worker = catalogLookup.workerProfilesById[workerId] ?: continue
             mutableEntries += BankEntry(
-                key = BankEntryKey(PlacedShopObjectKind.WORKER, worker.id),
-                displayName = worker.displayName
+                key = BankEntryKey(PlacedShopObjectKind.WORKER, worker.id)
             )
         }
         for (machineId in level.availableMachineIds) {
             val machine = catalogLookup.machineSpecsById[machineId] ?: continue
             mutableEntries += BankEntry(
-                key = BankEntryKey(PlacedShopObjectKind.MACHINE, machine.id),
-                displayName = machine.displayName
+                key = BankEntryKey(PlacedShopObjectKind.MACHINE, machine.id)
             )
         }
     }
@@ -75,7 +73,6 @@ class BankPanel(private val catalogLookup: CatalogLookup) {
 
 data class BankEntry(
     val key: BankEntryKey,
-    val displayName: String,
     val bounds: Rectangle = Rectangle()
 )
 

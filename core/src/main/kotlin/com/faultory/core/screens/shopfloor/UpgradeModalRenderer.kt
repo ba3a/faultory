@@ -2,6 +2,8 @@ package com.faultory.core.screens.shopfloor
 
 import com.badlogic.gdx.graphics.Color
 import com.faultory.core.config.GameConfig
+import com.faultory.core.i18n.MessageKey
+import com.faultory.core.i18n.Messages
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
 
@@ -60,7 +62,7 @@ class UpgradeModalRenderer(
         val hintLayout = ctx.hintLayout
 
         font.color = Color(0.96f, 0.97f, 0.98f, 1f)
-        titleLayout.setText(font, "Choose Upgrade")
+        titleLayout.setText(font, Messages.text(MessageKey.UPGRADE_TITLE))
         font.draw(
             batch,
             titleLayout,
@@ -70,22 +72,20 @@ class UpgradeModalRenderer(
 
         for (option in modal.options) {
             val affordable = shopFloor.cash >= option.cost
+            val (nameKey, kindKey) = when (option.kind) {
+                PlacedShopObjectKind.WORKER -> MessageKey.WORKER_DISPLAYNAME to MessageKey.UPGRADE_WORKER
+                PlacedShopObjectKind.MACHINE -> MessageKey.MACHINE_DISPLAYNAME to MessageKey.UPGRADE_MACHINE
+            }
             font.color = Color(0.95f, 0.96f, 0.97f, 1f)
-            titleLayout.setText(font, option.displayName)
+            titleLayout.setText(font, Messages.catalog(nameKey, option.targetCatalogId))
             font.draw(batch, titleLayout, option.bounds.x + 12f, option.bounds.y + option.bounds.height - 20f)
 
             font.color = Color(0.74f, 0.79f, 0.84f, 1f)
-            hintLayout.setText(
-                font,
-                when (option.kind) {
-                    PlacedShopObjectKind.WORKER -> "Worker"
-                    PlacedShopObjectKind.MACHINE -> "Machine"
-                }
-            )
+            hintLayout.setText(font, Messages.text(kindKey))
             font.draw(batch, hintLayout, option.bounds.x + 12f, option.bounds.y + 48f)
 
             font.color = if (affordable) Color(1f, 0.94f, 0.71f, 1f) else Color(0.96f, 0.55f, 0.55f, 1f)
-            hintLayout.setText(font, "Cost ${option.cost}")
+            hintLayout.setText(font, Messages.format(MessageKey.UPGRADE_COST, option.cost))
             font.draw(batch, hintLayout, option.bounds.x + 12f, option.bounds.y + 24f)
         }
     }

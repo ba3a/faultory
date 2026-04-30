@@ -51,8 +51,6 @@ class LevelUnlockResolverTest {
     private fun level(id: String, requiredLevelIds: List<String>): LevelDefinition {
         return LevelDefinition(
             id = id,
-            displayName = id,
-            subtitle = "",
             shopAssetPath = "shops/$id.json",
             starThresholds = LevelStarThresholds(1, 2, 3),
             recommendedNextLevelId = null,

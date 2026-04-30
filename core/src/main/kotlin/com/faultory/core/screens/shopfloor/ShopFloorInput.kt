@@ -2,6 +2,7 @@ package com.faultory.core.screens.shopfloor
 
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputAdapter
+import com.faultory.core.i18n.LocaleManager
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
 
@@ -40,6 +41,7 @@ class ShopFloorInput(
             bankPanel.hoveredKey != null ||
             hoverState.hoveredTile != null ||
             hoverState.isBackButtonHovered ||
+            hoverState.isLanguageButtonHovered ||
             workerAssignment.isContextMenuOpen ||
             workerAssignment.hasPendingAssignment ||
             machineDrag.isDragging
@@ -99,10 +101,15 @@ class ShopFloorInput(
         return bankPanel.selectedKey == null &&
             !workerAssignment.hasPendingAssignment &&
             !workerAssignment.isContextMenuOpen &&
-            !hoverState.isBackButtonHovered
+            !hoverState.isBackButtonHovered &&
+            !hoverState.isLanguageButtonHovered
     }
 
     private fun handleLeftClick(): Boolean {
+        if (hoverState.isLanguageButtonHovered) {
+            LocaleManager.cycleLocale()
+            return true
+        }
         if (hoverState.isBackButtonHovered) {
             shiftLifecycle.returnToLevelSelection()
             return true
@@ -180,6 +187,7 @@ class ShopFloorInput(
                 ?.action
             workerAssignment.clearHover()
             hoverState.isBackButtonHovered = false
+            hoverState.isLanguageButtonHovered = false
             bankPanel.clearHover()
             hoverState.hoveredTile = null
             upgradeFlow.closeModal()
@@ -191,6 +199,7 @@ class ShopFloorInput(
             workerAssignment.clearHover()
             bankPanel.clearHover()
             hoverState.isBackButtonHovered = false
+            hoverState.isLanguageButtonHovered = false
             hoverState.hoveredTile = null
             hoverState.hoveredCompletionAction = null
             return
@@ -200,12 +209,14 @@ class ShopFloorInput(
         hoverState.hoveredCompletionAction = null
 
         hoverState.isBackButtonHovered = HudRenderer.BACK_BUTTON_BOUNDS.contains(pointerState.worldX, pointerState.worldY)
+        hoverState.isLanguageButtonHovered = HudRenderer.LANGUAGE_BUTTON_BOUNDS.contains(pointerState.worldX, pointerState.worldY)
+        val isHudHovered = hoverState.isBackButtonHovered || hoverState.isLanguageButtonHovered
         bankPanel.updateHover(
             pointerState.worldX,
             pointerState.worldY,
-            enabled = !hoverState.isBackButtonHovered && !isContextMenuHovered
+            enabled = !isHudHovered && !isContextMenuHovered
         )
-        hoverState.hoveredTile = if (bankPanel.hoveredKey == null && !hoverState.isBackButtonHovered && !isContextMenuHovered) {
+        hoverState.hoveredTile = if (bankPanel.hoveredKey == null && !isHudHovered && !isContextMenuHovered) {
             shopFloor.grid.tileAt(pointerState.worldX, pointerState.worldY)
         } else {
             null

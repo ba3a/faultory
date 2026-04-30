@@ -50,7 +50,7 @@ class MachineValidatorTest {
     fun `duplicate id is an error`() {
         val original = repository.shopCatalog.machines.single()
         repository.shopCatalog = repository.shopCatalog.copy(
-            machines = listOf(original, original.copy(displayName = "Second Bench")),
+            machines = listOf(original, original.copy(installCost = 999)),
         )
 
         val issues = validate(AssetSelection.Machine(original.id))

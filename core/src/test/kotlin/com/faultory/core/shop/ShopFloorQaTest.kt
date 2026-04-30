@@ -176,7 +176,6 @@ class ShopFloorQaTest {
     private fun qaWorkerProfile(): WorkerProfile {
         return WorkerProfile(
             id = "line-inspector",
-            displayName = "Line Inspector",
             level = 1,
             hireCost = 60,
             walkSpeed = 200f,
@@ -202,7 +201,6 @@ class ShopFloorQaTest {
     ): MachineSpec {
         return MachineSpec(
             id = id,
-            displayName = "QA Machine",
             level = 1,
             type = MachineType.QA,
             manuality = Manuality.AUTOMATIC,
@@ -236,7 +234,6 @@ class ShopFloorQaTest {
     ): MachineSpec {
         return MachineSpec(
             id = id,
-            displayName = "Producer",
             level = 1,
             type = MachineType.PRODUCER,
             manuality = manuality,

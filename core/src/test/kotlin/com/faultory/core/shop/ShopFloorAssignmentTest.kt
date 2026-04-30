@@ -281,7 +281,6 @@ class ShopFloorAssignmentTest {
     private fun lineInspectorProfile(): WorkerProfile {
         return WorkerProfile(
             id = "line-inspector",
-            displayName = "Line Inspector",
             level = 1,
             hireCost = 60,
             walkSpeed = 200f,
@@ -309,7 +308,6 @@ class ShopFloorAssignmentTest {
     private fun benchAssemblerSpec(): MachineSpec {
         return MachineSpec(
             id = "bench-assembler",
-            displayName = "Bench Assembler",
             level = 1,
             type = MachineType.PRODUCER,
             manuality = Manuality.HUMAN_OPERATED,
@@ -337,7 +335,6 @@ class ShopFloorAssignmentTest {
     private fun cameraGateSpec(): MachineSpec {
         return MachineSpec(
             id = "camera-gate",
-            displayName = "Camera Gate",
             level = 1,
             type = MachineType.QA,
             manuality = Manuality.AUTOMATIC,
@@ -369,7 +366,6 @@ class ShopFloorAssignmentTest {
     private fun humanQaStationSpec(): MachineSpec {
         return MachineSpec(
             id = "human-qa-station",
-            displayName = "Human QA Station",
             level = 1,
             type = MachineType.QA,
             manuality = Manuality.HUMAN_OPERATED,

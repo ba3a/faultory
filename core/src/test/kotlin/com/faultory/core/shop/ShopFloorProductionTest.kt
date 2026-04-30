@@ -131,7 +131,6 @@ class ShopFloorProductionTest {
     ): WorkerProfile {
         return WorkerProfile(
             id = "line-inspector",
-            displayName = "Line Inspector",
             level = 1,
             hireCost = 60,
             walkSpeed = 200f,
@@ -155,7 +154,6 @@ class ShopFloorProductionTest {
     ): MachineSpec {
         return MachineSpec(
             id = id,
-            displayName = "Producer",
             level = 1,
             type = MachineType.PRODUCER,
             manuality = manuality,
