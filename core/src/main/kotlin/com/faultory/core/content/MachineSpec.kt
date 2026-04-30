@@ -20,8 +20,19 @@ data class MachineSpec(
     val operationDurationSeconds: Float,
     val upgradeTree: BinaryUpgradeTree? = null,
     val producerProfile: ProducerMachineProfile? = null,
-    val qaProfile: QaMachineProfile? = null
+    val qaProfile: QaMachineProfile? = null,
+    val recipe: MachineRecipe? = null
 ) {
+    init {
+        require(slots.count { it.type == MachineSlotType.BELT_OUTPUT } <= 1) {
+            "Machine $id may not declare more than one BELT_OUTPUT slot"
+        }
+    }
+
+    fun hasBeltSlots(): Boolean {
+        return slots.any { it.type == MachineSlotType.BELT_INPUT || it.type == MachineSlotType.BELT_OUTPUT }
+    }
+
     fun requiresOperator(): Boolean {
         return manuality == Manuality.HUMAN_OPERATED
     }

@@ -25,7 +25,9 @@ data class MachineSlotSpec(
 @Serializable
 enum class MachineSlotType {
     OPERATOR,
-    QA
+    QA,
+    BELT_INPUT,
+    BELT_OUTPUT
 }
 
 data class MachineSlotPosition(

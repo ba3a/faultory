@@ -80,6 +80,7 @@ class ReflectionFormTest {
                 NullableEditor("upgradeTree"),
                 NullableEditor("producerProfile"),
                 NullableEditor("qaProfile"),
+                NullableEditor("recipe"),
             ),
             nullables,
         )

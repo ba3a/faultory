@@ -37,12 +37,49 @@ class PlacedObjectRenderer(
             if (placedObject.id in spriteDrawnIds) continue
             drawPlacedObjectOutline(renderer, placedObject)
             drawOrientationMarker(renderer, placedObject)
+            drawRecipeIndicators(renderer, placedObject)
         }
         for (product in shopFloor.activeProducts) {
             drawProductOutline(renderer, product)
         }
         drawAssignmentTargetHover(renderer)
         drawFailureBlink(renderer)
+    }
+
+    private fun drawRecipeIndicators(renderer: ShapeRenderer, placedObject: PlacedShopObject) {
+        if (placedObject.kind != PlacedShopObjectKind.MACHINE) return
+        val recipeState = shopFloor.machineRecipeStateFor(placedObject.id) ?: return
+        if (recipeState.isEmpty) return
+
+        val tile = placedObject.position
+        val baseX = shopFloor.grid.worldXFor(tile)
+        val baseY = shopFloor.grid.worldYFor(tile)
+
+        val bufferTotal = recipeState.inputBuffer.values.sum()
+        if (bufferTotal > 0) {
+            renderer.color = Color(0.55f, 0.78f, 0.92f, 1f)
+            for (i in 0 until bufferTotal.coerceAtMost(6)) {
+                renderer.rect(
+                    baseX + 4f + (i * 4f),
+                    baseY + 4f,
+                    3f,
+                    3f
+                )
+            }
+        }
+
+        val queueSize = recipeState.outputQueue.size
+        if (queueSize > 0) {
+            renderer.color = Color(0.96f, 0.82f, 0.34f, 1f)
+            for (i in 0 until queueSize.coerceAtMost(6)) {
+                renderer.rect(
+                    baseX + GameConfig.tileSize - 7f - (i * 4f),
+                    baseY + GameConfig.tileSize - 7f,
+                    3f,
+                    3f
+                )
+            }
+        }
     }
 
     private fun drawAssignmentTargetHover(renderer: ShapeRenderer) {

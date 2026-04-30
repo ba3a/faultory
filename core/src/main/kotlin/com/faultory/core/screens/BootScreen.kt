@@ -67,6 +67,7 @@ class BootScreen(
             initialProducts = save.activeShift.activeProducts,
             initialMachineProductionStates = save.activeShift.machineProductionStates,
             initialQaInspectionStates = save.activeShift.qaInspectionStates,
+            initialMachineRecipeStates = save.activeShift.machineRecipeStates,
             productDefinitionsById = shopCatalog.products.associateBy { it.id },
             initialCash = save.activeShift.cash
         )

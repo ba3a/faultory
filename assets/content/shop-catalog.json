@@ -438,6 +438,54 @@
       }
     },
     {
+      "id": "tea-blender",
+      "level": 2,
+      "type": "PRODUCER",
+      "manuality": "AUTOMATIC",
+      "skin": "machine_servo_assembler",
+      "productIds": [],
+      "shape": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "slots": [
+        {
+          "x": 0,
+          "y": 0,
+          "side": "WEST",
+          "type": "BELT_INPUT"
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "side": "EAST",
+          "type": "BELT_OUTPUT"
+        }
+      ],
+      "minimumOperatorWorkerIds": [],
+      "installCost": 200,
+      "operationDurationSeconds": 1.5,
+      "upgradeTree": null,
+      "producerProfile": null,
+      "qaProfile": null,
+      "recipe": {
+        "inputs": [
+          {
+            "productId": "ceramic-mug",
+            "quantity": 1
+          },
+          {
+            "productId": "glass-jar",
+            "quantity": 1
+          }
+        ],
+        "outputProductId": "tea-kettle",
+        "durationSeconds": 1.5
+      }
+    },
+    {
       "id": "weight-checker",
       "level": 1,
       "type": "QA",

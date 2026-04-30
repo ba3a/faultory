@@ -89,7 +89,7 @@ class PlacementController(
 
             PlacedShopObjectKind.MACHINE -> {
                 val machine = catalogLookup.machineSpecsById[key.catalogId] ?: return emptyList()
-                val orientations = if (machine.type == MachineType.QA) {
+                val orientations = if (machine.type == MachineType.QA || machine.recipe != null || machine.hasBeltSlots()) {
                     Orientation.entries
                 } else {
                     listOf(Orientation.NORTH)

@@ -79,7 +79,8 @@ class ShiftLifecycleController(
                 activeProducts = shopFloor.activeProducts,
                 machineProductionStates = shopFloor.machineProductionStates,
                 qaInspectionStates = shopFloor.qaInspectionStates,
-                cash = shopFloor.cash
+                cash = shopFloor.cash,
+                machineRecipeStates = shopFloor.machineRecipeStates
             )
         )
         game.saveRepository.save(currentSave)

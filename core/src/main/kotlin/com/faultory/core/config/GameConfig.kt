@@ -10,6 +10,8 @@ object GameConfig {
     const val bankHeight = 160f
     const val tileSize = 40f
     const val conveyorSpeedTilesPerSecond = 2.5f
+    const val machineInputBufferCap = 5
+    const val machineOutputQueueCap = 3
     const val targetFps = 60
     const val saveDirectoryName = "saves"
     const val autosaveIntervalSeconds = 5f

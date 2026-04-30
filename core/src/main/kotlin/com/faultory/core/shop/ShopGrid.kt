@@ -62,6 +62,16 @@ class ShopGrid(
 
     fun nextBeltTile(tile: TileCoordinate): TileCoordinate? = nextBeltTileByTile[tile]
 
+    fun isShippingEdge(tile: TileCoordinate): Boolean {
+        val maxBuildableX = (GameConfig.virtualWidth / GameConfig.tileSize).toInt() - 1
+        val minBuildableY = (GameConfig.bankHeight / GameConfig.tileSize).toInt()
+        val maxBuildableY = ((GameConfig.virtualHeight - GameConfig.hudHeight) / GameConfig.tileSize).toInt() - 1
+        return tile.x <= 0 ||
+            tile.x >= maxBuildableX ||
+            tile.y <= minBuildableY ||
+            tile.y >= maxBuildableY
+    }
+
     fun findPath(
         start: TileCoordinate,
         goals: Set<TileCoordinate>,

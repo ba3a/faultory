@@ -39,6 +39,8 @@
       ],
       "availableMachineIds": [
         "bench-assembler",
+        "servo-assembler",
+        "tea-blender",
         "camera-gate",
         "weight-checker"
       ],

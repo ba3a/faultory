@@ -44,6 +44,23 @@ data class MachineProductionState(
 )
 
 @Serializable
+data class QueuedMachineOutput(
+    val productInstanceId: String,
+    val productId: String,
+    val faultReason: ProductFaultReason? = null
+)
+
+@Serializable
+data class MachineRecipeState(
+    val machineId: String,
+    val inputBuffer: Map<String, Int> = emptyMap(),
+    val outputQueue: List<QueuedMachineOutput> = emptyList()
+) {
+    val isEmpty: Boolean
+        get() = inputBuffer.isEmpty() && outputQueue.isEmpty()
+}
+
+@Serializable
 data class QaInspectionState(
     val inspectorObjectId: String,
     val productId: String,
