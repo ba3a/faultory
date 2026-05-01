@@ -707,12 +707,33 @@ class ShopFloor(
             val machineSpec = machineSpecsById[machine.catalogId] ?: continue
             val handled = when (machineSpec.manuality) {
                 Manuality.AUTOMATIC -> tryDispenseAutomaticProduct(machine, state)
-                Manuality.HUMAN_OPERATED -> tryHandProductToWorker(machine, state)
+                Manuality.HUMAN_OPERATED -> tryDispenseHumanOperatedProduct(machine, state)
             }
             if (handled) {
                 mutableMachineProductionStates.removeAll { it.machineId == state.machineId }
             }
         }
+    }
+
+    private fun tryDispenseHumanOperatedProduct(
+        machine: PlacedShopObject,
+        state: MachineProductionState
+    ): Boolean {
+        val outputAccess = slotPositionsFor(machine, MachineSlotType.BELT_OUTPUT).firstOrNull()?.accessTile
+        if (outputAccess != null) {
+            if (outputAccess !in grid.beltTiles) return false
+            if (isOccupied(outputAccess)) return false
+            mutableActiveProducts += ShopProduct(
+                id = state.productInstanceId,
+                productId = state.productId,
+                sourceMachineId = machine.id,
+                faultReason = state.faultReason,
+                state = ShopProductState.ON_BELT,
+                tile = outputAccess
+            )
+            return true
+        }
+        return tryHandProductToWorker(machine, state)
     }
 
     private fun canStartProduction(
@@ -839,6 +860,10 @@ class ShopFloor(
                 continue
             }
 
+            if (tryHandleRecipeIngredientFetch(index, worker)) {
+                continue
+            }
+
             if (worker.assignedMachineId != null && worker.movementPath.isEmpty() && !isWorkerAtAssignedSlot(worker)) {
                 planWorkerReturnToMachine(index, worker)
                 continue
@@ -848,6 +873,142 @@ class ShopFloor(
                 planWorkerReturnToQaPost(index, worker)
             }
         }
+    }
+
+    private fun tryHandleRecipeIngredientFetch(
+        workerIndex: Int,
+        worker: PlacedShopObject
+    ): Boolean {
+        val machineId = worker.assignedMachineId ?: return false
+        val machine = findObjectById(machineId) ?: return false
+        val machineSpec = machineSpecsById[machine.catalogId] ?: return false
+        val recipe = machineSpec.recipe ?: return false
+        if (machineSpec.slots.any { it.type == MachineSlotType.BELT_INPUT }) return false
+
+        if (worker.movementPath.isNotEmpty()) {
+            return false
+        }
+
+        val recipeState = machineRecipeStateFor(machineId) ?: MachineRecipeState(machineId = machineId)
+        val needed = neededRecipeIngredients(recipeState.inputBuffer, recipe)
+        if (needed.isEmpty()) {
+            return false
+        }
+
+        if (tryGrabAdjacentRecipeIngredient(workerIndex, worker, machineId, needed)) {
+            return true
+        }
+
+        return tryPlanRecipeIngredientFetch(workerIndex, worker, needed)
+    }
+
+    private fun neededRecipeIngredients(
+        buffer: Map<String, Int>,
+        recipe: MachineRecipe
+    ): Set<String> {
+        return recipe.inputs
+            .filter { (buffer[it.productId] ?: 0) < it.quantity }
+            .map { it.productId }
+            .toSet()
+    }
+
+    private fun tryGrabAdjacentRecipeIngredient(
+        workerIndex: Int,
+        worker: PlacedShopObject,
+        machineId: String,
+        needed: Set<String>
+    ): Boolean {
+        val neighborTiles = grid.orthogonalNeighbors(worker.position).toSet()
+        val candidate = mutableActiveProducts.firstOrNull { product ->
+            product.holderObjectId == null &&
+                product.state != ShopProductState.CARRIED &&
+                product.productId in needed &&
+                product.tile != null &&
+                product.tile in neighborTiles
+        } ?: return false
+
+        val productIndex = mutableActiveProducts.indexOfFirst { it.id == candidate.id }
+        if (productIndex < 0) return false
+
+        val productTile = candidate.tile ?: return false
+        mutableActiveProducts[productIndex] = candidate.copy(
+            state = ShopProductState.CARRIED,
+            tile = null,
+            beltProgress = 0f,
+            carrierWorkerId = worker.id,
+            holderObjectId = worker.id,
+            reworkTargetMachineId = machineId
+        )
+        val orientation = Orientation.between(worker.position, productTile) ?: worker.orientation
+        mutablePlacedObjects[workerIndex] = worker.copy(
+            carriedProductId = candidate.id,
+            movementPath = emptyList(),
+            movementProgress = 0f,
+            orientation = orientation
+        )
+        return true
+    }
+
+    private fun tryPlanRecipeIngredientFetch(
+        workerIndex: Int,
+        worker: PlacedShopObject,
+        needed: Set<String>
+    ): Boolean {
+        val candidates = mutableActiveProducts.filter { product ->
+            product.holderObjectId == null &&
+                product.state != ShopProductState.CARRIED &&
+                product.productId in needed &&
+                product.tile != null
+        }
+        if (candidates.isEmpty()) return false
+
+        val availableIngredients = candidates.map { it.productId }.toSet()
+        val pickedIngredient = availableIngredients.toList().random(random)
+        val typeMatching = candidates.filter { it.productId == pickedIngredient }
+
+        val blockedTiles = blockedTilesForPath(ignoreWorkerId = worker.id)
+        var bestPath: List<TileCoordinate>? = null
+        var bestStandIsFloor: Boolean = false
+
+        for (product in typeMatching) {
+            val productTile = product.tile ?: continue
+            val standTiles = grid.orthogonalNeighbors(productTile)
+                .filter { stand ->
+                    grid.isBuildable(stand) &&
+                        (stand == worker.position || !isOccupied(stand, ignoreObjectId = worker.id))
+                }
+                .sortedWith(
+                    compareBy<TileCoordinate> { if (it in grid.beltTiles) 1 else 0 }
+                        .thenBy { manhattanDistance(it, worker.position) }
+                )
+
+            for (stand in standTiles) {
+                val path = grid.findPath(worker.position, setOf(stand), blockedTiles) ?: continue
+                val isFloor = stand !in grid.beltTiles
+                val better = when {
+                    bestPath == null -> true
+                    isFloor && !bestStandIsFloor -> true
+                    isFloor == bestStandIsFloor && path.size < bestPath.size -> true
+                    else -> false
+                }
+                if (better) {
+                    bestPath = path
+                    bestStandIsFloor = isFloor
+                }
+            }
+        }
+
+        val path = bestPath ?: return false
+        val orientation = when {
+            path.isNotEmpty() -> Orientation.between(worker.position, path.first()) ?: worker.orientation
+            else -> worker.orientation
+        }
+        mutablePlacedObjects[workerIndex] = worker.copy(
+            movementPath = path,
+            movementProgress = 0f,
+            orientation = orientation
+        )
+        return true
     }
 
     private fun tryDeliverProductToProducer(
@@ -863,6 +1024,19 @@ class ShopFloor(
         val productIndex = mutableActiveProducts.indexOfFirst { it.id == carriedProduct.id }
         if (productIndex < 0) {
             return false
+        }
+
+        val targetMachine = findObjectById(targetMachineId)
+        val targetSpec = targetMachine?.catalogId?.let { machineSpecsById[it] }
+        val recipe = targetSpec?.recipe
+        if (recipe != null && recipe.inputs.any { it.productId == carriedProduct.productId }) {
+            val recipeState = ensureRecipeState(targetMachineId)
+            val current = recipeState.inputBuffer[carriedProduct.productId] ?: 0
+            replaceRecipeState(
+                recipeState.copy(
+                    inputBuffer = recipeState.inputBuffer + (carriedProduct.productId to current + 1)
+                )
+            )
         }
 
         mutableActiveProducts.removeAt(productIndex)
