@@ -14,6 +14,11 @@ import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.ShopCatalog
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopFloor
+import com.faultory.core.shop.ShopGrid
+import com.faultory.core.shop.TileCoordinate
+import com.faultory.core.systems.BeltSupplyFeeder
+import com.faultory.core.systems.BeltSupplySchedule
+import kotlin.random.Random
 
 class BootScreen(
     private val game: FaultoryGame,
@@ -60,6 +65,7 @@ class BootScreen(
             unlockedMachineIds = level.availableMachineIds,
             startingCash = level.startingCash
         )
+        val beltSupplyFeeder = buildBeltSupplyFeeder(level, shopBlueprint, save.activeShift.elapsedSeconds)
         val shopFloor = ShopFloor(
             blueprint = shopBlueprint,
             machineSpecsById = shopCatalog.machines.associateBy { it.id },
@@ -69,10 +75,46 @@ class BootScreen(
             initialQaInspectionStates = save.activeShift.qaInspectionStates,
             initialMachineRecipeStates = save.activeShift.machineRecipeStates,
             productDefinitionsById = shopCatalog.products.associateBy { it.id },
-            initialCash = save.activeShift.cash
+            initialCash = save.activeShift.cash,
+            beltSupplyFeeder = beltSupplyFeeder
         )
 
         game.setScreen(ShopFloorScreen(game, level, nextLevel, shopFloor, save, shopCatalog))
+    }
+
+    private fun buildBeltSupplyFeeder(
+        level: LevelDefinition,
+        blueprint: ShopBlueprint,
+        initialElapsedSeconds: Float
+    ): BeltSupplyFeeder? {
+        if (level.supplyingLevelIds.isEmpty()) return null
+        val feederBeltStarts = leftEdgeBeltStartsTopDown(blueprint)
+        if (feederBeltStarts.isEmpty()) return null
+
+        val schedules = level.supplyingLevelIds
+            .zip(feederBeltStarts)
+            .mapNotNull { (supplyingLevelId, beltStartTile) ->
+                val supplierSave = game.saveRepository.load(supplyingLevelId) ?: return@mapNotNull null
+                val stats = supplierSave.lastCompletedRun?.productDeliveryStats ?: return@mapNotNull null
+                if (stats.sumOf { it.totalCount } <= 0) return@mapNotNull null
+                BeltSupplySchedule(
+                    supplyingLevelId = supplyingLevelId,
+                    beltStartTile = beltStartTile,
+                    shiftLengthSeconds = blueprint.shiftLengthSeconds,
+                    stats = stats,
+                    random = Random(BeltSupplyFeeder.deterministicSeed(supplyingLevelId, beltStartTile))
+                )
+            }
+        if (schedules.isEmpty()) return null
+        return BeltSupplyFeeder(schedules, initialElapsedSeconds)
+    }
+
+    private fun leftEdgeBeltStartsTopDown(blueprint: ShopBlueprint): List<TileCoordinate> {
+        val grid = ShopGrid(blueprint)
+        return grid.orderedBeltPaths
+            .mapNotNull { path -> path.firstOrNull() }
+            .filter { it.x == 0 }
+            .sortedByDescending { it.y }
     }
 
     private fun drawProgress(progress: Float) {

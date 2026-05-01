@@ -12,6 +12,7 @@ import com.faultory.core.content.Manuality
 import com.faultory.core.content.ProductDefinition
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
+import com.faultory.core.systems.BeltSupplyFeeder
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.random.Random
@@ -26,6 +27,7 @@ class ShopFloor(
     initialMachineRecipeStates: List<MachineRecipeState> = emptyList(),
     private val productDefinitionsById: Map<String, ProductDefinition> = emptyMap(),
     initialCash: Int = 0,
+    private val beltSupplyFeeder: BeltSupplyFeeder? = null,
     private val random: Random = Random.Default
 ) : Disposable {
 
@@ -83,6 +85,7 @@ class ShopFloor(
         deltaSeconds: Float,
         workerProfilesById: Map<String, WorkerProfile>
     ) {
+        beltSupplyFeeder?.update(deltaSeconds, ::trySpawnSuppliedProduct)
         updateWorkerMovement(deltaSeconds, workerProfilesById)
         acceptBeltInputs()
         updateMachineProduction(deltaSeconds, workerProfilesById)
@@ -91,6 +94,27 @@ class ShopFloor(
         updateConveyor(deltaSeconds)
         resolveWorkerObjectives()
         pruneEmptyRecipeStates()
+    }
+
+    private fun trySpawnSuppliedProduct(
+        beltStartTile: TileCoordinate,
+        productId: String,
+        faultReason: ProductFaultReason?
+    ): Boolean {
+        if (beltStartTile !in grid.beltTiles) return false
+        if (isOccupied(beltStartTile)) return false
+
+        val instanceId = "supply-${nextProductSequence}"
+        nextProductSequence += 1
+        mutableActiveProducts += ShopProduct(
+            id = instanceId,
+            productId = productId,
+            sourceMachineId = "supply",
+            faultReason = faultReason,
+            state = ShopProductState.ON_BELT,
+            tile = beltStartTile
+        )
+        return true
     }
 
     fun consumeShipmentEvents(): List<ShipmentEvent> {
