@@ -118,7 +118,9 @@ class ShopFloorScreen(
 
     override fun show() {
         viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
-        bankPanel.rebuild(level)
+        bankPanel.rebuild(level) { levelId ->
+            (game.saveRepository.load(levelId)?.lastCompletedRun?.starsEarned ?: 0) >= 1
+        }
         bankPanel.layout()
         if (shiftLifecycle.finalizeIfNeeded()) {
             input.clearInteractionStateForShiftEnd()

@@ -10,6 +10,7 @@ data class WorkerProfile(
     val walkSpeed: Float,
     val skin: String,
     val roleProfiles: List<WorkerRoleProfile>,
+    val requiredCompletedLevelIds: List<String> = emptyList(),
     val upgradeTree: BinaryUpgradeTree? = null
 ) {
     fun profileFor(role: WorkerRole): WorkerRoleProfile? {

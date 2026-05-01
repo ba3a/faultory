@@ -45,6 +45,7 @@
       "hireCost": 96,
       "walkSpeed": 134.0,
       "skin": "worker_line_inspector_lead",
+      "requiredCompletedLevelIds": ["tutorial-shop"],
       "roleProfiles": [
         {
           "role": "PRODUCER_OPERATOR",
@@ -192,6 +193,7 @@
       "hireCost": 130,
       "walkSpeed": 176.0,
       "skin": "worker_float_tech_foreman",
+      "requiredCompletedLevelIds": ["tutorial-shop"],
       "roleProfiles": [
         {
           "role": "PRODUCER_OPERATOR",
@@ -267,6 +269,7 @@
       "type": "PRODUCER",
       "manuality": "AUTOMATIC",
       "skin": "machine_servo_assembler",
+      "requiredCompletedLevelIds": ["tutorial-shop"],
       "productIds": [],
       "shape": [
         {

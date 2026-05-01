@@ -18,6 +18,7 @@ data class MachineSpec(
     val minimumOperatorWorkerIds: List<String> = emptyList(),
     val installCost: Int,
     val operationDurationSeconds: Float,
+    val requiredCompletedLevelIds: List<String> = emptyList(),
     val upgradeTree: BinaryUpgradeTree? = null,
     val producerProfile: ProducerMachineProfile? = null,
     val qaProfile: QaMachineProfile? = null,

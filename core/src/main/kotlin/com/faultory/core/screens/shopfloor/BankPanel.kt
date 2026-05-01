@@ -14,16 +14,21 @@ class BankPanel(private val catalogLookup: CatalogLookup) {
     var hoveredKey: BankEntryKey? = null
         private set
 
-    fun rebuild(level: LevelDefinition) {
+    fun rebuild(
+        level: LevelDefinition,
+        isLevelCompleted: (String) -> Boolean = { false }
+    ) {
         mutableEntries.clear()
         for (workerId in level.availableWorkerIds) {
             val worker = catalogLookup.workerProfilesById[workerId] ?: continue
+            if (worker.requiredCompletedLevelIds.any { !isLevelCompleted(it) }) continue
             mutableEntries += BankEntry(
                 key = BankEntryKey(PlacedShopObjectKind.WORKER, worker.id)
             )
         }
         for (machineId in level.availableMachineIds) {
             val machine = catalogLookup.machineSpecsById[machineId] ?: continue
+            if (machine.requiredCompletedLevelIds.any { !isLevelCompleted(it) }) continue
             mutableEntries += BankEntry(
                 key = BankEntryKey(PlacedShopObjectKind.MACHINE, machine.id)
             )
