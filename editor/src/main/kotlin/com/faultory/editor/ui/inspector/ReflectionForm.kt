@@ -34,7 +34,7 @@ object ReflectionForm {
         return editorsFrom(listOf(descriptor), json)
     }
 
-    private fun editorsFrom(ownerChain: List<SerialDescriptor>, json: JsonObject): List<PropertyEditor> {
+    fun editorsFrom(ownerChain: List<SerialDescriptor>, json: JsonObject): List<PropertyEditor> {
         val current = ownerChain.last()
         val editors = mutableListOf<PropertyEditor>()
         for (index in 0 until current.elementsCount) {
@@ -80,13 +80,36 @@ object ReflectionForm {
             }
             StructureKind.LIST -> {
                 val elementDescriptor = descriptor.getElementDescriptor(0)
-                if (elementDescriptor.kind != PrimitiveKind.STRING) return null
-                val array = value as? JsonArray
-                val values = array
-                    ?.map { (it as? JsonPrimitive)?.content.orEmpty() }
-                    ?.toMutableList()
-                    ?: mutableListOf()
-                StringListEditor(name, values)
+                when (elementDescriptor.kind) {
+                    PrimitiveKind.STRING -> {
+                        val array = value as? JsonArray
+                        val values = array
+                            ?.map { (it as? JsonPrimitive)?.content.orEmpty() }
+                            ?.toMutableList()
+                            ?: mutableListOf()
+                        StringListEditor(name, values)
+                    }
+                    StructureKind.CLASS -> {
+                        val array = value as? JsonArray
+                        val elementChain = ownerChain + elementDescriptor
+                        val items = (array ?: JsonArray(emptyList()))
+                            .mapNotNull { it as? JsonObject }
+                            .map { obj ->
+                                ClassListEditor.Item(
+                                    original = obj,
+                                    editors = editorsFrom(elementChain, obj),
+                                )
+                            }
+                        val template = Defaults.defaultJsonObject(elementDescriptor)
+                        ClassListEditor(
+                            fieldName = name,
+                            template = template,
+                            newItemEditors = { editorsFrom(elementChain, template) },
+                            initialItems = items,
+                        )
+                    }
+                    else -> null
+                }
             }
             else -> null
         }

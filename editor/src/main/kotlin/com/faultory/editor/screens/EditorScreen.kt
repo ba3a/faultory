@@ -11,13 +11,16 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.faultory.editor.backup.BackupService
+import com.faultory.editor.model.DeleteResult
 import com.faultory.editor.model.Duplicator
 import com.faultory.editor.model.EditorSession
 import com.faultory.editor.model.ReferenceIndex
+import com.faultory.editor.model.RenameResult
 import com.faultory.editor.ui.dialogs.BakeAtlasDialog
 import com.faultory.editor.ui.dialogs.ConfirmDialog
 import com.faultory.editor.ui.dialogs.DuplicateDialog
 import com.faultory.editor.ui.dialogs.FindReferencesDialog
+import com.faultory.editor.ui.dialogs.RenameDialog
 import com.faultory.editor.ui.inspector.Inspector
 import com.faultory.editor.ui.tree.AssetSelection
 import com.faultory.editor.ui.tree.AssetTree
@@ -58,6 +61,7 @@ class EditorScreen(
         hasBlockingErrors = ValidatorRegistry.hasBlockingErrors(issues)
         saveButton.isDisabled = hasBlockingErrors
     }
+    private val structureListener: () -> Unit = { rebuildLeftPanel() }
 
     init {
         buildMenuBar()
@@ -74,6 +78,7 @@ class EditorScreen(
         stage.addActor(root)
         stage.addListener(saveShortcutListener())
         session?.addDirtyListener(dirtyListener)
+        session?.addStructureListener(structureListener)
         inspector?.addValidationListener(validationListener)
     }
 
@@ -178,6 +183,16 @@ class EditorScreen(
                 override fun changed(event: ChangeEvent, actor: Actor) = openDuplicateDialog()
             })
         })
+        menu.addItem(com.kotcrab.vis.ui.widget.MenuItem("Rename…").apply {
+            addListener(object : ChangeListener() {
+                override fun changed(event: ChangeEvent, actor: Actor) = openRenameDialog(selection)
+            })
+        })
+        menu.addItem(com.kotcrab.vis.ui.widget.MenuItem("Delete…").apply {
+            addListener(object : ChangeListener() {
+                override fun changed(event: ChangeEvent, actor: Actor) = openDeleteDialog(selection)
+            })
+        })
         menu.addItem(com.kotcrab.vis.ui.widget.MenuItem("Find references…").apply {
             addListener(object : ChangeListener() {
                 override fun changed(event: ChangeEvent, actor: Actor) = openFindReferences(selection)
@@ -185,6 +200,64 @@ class EditorScreen(
         })
         val input = Gdx.input ?: return
         menu.showMenu(stage, input.x.toFloat(), stage.height - input.y.toFloat())
+    }
+
+    private fun openRenameDialog(selection: AssetSelection) {
+        val session = session ?: return
+        val currentId = when (selection) {
+            is AssetSelection.Product -> selection.id
+            is AssetSelection.Worker -> selection.id
+            is AssetSelection.Machine -> selection.id
+            is AssetSelection.Level -> selection.id
+            is AssetSelection.Blueprint -> session.repository.blueprints[selection.shopAssetPath]?.id
+                ?: return
+        }
+        RenameDialog(
+            title = "Rename ${labelFor(selection)}",
+            prompt = "New id (will cascade through references and i18n files)",
+            initialValue = currentId,
+            onConfirm = { newId ->
+                when (val result = session.rename(selection, newId)) {
+                    is RenameResult.Success -> SelectionBus.select(result.newSelection)
+                    is RenameResult.Collision -> ConfirmDialog.info(stage, "Rename failed", result.message)
+                    is RenameResult.NotFound -> ConfirmDialog.info(stage, "Rename failed", result.message)
+                    is RenameResult.InvalidId -> ConfirmDialog.info(stage, "Rename failed", result.message)
+                }
+            },
+        ).showOn(stage)
+    }
+
+    private fun openDeleteDialog(selection: AssetSelection) {
+        val session = session ?: return
+        val refs = ReferenceIndex(session.repository).findReferencesTo(selection)
+        val refsSummary = if (refs.isEmpty()) "No incoming references." else
+            "Will cascade through ${refs.size} reference(s):\n" +
+                refs.take(8).joinToString("\n") { " • ${it.description}" } +
+                if (refs.size > 8) "\n …" else ""
+        ConfirmDialog(
+            title = "Delete ${labelFor(selection)}",
+            message = "Permanently remove this asset and update referrers.\n\n$refsSummary",
+            confirmText = "Delete",
+            onConfirm = {
+                when (val result = session.delete(selection)) {
+                    DeleteResult.Success -> SelectionBus.select(null)
+                    is DeleteResult.NotFound -> ConfirmDialog.info(stage, "Delete failed", result.message)
+                }
+            },
+        ).showOn(stage)
+    }
+
+    private fun labelFor(selection: AssetSelection): String = when (selection) {
+        is AssetSelection.Product -> "product"
+        is AssetSelection.Worker -> "worker"
+        is AssetSelection.Machine -> "machine"
+        is AssetSelection.Level -> "level"
+        is AssetSelection.Blueprint -> "blueprint"
+    }
+
+    private fun rebuildLeftPanel() {
+        leftPanel.clear()
+        buildLeftPanel()
     }
 
     private fun openFindReferences(selection: AssetSelection) {
@@ -297,6 +370,7 @@ class EditorScreen(
 
     override fun dispose() {
         session?.removeDirtyListener(dirtyListener)
+        session?.removeStructureListener(structureListener)
         inspector?.removeValidationListener(validationListener)
         inspector?.dispose()
         stage.dispose()

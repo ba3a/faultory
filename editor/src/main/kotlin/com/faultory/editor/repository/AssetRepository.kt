@@ -17,10 +17,20 @@ class AssetRepository(val rootPath: Path) {
     var levelCatalog: LevelCatalog = readLevelCatalog()
     var blueprints: MutableMap<String, ShopBlueprint> = readBlueprints()
 
+    private val pendingFileDeletions: MutableSet<Path> = mutableSetOf()
+
+    fun queueFileDeletion(path: Path) {
+        pendingFileDeletions.add(path)
+    }
+
     fun writeAll() {
         writeShopCatalog()
         writeLevelCatalog()
         writeBlueprints()
+        for (path in pendingFileDeletions) {
+            runCatching { Files.deleteIfExists(path) }
+        }
+        pendingFileDeletions.clear()
     }
 
     private fun writeShopCatalog() {

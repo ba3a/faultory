@@ -1,5 +1,8 @@
 package com.faultory.editor.ui.inspector
 
+import com.faultory.core.i18n.MessageKey
+import kotlinx.serialization.json.JsonObject
+
 sealed interface PropertyEditor {
     val fieldName: String
 }
@@ -64,4 +67,43 @@ data class StringListEditor(
         val item = values.removeAt(from)
         values.add(to, item)
     }
+}
+
+class ClassListEditor(
+    override val fieldName: String,
+    val template: JsonObject,
+    val newItemEditors: () -> List<PropertyEditor>,
+    initialItems: List<Item>,
+) : PropertyEditor {
+
+    data class Item(
+        val original: JsonObject,
+        val editors: List<PropertyEditor>,
+    )
+
+    private val mutableItems: MutableList<Item> = initialItems.toMutableList()
+
+    val items: List<Item> get() = mutableItems
+
+    fun add() {
+        mutableItems += Item(original = template, editors = newItemEditors())
+    }
+
+    fun removeAt(index: Int) {
+        if (index in mutableItems.indices) mutableItems.removeAt(index)
+    }
+
+    fun move(from: Int, to: Int) {
+        if (from == to || from !in mutableItems.indices || to !in mutableItems.indices) return
+        val item = mutableItems.removeAt(from)
+        mutableItems.add(to, item)
+    }
+}
+
+class LocalizableEditor(
+    val messageKey: MessageKey,
+    val category: String,
+    val assetId: String,
+) : PropertyEditor {
+    override val fieldName: String get() = messageKey.path
 }

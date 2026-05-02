@@ -4,11 +4,15 @@ import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.ProductDefinition
 import com.faultory.core.content.WorkerProfile
+import com.faultory.core.content.WorkerRole
 import com.faultory.core.graphics.SkinActions
+import com.faultory.core.i18n.MessageKey
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.editor.graphics.ClipDurationPolicy
+import com.faultory.editor.i18n.TranslationStore
 import com.faultory.editor.model.EditorSession
 import com.faultory.editor.repository.EditorJson
+import com.faultory.editor.ui.dialogs.TranslationsDialog
 import com.faultory.editor.ui.inspector.animations.AnimationsPanel
 import com.faultory.editor.ui.tree.AssetSelection
 import com.faultory.editor.ui.tree.SelectionBus
@@ -23,6 +27,7 @@ import com.kotcrab.vis.ui.widget.VisTextButton
 import com.kotcrab.vis.ui.widget.VisTextField
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.serializer
@@ -95,11 +100,105 @@ class Inspector(
             refreshIssues(selection)
         }
         for (editor in bundle.editors) {
-            content.add(VisLabel(editor.fieldName)).left().pad(4f)
-            content.add(actorFor(editor, onChangeWithValidation)).growX().pad(4f).row()
+            when {
+                editor is StringEditor && editor.fieldName == "id" -> {
+                    content.add(VisLabel("id")).left().pad(4f)
+                    content.add(rootIdActor(selection, editor.value)).growX().pad(4f).row()
+                }
+                editor is WorkerRoleProfilesEditor || editor is ClassListEditor -> {
+                    content.add(VisLabel(editor.fieldName)).colspan(2).left().pad(4f).row()
+                    content.add(actorFor(editor, onChangeWithValidation)).colspan(2).growX().pad(4f).row()
+                }
+                else -> {
+                    content.add(VisLabel(editor.fieldName)).left().pad(4f)
+                    content.add(actorFor(editor, onChangeWithValidation)).growX().pad(4f).row()
+                }
+            }
         }
+        appendLocalizable(selection, onChangeWithValidation)
         appendAnimations(selection)
         refreshIssues(selection)
+    }
+
+    private fun appendLocalizable(selection: AssetSelection, onChange: () -> Unit) {
+        val category = categoryFor(selection) ?: return
+        val assetId = idFor(selection) ?: return
+        val keys = TranslationStore.keysForCategory(category)
+        if (keys.isEmpty()) return
+        content.add(VisLabel("Localizable")).colspan(2).left().pad(6f).row()
+        for (messageKey in keys) {
+            val editor = LocalizableEditor(messageKey, category, assetId)
+            content.add(VisLabel(editor.fieldName)).left().pad(4f)
+            content.add(localizableActor(editor, onChange)).growX().pad(4f).row()
+        }
+    }
+
+    private fun categoryFor(selection: AssetSelection): String? = when (selection) {
+        is AssetSelection.Product -> "products"
+        is AssetSelection.Worker -> "workers"
+        is AssetSelection.Machine -> "machines"
+        is AssetSelection.Level -> "levels"
+        is AssetSelection.Blueprint -> null
+    }
+
+    private fun idFor(selection: AssetSelection): String? = when (selection) {
+        is AssetSelection.Product -> selection.id
+        is AssetSelection.Worker -> selection.id
+        is AssetSelection.Machine -> selection.id
+        is AssetSelection.Level -> selection.id
+        is AssetSelection.Blueprint -> repository.blueprints[selection.shopAssetPath]?.id
+    }
+
+    private fun rootIdActor(selection: AssetSelection, currentId: String): VisTable {
+        val table = VisTable().apply { left() }
+        val readonly = VisTextField(currentId).apply { isDisabled = true }
+        table.add(readonly).growX().pad(2f)
+        val rename = VisTextButton("Rename…").apply {
+            addListener(object : ChangeListener() {
+                override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                    val stage = this@Inspector.actor.stage ?: return
+                    com.faultory.editor.ui.dialogs.RenameDialog(
+                        title = "Rename",
+                        prompt = "New id (cascades through references)",
+                        initialValue = currentId,
+                        onConfirm = { newId ->
+                            when (val result = session.rename(selection, newId)) {
+                                is com.faultory.editor.model.RenameResult.Success ->
+                                    SelectionBus.select(result.newSelection)
+                                is com.faultory.editor.model.RenameResult.Collision ->
+                                    com.faultory.editor.ui.dialogs.ConfirmDialog.info(stage, "Rename failed", result.message)
+                                is com.faultory.editor.model.RenameResult.NotFound ->
+                                    com.faultory.editor.ui.dialogs.ConfirmDialog.info(stage, "Rename failed", result.message)
+                                is com.faultory.editor.model.RenameResult.InvalidId ->
+                                    com.faultory.editor.ui.dialogs.ConfirmDialog.info(stage, "Rename failed", result.message)
+                            }
+                        },
+                    ).showOn(stage)
+                }
+            })
+        }
+        table.add(rename).pad(2f)
+        return table
+    }
+
+    private fun localizableActor(editor: LocalizableEditor, onChange: () -> Unit): VisTable {
+        val table = VisTable()
+        val button = VisTextButton("Edit translations…")
+        button.addListener(object : ChangeListener() {
+            override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                val stage = this@Inspector.actor.stage ?: return
+                TranslationsDialog(
+                    title = "Translations",
+                    messageKey = editor.messageKey,
+                    category = editor.category,
+                    assetId = editor.assetId,
+                    store = session.translationStore,
+                    onConfirm = { changed -> if (changed) { session.markDirty(); onChange() } },
+                ).showOn(stage)
+            }
+        })
+        table.left().add(button).left()
+        return table
     }
 
     private fun appendAnimations(selection: AssetSelection) {
@@ -190,7 +289,10 @@ class Inspector(
             }
             is AssetSelection.Worker -> findWorker(selection.id)?.let { worker ->
                 val original = originalJson(worker)
-                val editors = ReflectionForm.editorsFor(worker)
+                val genericEditors = ReflectionForm.editorsFor(worker)
+                val rolesArray = original["roleProfiles"] as? JsonArray ?: JsonArray(emptyList())
+                val rolesEditor = WorkerRoleProfilesEditor(initialProfiles = rolesArray)
+                val editors = genericEditors.map { if (it.fieldName == "roleProfiles") rolesEditor else it }
                 EditorsBundle(editors) {
                     val updated = EditorJson.instance.decodeFromString<WorkerProfile>(
                         EditorJson.instance.encodeToString(EditorCommitter.commit(editors, original))
@@ -332,7 +434,109 @@ class Inspector(
             is StringListEditor -> VisTable().apply { stringListActor(this, editor, onChange) }
             is IdReferenceEditor -> idReferenceActor(editor, onChange)
             is IdReferenceListEditor -> VisTable().apply { idReferenceListActor(this, editor, onChange) }
+            is ClassListEditor -> VisTable().apply { classListActor(this, editor, onChange) }
+            is WorkerRoleProfilesEditor -> VisTable().apply { workerRoleProfilesActor(this, editor, onChange) }
+            is LocalizableEditor -> localizableActor(editor, onChange)
         }
+    }
+
+    private fun classListActor(table: VisTable, editor: ClassListEditor, onChange: () -> Unit) {
+        fun rebuild() {
+            table.clear()
+            table.top().left()
+            editor.items.forEachIndexed { index, item ->
+                val itemTable = VisTable().apply { top().left() }
+                for (child in item.editors) {
+                    itemTable.add(VisLabel(child.fieldName)).left().pad(2f)
+                    itemTable.add(actorFor(child, onChange)).growX().pad(2f).row()
+                }
+                table.add(VisLabel("[$index]")).left().top().pad(2f)
+                table.add(itemTable).growX().pad(2f)
+                val controls = VisTable()
+                controls.add(VisTextButton("↑").apply {
+                    isDisabled = index == 0
+                    addListener(object : ChangeListener() {
+                        override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                            editor.move(index, index - 1)
+                            onChange()
+                            rebuild()
+                        }
+                    })
+                }).pad(2f)
+                controls.add(VisTextButton("↓").apply {
+                    isDisabled = index == editor.items.lastIndex
+                    addListener(object : ChangeListener() {
+                        override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                            editor.move(index, index + 1)
+                            onChange()
+                            rebuild()
+                        }
+                    })
+                }).pad(2f)
+                controls.add(VisTextButton("-").apply {
+                    addListener(object : ChangeListener() {
+                        override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                            editor.removeAt(index)
+                            onChange()
+                            rebuild()
+                        }
+                    })
+                }).pad(2f)
+                table.add(controls).top().pad(2f).row()
+            }
+            table.add(VisTextButton("+ add").apply {
+                addListener(object : ChangeListener() {
+                    override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                        editor.add()
+                        onChange()
+                        rebuild()
+                    }
+                })
+            }).colspan(3).left().pad(2f).row()
+        }
+        rebuild()
+    }
+
+    private fun workerRoleProfilesActor(table: VisTable, editor: WorkerRoleProfilesEditor, onChange: () -> Unit) {
+        fun rebuild() {
+            table.clear()
+            table.top().left()
+            for (slot in editor.slots) {
+                val checkbox = VisCheckBox(slot.role.name).apply {
+                    isChecked = slot.enabled
+                    addListener(object : ChangeListener() {
+                        override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                            if (slot.enabled == isChecked) return
+                            editor.setEnabled(slot.role, isChecked)
+                            onChange()
+                            rebuild()
+                        }
+                    })
+                }
+                table.add(checkbox).left().pad(4f).colspan(2).row()
+                if (slot.enabled) {
+                    val sub = VisTable().apply { top().left() }
+                    for (child in slot.editors) {
+                        if (child.fieldName == "role") continue
+                        sub.add(VisLabel(child.fieldName)).left().pad(2f)
+                        sub.add(actorFor(child, onChange)).growX().pad(2f).row()
+                    }
+                    val resetButton = VisTextButton("Reset to template").apply {
+                        addListener(object : ChangeListener() {
+                            override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                                editor.resetToTemplate(slot.role)
+                                onChange()
+                                rebuild()
+                            }
+                        })
+                    }
+                    sub.add(resetButton).left().colspan(2).pad(4f).row()
+                    table.add().pad(2f)
+                    table.add(sub).growX().pad(4f).row()
+                }
+            }
+        }
+        rebuild()
     }
 
     private fun idsFor(catalogType: CatalogType): List<String> {

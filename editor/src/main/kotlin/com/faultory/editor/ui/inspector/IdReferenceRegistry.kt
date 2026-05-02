@@ -4,6 +4,7 @@ import com.faultory.core.content.BinaryUpgradeTree
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.WorkerProfile
+import com.faultory.core.content.WorkerRoleProfile
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.serializer
 import kotlin.reflect.KClass
@@ -29,6 +30,7 @@ object IdReferenceRegistry {
         put(key(WorkerProfile::class, BinaryUpgradeTree::class, "rightUpgradeId"), CatalogType.WORKER)
         put(key(MachineSpec::class, BinaryUpgradeTree::class, "leftUpgradeId"), CatalogType.MACHINE)
         put(key(MachineSpec::class, BinaryUpgradeTree::class, "rightUpgradeId"), CatalogType.MACHINE)
+        put(key(WorkerProfile::class, WorkerRoleProfile::class, "acceptedProductIds"), CatalogType.PRODUCT)
     }
 
     fun lookup(ownerSerialNames: List<String>, fieldName: String): CatalogType? {
@@ -57,6 +59,7 @@ object IdReferenceRegistry {
             WorkerProfile::class -> serializer<WorkerProfile>().descriptor
             LevelDefinition::class -> serializer<LevelDefinition>().descriptor
             BinaryUpgradeTree::class -> serializer<BinaryUpgradeTree>().descriptor
+            WorkerRoleProfile::class -> serializer<WorkerRoleProfile>().descriptor
             else -> error("No serializer registered for ${kClass.qualifiedName}")
         }
     }

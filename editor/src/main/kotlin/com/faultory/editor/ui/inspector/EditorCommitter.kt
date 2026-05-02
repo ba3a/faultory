@@ -25,6 +25,11 @@ object EditorCommitter {
                 is StringListEditor -> merged[name] = JsonArray(editor.values.map { JsonPrimitive(it) })
                 is IdReferenceEditor -> merged[name] = JsonPrimitive(editor.value)
                 is IdReferenceListEditor -> merged[name] = JsonArray(editor.values.map { JsonPrimitive(it) })
+                is ClassListEditor -> merged[name] = JsonArray(
+                    editor.items.map { commit(it.editors, it.original) }
+                )
+                is WorkerRoleProfilesEditor -> merged[name] = editor.toJsonArray()
+                is LocalizableEditor -> { /* persisted via TranslationStore, not via the catalog JSON */ }
             }
         }
         return JsonObject(merged)
