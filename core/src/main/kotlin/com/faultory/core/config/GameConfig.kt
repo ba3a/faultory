@@ -15,4 +15,7 @@ object GameConfig {
     const val targetFps = 60
     const val saveDirectoryName = "saves"
     const val autosaveIntervalSeconds = 5f
+    const val securityRoamMinSteps = 3
+    const val securityRoamMaxSteps = 10
+    const val securityRoamBeltTripChance = 0.12f
 }

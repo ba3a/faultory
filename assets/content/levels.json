@@ -38,14 +38,16 @@
       ],
       "availableWorkerIds": [
         "line-inspector",
-        "float-tech"
+        "float-tech",
+        "shop-guard"
       ],
       "availableMachineIds": [
         "bench-assembler",
         "servo-assembler",
         "tea-blender",
         "camera-gate",
-        "weight-checker"
+        "weight-checker",
+        "security-camera"
       ],
       "startingCash": 380
     }

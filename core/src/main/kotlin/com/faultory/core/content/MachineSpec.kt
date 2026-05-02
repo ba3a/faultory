@@ -46,6 +46,7 @@ data class MachineSpec(
         return when (type) {
             MachineType.PRODUCER -> WorkerRole.PRODUCER_OPERATOR
             MachineType.QA -> WorkerRole.QA
+            MachineType.SECURITY_CAMERA -> WorkerRole.SECURITY
         }
     }
 
@@ -112,7 +113,8 @@ data class MachineSpec(
 @Serializable
 enum class MachineType {
     PRODUCER,
-    QA
+    QA,
+    SECURITY_CAMERA
 }
 
 @Serializable

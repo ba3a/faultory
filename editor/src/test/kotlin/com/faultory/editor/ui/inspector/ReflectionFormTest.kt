@@ -50,7 +50,7 @@ class ReflectionFormTest {
         val typeEditor = editors.filterIsInstance<EnumEditor>().single { it.fieldName == "type" }
         val manualityEditor = editors.filterIsInstance<EnumEditor>().single { it.fieldName == "manuality" }
 
-        assertEquals(EnumEditor("type", "PRODUCER", listOf("PRODUCER", "QA")), typeEditor)
+        assertEquals(EnumEditor("type", "PRODUCER", listOf("PRODUCER", "QA", "SECURITY_CAMERA")), typeEditor)
         assertEquals(
             EnumEditor("manuality", "HUMAN_OPERATED", listOf("HUMAN_OPERATED", "AUTOMATIC")),
             manualityEditor,

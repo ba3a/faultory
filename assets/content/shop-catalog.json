@@ -223,6 +223,77 @@
         }
       ],
       "upgradeTree": null
+    },
+    {
+      "id": "shop-guard",
+      "level": 1,
+      "hireCost": 110,
+      "walkSpeed": 132.0,
+      "skin": "worker_shop_guard",
+      "roleProfiles": [
+        {
+          "role": "SECURITY",
+          "taskDurationSeconds": 0.0,
+          "defectChance": null,
+          "sabotageChance": 0.0,
+          "inspectionDurationSeconds": null,
+          "detectionAccuracy": null,
+          "falsePositiveChance": 0.0,
+          "faultyProductStrategy": null,
+          "acceptedProductIds": [],
+          "eyesightRadius": 4.5
+        }
+      ],
+      "upgradeTree": {
+        "leftUpgradeId": "shop-guard-watcher",
+        "rightUpgradeId": "shop-guard-radio"
+      }
+    },
+    {
+      "id": "shop-guard-watcher",
+      "level": 2,
+      "hireCost": 168,
+      "walkSpeed": 138.0,
+      "skin": "worker_shop_guard_watcher",
+      "requiredCompletedLevelIds": ["tutorial-shop"],
+      "roleProfiles": [
+        {
+          "role": "SECURITY",
+          "taskDurationSeconds": 0.0,
+          "defectChance": null,
+          "sabotageChance": 0.0,
+          "inspectionDurationSeconds": null,
+          "detectionAccuracy": null,
+          "falsePositiveChance": 0.0,
+          "faultyProductStrategy": null,
+          "acceptedProductIds": [],
+          "eyesightRadius": 6.0
+        }
+      ],
+      "upgradeTree": null
+    },
+    {
+      "id": "shop-guard-radio",
+      "level": 2,
+      "hireCost": 184,
+      "walkSpeed": 144.0,
+      "skin": "worker_shop_guard_radio",
+      "requiredCompletedLevelIds": ["tutorial-shop"],
+      "roleProfiles": [
+        {
+          "role": "SECURITY",
+          "taskDurationSeconds": 0.0,
+          "defectChance": null,
+          "sabotageChance": 0.0,
+          "inspectionDurationSeconds": null,
+          "detectionAccuracy": null,
+          "falsePositiveChance": 0.0,
+          "faultyProductStrategy": null,
+          "acceptedProductIds": [],
+          "eyesightRadius": 5.5
+        }
+      ],
+      "upgradeTree": null
     }
   ],
   "machines": [
@@ -527,6 +598,36 @@
         "falsePositiveChance": 0.03,
         "faultyProductStrategy": "PUT_ON_FREE_TILE"
       }
+    },
+    {
+      "id": "security-camera",
+      "level": 1,
+      "type": "SECURITY_CAMERA",
+      "manuality": "HUMAN_OPERATED",
+      "skin": "machine_security_camera",
+      "productIds": [],
+      "shape": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "slots": [
+        {
+          "x": 0,
+          "y": 0,
+          "side": "SOUTH",
+          "type": "OPERATOR"
+        }
+      ],
+      "minimumOperatorWorkerIds": [
+        "shop-guard"
+      ],
+      "installCost": 140,
+      "operationDurationSeconds": 1.0,
+      "upgradeTree": null,
+      "producerProfile": null,
+      "qaProfile": null
     }
   ],
   "products": [

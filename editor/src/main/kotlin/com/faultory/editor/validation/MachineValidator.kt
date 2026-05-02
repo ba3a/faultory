@@ -97,6 +97,29 @@ object MachineValidator : Validator<AssetSelection.Machine> {
                     )
                 }
             }
+            MachineType.SECURITY_CAMERA -> {
+                if (machine.producerProfile != null) {
+                    issues += ValidationIssue(
+                        Severity.ERROR,
+                        "SECURITY_CAMERA machine must not have producerProfile",
+                        fieldName = "producerProfile",
+                    )
+                }
+                if (machine.qaProfile != null) {
+                    issues += ValidationIssue(
+                        Severity.ERROR,
+                        "SECURITY_CAMERA machine must not have qaProfile",
+                        fieldName = "qaProfile",
+                    )
+                }
+                if (machine.recipe != null) {
+                    issues += ValidationIssue(
+                        Severity.ERROR,
+                        "SECURITY_CAMERA machine must not have recipe",
+                        fieldName = "recipe",
+                    )
+                }
+            }
         }
 
         machine.upgradeTree?.let { tree ->

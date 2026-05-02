@@ -17,7 +17,8 @@ data class PlacedShopObject(
     val carriedProductId: String? = null,
     val faultyInventoryCount: Int = 0,
     val movementPath: List<TileCoordinate> = emptyList(),
-    val movementProgress: Float = 0f
+    val movementProgress: Float = 0f,
+    val pursuitTargetWorkerId: String? = null
 )
 
 @Serializable

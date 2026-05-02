@@ -13,6 +13,7 @@ object ShopFloorPalette {
             machine.type == MachineType.PRODUCER && machine.manuality == Manuality.HUMAN_OPERATED -> Color(0.74f, 0.45f, 0.24f, 1f)
             machine.type == MachineType.PRODUCER && machine.manuality == Manuality.AUTOMATIC -> Color(0.80f, 0.64f, 0.22f, 1f)
             machine.type == MachineType.QA && machine.manuality == Manuality.HUMAN_OPERATED -> Color(0.29f, 0.49f, 0.68f, 1f)
+            machine.type == MachineType.SECURITY_CAMERA -> Color(0.42f, 0.30f, 0.55f, 1f)
             else -> Color(0.20f, 0.62f, 0.64f, 1f)
         }
     }
@@ -21,6 +22,7 @@ object ShopFloorPalette {
         return when {
             machine == null -> Color(0.58f, 0.62f, 0.66f, 1f)
             machine.type == MachineType.PRODUCER -> Color(0.98f, 0.79f, 0.40f, 1f)
+            machine.type == MachineType.SECURITY_CAMERA -> Color(0.78f, 0.62f, 0.95f, 1f)
             else -> Color(0.67f, 0.87f, 0.90f, 1f)
         }
     }
@@ -29,6 +31,7 @@ object ShopFloorPalette {
         return when (role) {
             WorkerRole.PRODUCER_OPERATOR -> Color(0.86f, 0.56f, 0.30f, 1f)
             WorkerRole.QA -> Color(0.22f, 0.69f, 0.82f, 1f)
+            WorkerRole.SECURITY -> Color(0.42f, 0.30f, 0.55f, 1f)
             null -> Color(0.66f, 0.69f, 0.73f, 1f)
         }
     }
