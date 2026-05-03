@@ -2,19 +2,16 @@ package com.faultory.core.content
 
 import com.faultory.core.save.FaultoryJson
 import com.faultory.core.shop.ShopBlueprint
-import java.nio.file.Path
-import kotlin.io.path.readText
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import kotlin.text.Charsets
 import kotlinx.serialization.decodeFromString
 
 class CatalogStructureTest {
     @Test
     fun `shop catalog exposes worker role profiles and unified machine specs`() {
-        val rawJson = assetPath("content", "shop-catalog.json").readText(Charsets.UTF_8)
+        val rawJson = assetText("content", "shop-catalog.json")
         val catalog = FaultoryJson.instance.decodeFromString<ShopCatalog>(rawJson)
 
         val producerMachine = assertNotNull(catalog.machines.firstOrNull { it.id == "bench-assembler" })
@@ -59,7 +56,7 @@ class CatalogStructureTest {
 
     @Test
     fun `level catalog exposes bank inventories`() {
-        val rawJson = assetPath("content", "levels.json").readText(Charsets.UTF_8)
+        val rawJson = assetText("content", "levels.json")
         val levelCatalog = FaultoryJson.instance.decodeFromString<LevelCatalog>(rawJson)
 
         val tutorialLevel = assertNotNull(levelCatalog.levels.firstOrNull { it.id == "tutorial-shop" })
@@ -77,14 +74,17 @@ class CatalogStructureTest {
 
     @Test
     fun `shop blueprint starts with an empty floor`() {
-        val rawJson = assetPath("shops", "tutorial-shop.json").readText(Charsets.UTF_8)
+        val rawJson = assetText("shops", "tutorial-shop.json")
         val blueprint = FaultoryJson.instance.decodeFromString<ShopBlueprint>(rawJson)
 
         assertTrue(blueprint.machineSlots.isEmpty())
         assertTrue(blueprint.workerSpawnPoints.isEmpty())
     }
 
-    private fun assetPath(vararg segments: String): Path {
-        return Path.of("..", "assets", *segments)
+    private fun assetText(vararg segments: String): String {
+        val path = segments.joinToString("/")
+        return checkNotNull(javaClass.classLoader.getResourceAsStream(path)) {
+            "Test resource not found: $path"
+        }.bufferedReader(Charsets.UTF_8).readText()
     }
 }

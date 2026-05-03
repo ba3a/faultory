@@ -1,0 +1,31 @@
+{
+  "levels": [
+    {
+      "id": "tutorial-shop",
+      "shopAssetPath": "shops/tutorial-shop.json",
+      "starThresholds": {
+        "oneStar": 3,
+        "twoStar": 6,
+        "threeStar": 9
+      },
+      "recommendedNextLevelId": "rush-order-shop",
+      "requiredLevelIds": [],
+      "availableWorkerIds": ["line-inspector"],
+      "availableMachineIds": ["bench-assembler"],
+      "startingCash": 320
+    },
+    {
+      "id": "rush-order-shop",
+      "shopAssetPath": "shops/rush-order-shop.json",
+      "starThresholds": {
+        "oneStar": 4,
+        "twoStar": 8,
+        "threeStar": 12
+      },
+      "requiredLevelIds": ["tutorial-shop"],
+      "availableWorkerIds": ["line-inspector"],
+      "availableMachineIds": ["bench-assembler"],
+      "startingCash": 380
+    }
+  ]
+}

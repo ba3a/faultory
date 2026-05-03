@@ -1,0 +1,137 @@
+{
+  "workers": [
+    {
+      "id": "line-inspector",
+      "level": 1,
+      "hireCost": 10,
+      "walkSpeed": 100.0,
+      "skin": "worker_line_inspector",
+      "roleProfiles": [
+        {
+          "role": "PRODUCER_OPERATOR",
+          "taskDurationSeconds": 1.9,
+          "defectChance": 0.12,
+          "sabotageChance": 0.05
+        },
+        {
+          "role": "QA",
+          "taskDurationSeconds": 1.5,
+          "inspectionDurationSeconds": 1.5,
+          "detectionAccuracy": 0.84,
+          "faultyProductStrategy": "HAND_TO_PRODUCER",
+          "acceptedProductIds": ["ceramic-mug", "glass-jar", "tea-kettle"]
+        }
+      ],
+      "upgradeTree": {
+        "leftUpgradeId": "line-inspector-lead",
+        "rightUpgradeId": "line-inspector-rover"
+      }
+    },
+    {
+      "id": "line-inspector-lead",
+      "level": 2,
+      "hireCost": 15,
+      "walkSpeed": 100.0,
+      "skin": "worker_line_inspector_lead",
+      "roleProfiles": [
+        {
+          "role": "QA",
+          "taskDurationSeconds": 1.2,
+          "inspectionDurationSeconds": 1.2,
+          "detectionAccuracy": 0.9,
+          "faultyProductStrategy": "HAND_TO_PRODUCER",
+          "acceptedProductIds": ["ceramic-mug", "glass-jar", "tea-kettle"]
+        }
+      ]
+    },
+    {
+      "id": "line-inspector-rover",
+      "level": 2,
+      "hireCost": 15,
+      "walkSpeed": 120.0,
+      "skin": "worker_line_inspector_rover",
+      "roleProfiles": [
+        {
+          "role": "PRODUCER_OPERATOR",
+          "taskDurationSeconds": 1.5,
+          "defectChance": 0.1,
+          "sabotageChance": 0.04
+        }
+      ]
+    },
+    {
+      "id": "float-tech",
+      "level": 1,
+      "hireCost": 20,
+      "walkSpeed": 120.0,
+      "skin": "worker_float_tech",
+      "roleProfiles": [
+        {
+          "role": "PRODUCER_OPERATOR",
+          "taskDurationSeconds": 5.4,
+          "defectChance": 0.09,
+          "sabotageChance": 0.09
+        }
+      ]
+    }
+  ],
+  "machines": [
+    {
+      "id": "bench-assembler",
+      "level": 1,
+      "type": "PRODUCER",
+      "manuality": "HUMAN_OPERATED",
+      "skin": "machine_bench_assembler",
+      "shape": [
+        { "x": 0, "y": 0 }
+      ],
+      "slots": [
+        { "x": 0, "y": 0, "side": "NORTH", "type": "OPERATOR" }
+      ],
+      "minimumOperatorWorkerIds": ["line-inspector"],
+      "installCost": 75,
+      "operationDurationSeconds": 1.8,
+      "upgradeTree": {
+        "leftUpgradeId": "servo-assembler",
+        "rightUpgradeId": "precision-assembler"
+      },
+      "producerProfile": {
+        "productId": "ceramic-mug",
+        "defectChance": 0.18,
+        "faultyProductCapacity": 0
+      }
+    },
+    {
+      "id": "camera-gate",
+      "level": 1,
+      "type": "QA",
+      "manuality": "AUTOMATIC",
+      "skin": "machine_camera_gate",
+      "productIds": ["ceramic-mug", "glass-jar", "tea-kettle"],
+      "shape": [
+        { "x": 0, "y": 0 },
+        { "x": 1, "y": 0 }
+      ],
+      "slots": [
+        { "x": 0, "y": 0, "side": "NORTH", "type": "QA" }
+      ],
+      "installCost": 90,
+      "operationDurationSeconds": 0.8,
+      "upgradeTree": {
+        "leftUpgradeId": "spectral-camera-gate",
+        "rightUpgradeId": "multi-angle-camera-gate"
+      },
+      "qaProfile": {
+        "inspectionDurationSeconds": 0.8,
+        "detectionAccuracy": 0.86,
+        "falsePositiveChance": 0.03,
+        "faultyProductStrategy": "DESTROY"
+      }
+    }
+  ],
+  "products": [
+    { "id": "ceramic-mug", "saleValue": 22 },
+    { "id": "glass-jar", "saleValue": 18 },
+    { "id": "tea-kettle", "saleValue": 35 }
+  ]
+}

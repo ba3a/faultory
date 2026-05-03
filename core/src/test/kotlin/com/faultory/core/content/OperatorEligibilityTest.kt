@@ -2,18 +2,15 @@ package com.faultory.core.content
 
 import com.faultory.core.save.FaultoryJson
 import com.faultory.core.shop.Orientation
-import java.nio.file.Path
-import kotlin.io.path.readText
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import kotlin.text.Charsets
 
 class OperatorEligibilityTest {
     @Test
     fun `human operated machine accepts required worker root and higher levels on the same branch`() {
-        val rawJson = assetPath("content", "shop-catalog.json").readText(Charsets.UTF_8)
+        val rawJson = assetText("content", "shop-catalog.json")
         val catalog = FaultoryJson.instance.decodeFromString<ShopCatalog>(rawJson)
         val workersById = catalog.workers.associateBy { it.id }
         val machine = assertNotNull(catalog.machines.firstOrNull { it.id == "bench-assembler" })
@@ -69,7 +66,10 @@ class OperatorEligibilityTest {
         assertFalse(machine.canBeOperatedBy(worker, mapOf(worker.id to worker)))
     }
 
-    private fun assetPath(vararg segments: String): Path {
-        return Path.of("..", "assets", *segments)
+    private fun assetText(vararg segments: String): String {
+        val path = segments.joinToString("/")
+        return checkNotNull(javaClass.classLoader.getResourceAsStream(path)) {
+            "Test resource not found: $path"
+        }.bufferedReader(Charsets.UTF_8).readText()
     }
 }

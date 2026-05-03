@@ -1,0 +1,9 @@
+{
+  "id": "tutorial-shop",
+  "displayName": "Test Shop",
+  "qualityThresholdPercent": 80.0,
+  "shiftLengthSeconds": 180.0,
+  "conveyorBelts": [],
+  "machineSlots": [],
+  "workerSpawnPoints": []
+}
