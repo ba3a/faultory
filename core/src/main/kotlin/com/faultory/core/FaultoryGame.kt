@@ -18,6 +18,7 @@ import com.faultory.core.content.ShopCatalog
 import com.faultory.core.content.ShopCatalogAssetLoader
 import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.graphics.SkinDefinitionAssetLoader
+import com.faultory.core.graphics.SkinReferences
 import com.faultory.core.graphics.SkinRegistry
 import com.faultory.core.i18n.CatalogTranslations
 import com.faultory.core.i18n.LocaleManager
@@ -80,6 +81,7 @@ class FaultoryGame : Game() {
             setLoader(SkinDefinition::class.java, SkinDefinitionAssetLoader(fileHandleResolver))
             load(AssetPaths.levelCatalog, LevelCatalog::class.java)
             load(AssetPaths.shopCatalog, ShopCatalog::class.java)
+            finishLoadingAsset<ShopCatalog>(AssetPaths.shopCatalog)
             enqueueSkinDefinitions(fileHandleResolver)
         }
         skinRegistry = SkinRegistry(assetManager)
@@ -148,15 +150,12 @@ class FaultoryGame : Game() {
     }
 
     private fun AssetManager.enqueueSkinDefinitions(fileHandleResolver: InternalFileHandleResolver) {
-        val skinsDirectory = fileHandleResolver.resolve(AssetPaths.skinsDir)
-        if (!skinsDirectory.exists() || !skinsDirectory.isDirectory) {
-            return
-        }
-
-        skinsDirectory.list(".json")
-            .sortedBy { it.name() }
-            .forEach { skinFile ->
-                load("${AssetPaths.skinsDir}${skinFile.name()}", SkinDefinition::class.java)
+        val catalog = get(AssetPaths.shopCatalog, ShopCatalog::class.java)
+        SkinReferences.referencedSkinIds(catalog).forEach { skinId ->
+            val path = AssetPaths.skinPath(skinId)
+            if (fileHandleResolver.resolve(path).exists()) {
+                load(path, SkinDefinition::class.java)
             }
+        }
     }
 }

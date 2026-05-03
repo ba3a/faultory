@@ -1,4 +1,5 @@
 import org.gradle.api.tasks.JavaExec
+import org.gradle.jvm.application.tasks.CreateStartScripts
 
 plugins {
     id("buildsrc.convention.kotlin-jvm")
@@ -16,6 +17,23 @@ application {
     mainClass = "com.faultory.desktop.DesktopLauncherKt"
 }
 
+sourceSets {
+    main {
+        resources.srcDir(rootProject.file("assets"))
+    }
+}
+
 tasks.named<JavaExec>("run") {
     workingDir = rootProject.file("assets")
+}
+
+tasks.named<CreateStartScripts>("startScripts") {
+    doLast {
+        windowsScript.writeText(
+            windowsScript.readText().replace(
+                Regex("""^set CLASSPATH=.*$""", RegexOption.MULTILINE),
+                Regex.escapeReplacement("""set CLASSPATH=%APP_HOME%\lib\*""")
+            )
+        )
+    }
 }
