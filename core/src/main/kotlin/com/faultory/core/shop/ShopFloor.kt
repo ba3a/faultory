@@ -13,6 +13,7 @@ import com.faultory.core.content.ProductDefinition
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.content.WorkerRoleProfile
+import com.faultory.core.shop.systems.ShopFloorState
 import com.faultory.core.systems.BeltSupplyFeeder
 import kotlin.math.abs
 import kotlin.math.max
@@ -32,32 +33,36 @@ class ShopFloor(
     private val random: Random = Random.Default
 ) : Disposable {
 
-    var cash: Int = initialCash
-        private set
-
     val grid = ShopGrid(blueprint)
 
-    private val mutablePlacedObjects = initialPlacements.toMutableList()
-    private val mutableActiveProducts = initialProducts.toMutableList()
-    private val mutableMachineProductionStates = initialMachineProductionStates.toMutableList()
-    private val mutableQaInspectionStates = initialQaInspectionStates.toMutableList()
-    private val mutableMachineRecipeStates = initialMachineRecipeStates.toMutableList()
-    private val pendingShipmentEvents = mutableListOf<ShipmentEvent>()
+    private val state: ShopFloorState = ShopFloorState(
+        grid = grid,
+        machineSpecsById = machineSpecsById,
+        productDefinitionsById = productDefinitionsById,
+        initialPlacements = initialPlacements,
+        initialProducts = initialProducts,
+        initialMachineProductionStates = initialMachineProductionStates,
+        initialQaInspectionStates = initialQaInspectionStates,
+        initialMachineRecipeStates = initialMachineRecipeStates,
+        initialCash = initialCash
+    )
+
+    val cash: Int
+        get() = state.cash
+
+    private val mutablePlacedObjects: MutableList<PlacedShopObject>
+        get() = state.mutablePlacedObjects
+    private val mutableActiveProducts: MutableList<ShopProduct>
+        get() = state.mutableActiveProducts
+    private val mutableMachineProductionStates: MutableList<MachineProductionState>
+        get() = state.mutableMachineProductionStates
+    private val mutableQaInspectionStates: MutableList<QaInspectionState>
+        get() = state.mutableQaInspectionStates
+    private val mutableMachineRecipeStates: MutableList<MachineRecipeState>
+        get() = state.mutableMachineRecipeStates
+    private val pendingShipmentEvents: MutableList<ShipmentEvent>
+        get() = state.pendingShipmentEvents
     private var conveyorProgress = 0f
-    private var nextObjectSequence = initialPlacements
-        .mapNotNull(::sequenceOf)
-        .maxOrNull()
-        ?.plus(1)
-        ?: 1
-    private var nextProductSequence = buildList {
-        addAll(initialProducts.mapNotNull { sequenceOf(it.id) })
-        addAll(initialMachineProductionStates.mapNotNull { sequenceOf(it.productInstanceId) })
-        addAll(
-            initialMachineRecipeStates.flatMap { state ->
-                state.outputQueue.mapNotNull { sequenceOf(it.productInstanceId) }
-            }
-        )
-    }.maxOrNull()?.plus(1) ?: 1
 
     val placedObjects: List<PlacedShopObject>
         get() = mutablePlacedObjects
@@ -106,8 +111,7 @@ class ShopFloor(
         if (beltStartTile !in grid.beltTiles) return false
         if (isOccupied(beltStartTile)) return false
 
-        val instanceId = "supply-${nextProductSequence}"
-        nextProductSequence += 1
+        val instanceId = state.createSupplyProductId()
         mutableActiveProducts += ShopProduct(
             id = instanceId,
             productId = productId,
@@ -123,18 +127,9 @@ class ShopFloor(
         return pendingShipmentEvents.toList().also { pendingShipmentEvents.clear() }
     }
 
-    fun tryDeductCash(amount: Int): Boolean {
-        if (amount < 0 || cash < amount) {
-            return false
-        }
-        cash -= amount
-        return true
-    }
+    fun tryDeductCash(amount: Int): Boolean = state.tryDeductCash(amount)
 
-    fun creditCash(amount: Int) {
-        if (amount <= 0) return
-        cash += amount
-    }
+    fun creditCash(amount: Int) = state.creditCash(amount)
 
     fun tryUpgradeObject(
         objectId: String,
@@ -159,40 +154,19 @@ class ShopFloor(
         return true
     }
 
-    fun occupiedTilesFor(placedObject: PlacedShopObject): Set<TileCoordinate> {
-        return when (placedObject.kind) {
-            PlacedShopObjectKind.WORKER -> setOf(placedObject.position)
-            PlacedShopObjectKind.MACHINE -> {
-                val machineSpec = machineSpecsById[placedObject.catalogId]
-                    ?: return setOf(placedObject.position)
-                machineSpec.occupiedTiles(placedObject.position, placedObject.orientation)
-            }
-        }
-    }
+    fun occupiedTilesFor(placedObject: PlacedShopObject): Set<TileCoordinate> =
+        state.occupiedTilesFor(placedObject)
 
     fun slotPositionsFor(
         placedObject: PlacedShopObject,
         type: MachineSlotType? = null
-    ): List<MachineSlotPosition> {
-        if (placedObject.kind != PlacedShopObjectKind.MACHINE) {
-            return emptyList()
-        }
-
-        val machineSpec = machineSpecsById[placedObject.catalogId] ?: return emptyList()
-        return machineSpec.slotPositions(placedObject.position, placedObject.orientation, type)
-    }
+    ): List<MachineSlotPosition> = state.slotPositionsFor(placedObject, type)
 
     fun isOccupied(
         tile: TileCoordinate,
         ignoreObjectId: String? = null,
         ignoreProductId: String? = null
-    ): Boolean {
-        return mutablePlacedObjects.any { placedObject ->
-            placedObject.id != ignoreObjectId && tile in occupiedTilesFor(placedObject)
-        } || mutableActiveProducts.any { product ->
-            product.id != ignoreProductId && product.state != ShopProductState.CARRIED && product.tile == tile
-        }
-    }
+    ): Boolean = state.isOccupied(tile, ignoreObjectId, ignoreProductId)
 
     fun canPlaceObject(
         placedObject: PlacedShopObject,
@@ -262,9 +236,7 @@ class ShopFloor(
         return slot.accessTile in grid.beltTiles && grid.nextBeltTile(slot.accessTile) != null
     }
 
-    fun findObjectById(objectId: String): PlacedShopObject? {
-        return mutablePlacedObjects.firstOrNull { it.id == objectId }
-    }
+    fun findObjectById(objectId: String): PlacedShopObject? = state.findObjectById(objectId)
 
     fun objectAt(tile: TileCoordinate): PlacedShopObject? {
         return mutablePlacedObjects.lastOrNull { placedObject ->
@@ -272,15 +244,7 @@ class ShopFloor(
         }
     }
 
-    fun createObjectId(kind: PlacedShopObjectKind): String {
-        val prefix = when (kind) {
-            PlacedShopObjectKind.WORKER -> "worker"
-            PlacedShopObjectKind.MACHINE -> "machine"
-        }
-        val objectId = "$prefix-$nextObjectSequence"
-        nextObjectSequence += 1
-        return objectId
-    }
+    fun createObjectId(kind: PlacedShopObjectKind): String = state.createObjectId(kind)
 
     fun placeObject(placedObject: PlacedShopObject): Boolean {
         if (findObjectById(placedObject.id) != null) {
@@ -1789,31 +1753,17 @@ class ShopFloor(
         }
     }
 
-    private fun operatorWorkerForMachine(machineId: String): PlacedShopObject? {
-        return mutablePlacedObjects.firstOrNull { placedObject ->
-            placedObject.kind == PlacedShopObjectKind.WORKER &&
-                placedObject.assignedMachineId == machineId &&
-                placedObject.assignedSlotIndex != null
-        }
-    }
+    private fun operatorWorkerForMachine(machineId: String): PlacedShopObject? =
+        state.operatorWorkerForMachine(machineId)
 
-    private fun isWorkerAtAssignedSlot(worker: PlacedShopObject): Boolean {
-        val slot = assignedSlotFor(worker) ?: return false
-        return worker.position == slot.accessTile
-    }
+    private fun isWorkerAtAssignedSlot(worker: PlacedShopObject): Boolean =
+        state.isWorkerAtAssignedSlot(worker)
 
-    private fun isWorkerAtQaPost(worker: PlacedShopObject): Boolean {
-        val qaPostTile = worker.qaPostTile ?: return false
-        return worker.position == qaPostTile
-    }
+    private fun isWorkerAtQaPost(worker: PlacedShopObject): Boolean =
+        state.isWorkerAtQaPost(worker)
 
-    private fun assignedSlotFor(worker: PlacedShopObject): MachineSlotPosition? {
-        val machineId = worker.assignedMachineId ?: return null
-        val slotIndex = worker.assignedSlotIndex ?: return null
-        val machine = findObjectById(machineId) ?: return null
-        return slotPositionsFor(machine, MachineSlotType.OPERATOR)
-            .firstOrNull { it.slotIndex == slotIndex }
-    }
+    private fun assignedSlotFor(worker: PlacedShopObject): MachineSlotPosition? =
+        state.assignedSlotFor(worker)
 
     private fun isOperatorSlotReserved(
         machineId: String,
@@ -1831,20 +1781,7 @@ class ShopFloor(
     private fun blockedTilesForPath(
         ignoreWorkerId: String? = null,
         ignoreCarriedProductId: String? = null
-    ): Set<TileCoordinate> {
-        return buildSet {
-            mutablePlacedObjects
-                .asSequence()
-                .filter { it.id != ignoreWorkerId }
-                .flatMap { occupiedTilesFor(it).asSequence() }
-                .forEach(::add)
-            mutableActiveProducts
-                .asSequence()
-                .filter { it.id != ignoreCarriedProductId && it.state != ShopProductState.CARRIED }
-                .mapNotNull { it.tile }
-                .forEach(::add)
-        }
-    }
+    ): Set<TileCoordinate> = state.blockedTilesForPath(ignoreWorkerId, ignoreCarriedProductId)
 
     private fun isProductBlocking(tile: TileCoordinate): Boolean {
         return mutableActiveProducts.any { it.state != ShopProductState.CARRIED && it.tile == tile }
@@ -1895,9 +1832,7 @@ class ShopFloor(
         }
     }
 
-    private fun productById(productId: String?): ShopProduct? {
-        return mutableActiveProducts.firstOrNull { it.id == productId }
-    }
+    private fun productById(productId: String?): ShopProduct? = state.productById(productId)
 
     private fun markProductInspectedBy(productId: String, inspectorId: String) {
         val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
@@ -1913,49 +1848,18 @@ class ShopFloor(
         )
     }
 
-    private fun productAtBeltTile(tile: TileCoordinate): ShopProduct? {
-        return mutableActiveProducts.firstOrNull { it.state == ShopProductState.ON_BELT && it.tile == tile }
-    }
+    private fun productAtBeltTile(tile: TileCoordinate): ShopProduct? = state.productAtBeltTile(tile)
 
-    private fun clearWorkerHold(workerId: String) {
-        val workerIndex = mutablePlacedObjects.indexOfFirst { it.id == workerId && it.kind == PlacedShopObjectKind.WORKER }
-        if (workerIndex < 0) {
-            return
-        }
+    private fun clearWorkerHold(workerId: String) = state.clearWorkerHold(workerId)
 
-        val worker = mutablePlacedObjects[workerIndex]
-        if (worker.carriedProductId == null) {
-            return
-        }
-
-        mutablePlacedObjects[workerIndex] = worker.copy(
-            carriedProductId = null,
-            movementPath = emptyList(),
-            movementProgress = 0f
-        )
-    }
-
-    private fun createProductId(): String {
-        val productId = "product-$nextProductSequence"
-        nextProductSequence += 1
-        return productId
-    }
+    private fun createProductId(): String = state.createProductId()
 
     private fun distanceToNearestBeltTile(tile: TileCoordinate): Int {
         return grid.beltTiles.minOfOrNull { beltTile -> manhattanDistance(tile, beltTile) } ?: Int.MAX_VALUE
     }
 
-    private fun manhattanDistance(first: TileCoordinate, second: TileCoordinate): Int {
-        return abs(first.x - second.x) + abs(first.y - second.y)
-    }
-
-    private fun sequenceOf(identifier: String): Int? {
-        return identifier.substringAfterLast('-', "").toIntOrNull()
-    }
-
-    private fun sequenceOf(placedObject: PlacedShopObject): Int? {
-        return sequenceOf(placedObject.id)
-    }
+    private fun manhattanDistance(first: TileCoordinate, second: TileCoordinate): Int =
+        state.manhattanDistance(first, second)
 
     private fun updateSecurity(workerProfilesById: Map<String, WorkerProfile>) {
         val securityWorkers = mutablePlacedObjects
