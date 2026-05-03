@@ -421,9 +421,7 @@ class Inspector(
                     }
                 })
             }
-            is NullableEditor -> VisTextField(if (editor.isNull) "null" else "<value>").apply {
-                isDisabled = true
-            }
+            is NullableEditor -> VisTable().apply { nullableEditorActor(this, editor, onChange) }
             is ClassEditor -> VisTable().apply {
                 top().left()
                 for (child in editor.children) {
@@ -654,6 +652,39 @@ class Inspector(
 
     companion object {
         private const val NONE_OPTION = "(none)"
+    }
+
+    private fun nullableEditorActor(table: VisTable, editor: NullableEditor, onChange: () -> Unit) {
+        fun rebuild() {
+            table.clear()
+            table.top().left()
+            if (editor.isNull) {
+                val nullField = VisTextField("null").apply { isDisabled = true }
+                table.add(nullField).growX().pad(2f)
+                if (editor.canInflate) {
+                    val setButton = VisTextButton("Set").apply {
+                        addListener(object : ChangeListener() {
+                            override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                                editor.inflate()
+                                onChange()
+                                rebuild()
+                            }
+                        })
+                    }
+                    table.add(setButton).pad(2f).row()
+                } else {
+                    table.row()
+                }
+            } else {
+                val sub = VisTable().apply { top().left() }
+                for (child in editor.children) {
+                    sub.add(VisLabel(child.fieldName)).left().pad(2f)
+                    sub.add(actorFor(child, onChange)).growX().pad(2f).row()
+                }
+                table.add(sub).growX().pad(2f).row()
+            }
+        }
+        rebuild()
     }
 
     private fun stringListActor(table: VisTable, editor: StringListEditor, onChange: () -> Unit) {

@@ -2,6 +2,7 @@ package com.faultory.editor.ui.inspector
 
 import com.faultory.core.i18n.MessageKey
 import kotlinx.serialization.json.JsonObject
+import java.util.Objects
 
 sealed interface PropertyEditor {
     val fieldName: String
@@ -38,11 +39,32 @@ data class EnumEditor(
     val options: List<String>,
 ) : PropertyEditor
 
-data class NullableEditor(
+class NullableEditor(
     override val fieldName: String,
-    val inner: PropertyEditor? = null,
+    private val inflate: (() -> Inflated)? = null,
 ) : PropertyEditor {
-    val isNull: Boolean get() = inner == null
+    data class Inflated(val template: JsonObject, val children: List<PropertyEditor>)
+
+    private var inflated: Inflated? = null
+
+    val isNull: Boolean get() = inflated == null
+    val canInflate: Boolean get() = inflate != null
+    val template: JsonObject? get() = inflated?.template
+    val children: List<PropertyEditor> get() = inflated?.children.orEmpty()
+
+    fun inflate() {
+        if (inflated == null) inflated = inflate?.invoke()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is NullableEditor) return false
+        return fieldName == other.fieldName && isNull == other.isNull
+    }
+
+    override fun hashCode(): Int = Objects.hash(fieldName, isNull)
+
+    override fun toString(): String = "NullableEditor(fieldName=$fieldName, isNull=$isNull)"
 }
 
 data class ClassEditor(

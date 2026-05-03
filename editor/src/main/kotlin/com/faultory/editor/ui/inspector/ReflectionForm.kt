@@ -60,7 +60,17 @@ object ReflectionForm {
         }
 
         if (descriptor.isNullable && value is JsonNull) {
-            return NullableEditor(name, inner = null)
+            val inflate: (() -> NullableEditor.Inflated)? =
+                if (descriptor.kind == StructureKind.CLASS) {
+                    {
+                        val template = Defaults.defaultJsonObject(descriptor)
+                        val children = editorsFrom(ownerChain + descriptor, template)
+                        NullableEditor.Inflated(template, children)
+                    }
+                } else {
+                    null
+                }
+            return NullableEditor(name, inflate)
         }
         val primitive = value as? JsonPrimitive
         return when (descriptor.kind) {

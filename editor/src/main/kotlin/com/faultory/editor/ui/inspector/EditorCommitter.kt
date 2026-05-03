@@ -1,6 +1,7 @@
 package com.faultory.editor.ui.inspector
 
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -17,7 +18,10 @@ object EditorCommitter {
                 is FloatEditor -> merged[name] = JsonPrimitive(editor.value)
                 is BooleanEditor -> merged[name] = JsonPrimitive(editor.value)
                 is EnumEditor -> merged[name] = JsonPrimitive(editor.value)
-                is NullableEditor -> { /* null is already preserved in original */ }
+                is NullableEditor -> {
+                    val template = editor.template
+                    merged[name] = if (template == null) JsonNull else commit(editor.children, template)
+                }
                 is ClassEditor -> {
                     val childOriginal = original[name] as? JsonObject ?: JsonObject(emptyMap())
                     merged[name] = commit(editor.children, childOriginal)
