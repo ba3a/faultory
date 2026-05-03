@@ -15,6 +15,7 @@ import com.faultory.core.content.WorkerRole
 import com.faultory.core.content.WorkerRoleProfile
 import com.faultory.core.shop.systems.SecuritySystem
 import com.faultory.core.shop.systems.ShopFloorState
+import com.faultory.core.shop.systems.WorkerMovementSystem
 import com.faultory.core.systems.BeltSupplyFeeder
 import kotlin.math.abs
 import kotlin.math.max
@@ -49,6 +50,7 @@ class ShopFloor(
     )
 
     private val securitySystem: SecuritySystem = SecuritySystem(state, random)
+    private val workerMovementSystem: WorkerMovementSystem = WorkerMovementSystem(state)
 
     val cash: Int
         get() = state.cash
@@ -95,7 +97,7 @@ class ShopFloor(
         workerProfilesById: Map<String, WorkerProfile>
     ) {
         beltSupplyFeeder?.update(deltaSeconds, ::trySpawnSuppliedProduct)
-        updateWorkerMovement(deltaSeconds, workerProfilesById)
+        workerMovementSystem.update(deltaSeconds, workerProfilesById)
         acceptBeltInputs()
         updateMachineProduction(deltaSeconds, workerProfilesById)
         drainRecipeOutputs(workerProfilesById)
@@ -1669,54 +1671,6 @@ class ShopFloor(
         )
     }
 
-    private fun updateWorkerMovement(
-        deltaSeconds: Float,
-        workerProfilesById: Map<String, WorkerProfile>
-    ) {
-        for (index in mutablePlacedObjects.indices) {
-            val placedObject = mutablePlacedObjects[index]
-            if (placedObject.kind != PlacedShopObjectKind.WORKER || placedObject.movementPath.isEmpty()) {
-                continue
-            }
-
-            val workerProfile = workerProfilesById[placedObject.catalogId] ?: continue
-            var progress = placedObject.movementProgress +
-                (workerProfile.walkSpeed * deltaSeconds / GameConfig.tileSize)
-            var remainingPath = placedObject.movementPath
-            var currentPosition = placedObject.position
-            var currentOrientation = placedObject.orientation
-
-            while (progress >= 1f && remainingPath.isNotEmpty()) {
-                val nextTile = remainingPath.first()
-                if (isOccupied(nextTile, ignoreObjectId = placedObject.id, ignoreProductId = placedObject.carriedProductId)) {
-                    remainingPath = emptyList()
-                    progress = 0f
-                    break
-                }
-                currentOrientation = Orientation.between(currentPosition, nextTile) ?: currentOrientation
-                currentPosition = nextTile
-                remainingPath = remainingPath.drop(1)
-                progress -= 1f
-            }
-
-            if (remainingPath.isEmpty()) {
-                progress = 0f
-                currentOrientation = orientationAtAssignedSlot(placedObject.copy(position = currentPosition))
-                    ?: orientationAtQaPost(placedObject.copy(position = currentPosition))
-                    ?: currentOrientation
-            } else {
-                currentOrientation = Orientation.between(currentPosition, remainingPath.first()) ?: currentOrientation
-            }
-
-            mutablePlacedObjects[index] = placedObject.copy(
-                position = currentPosition,
-                orientation = currentOrientation,
-                movementPath = remainingPath,
-                movementProgress = progress
-            )
-        }
-    }
-
     private fun hasAvailableOperatorSlot(
         machineSpec: MachineSpec,
         placedObject: PlacedShopObject,
@@ -1788,25 +1742,6 @@ class ShopFloor(
 
     private fun isProductBlocking(tile: TileCoordinate): Boolean {
         return mutableActiveProducts.any { it.state != ShopProductState.CARRIED && it.tile == tile }
-    }
-
-    private fun orientationAtAssignedSlot(worker: PlacedShopObject): Orientation? {
-        val machineId = worker.assignedMachineId ?: return null
-        val machine = findObjectById(machineId) ?: return null
-        val slotIndex = worker.assignedSlotIndex
-        return slotPositionsFor(machine, MachineSlotType.OPERATOR)
-            .firstOrNull { slotPosition ->
-                slotPosition.slotIndex == slotIndex ||
-                    (slotIndex == null && slotPosition.accessTile == worker.position)
-            }
-            ?.side
-            ?.opposite()
-    }
-
-    private fun orientationAtQaPost(worker: PlacedShopObject): Orientation? {
-        val qaPostTile = worker.qaPostTile ?: return null
-        val beltTile = grid.orthogonalNeighbors(qaPostTile).firstOrNull { it in grid.beltTiles }
-        return beltTile?.let { Orientation.between(qaPostTile, it) }
     }
 
     private fun rollFaultReason(
