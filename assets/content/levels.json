@@ -10,9 +10,10 @@
       },
       "recommendedNextLevelId": "rush-order-shop",
       "requiredLevelIds": [],
+      "supplyingLevelIds": [],
       "availableWorkerIds": [
-        "line-inspector",
-        "float-tech"
+        "target-intern",
+        "anywork-1"
       ],
       "availableMachineIds": [
         "bench-assembler",
@@ -37,8 +38,8 @@
         "tutorial-shop"
       ],
       "availableWorkerIds": [
-        "line-inspector",
-        "float-tech",
+        "target-intern",
+        "anywork-1",
         "shop-guard"
       ],
       "availableMachineIds": [

@@ -1,9 +1,9 @@
 {
   "workers": [
     {
-      "id": "line-inspector",
+      "id": "target-intern",
       "level": 1,
-      "hireCost": 60,
+      "hireCost": 80,
       "walkSpeed": 128.0,
       "skin": "worker_line_inspector",
       "roleProfiles": [
@@ -16,7 +16,8 @@
           "detectionAccuracy": null,
           "falsePositiveChance": 0.0,
           "faultyProductStrategy": null,
-          "acceptedProductIds": []
+          "acceptedProductIds": [],
+          "eyesightRadius": null
         },
         {
           "role": "QA",
@@ -26,38 +27,28 @@
           "inspectionDurationSeconds": 1.5,
           "detectionAccuracy": 0.84,
           "falsePositiveChance": 0.05,
-          "faultyProductStrategy": "HAND_TO_PRODUCER",
+          "faultyProductStrategy": "PUT_ON_FREE_TILE",
           "acceptedProductIds": [
             "ceramic-mug",
             "glass-jar",
             "tea-kettle"
-          ]
+          ],
+          "eyesightRadius": null
         }
       ],
+      "requiredCompletedLevelIds": [],
       "upgradeTree": {
-        "leftUpgradeId": "line-inspector-lead",
-        "rightUpgradeId": "line-inspector-rover"
+        "leftUpgradeId": "target-inspector",
+        "rightUpgradeId": "target-worker"
       }
     },
     {
-      "id": "line-inspector-lead",
+      "id": "target-inspector",
       "level": 2,
-      "hireCost": 96,
+      "hireCost": 40,
       "walkSpeed": 134.0,
       "skin": "worker_line_inspector_lead",
-      "requiredCompletedLevelIds": ["tutorial-shop"],
       "roleProfiles": [
-        {
-          "role": "PRODUCER_OPERATOR",
-          "taskDurationSeconds": 1.7,
-          "defectChance": 0.09,
-          "sabotageChance": 0.03,
-          "inspectionDurationSeconds": null,
-          "detectionAccuracy": null,
-          "falsePositiveChance": 0.0,
-          "faultyProductStrategy": null,
-          "acceptedProductIds": []
-        },
         {
           "role": "QA",
           "taskDurationSeconds": 1.2,
@@ -71,13 +62,17 @@
             "ceramic-mug",
             "glass-jar",
             "tea-kettle"
-          ]
+          ],
+          "eyesightRadius": null
         }
+      ],
+      "requiredCompletedLevelIds": [
+        "tutorial-shop"
       ],
       "upgradeTree": null
     },
     {
-      "id": "float-tech",
+      "id": "anywork-1",
       "level": 1,
       "hireCost": 85,
       "walkSpeed": 148.0,
@@ -85,40 +80,43 @@
       "roleProfiles": [
         {
           "role": "PRODUCER_OPERATOR",
-          "taskDurationSeconds": 1.4,
+          "taskDurationSeconds": 5.4,
           "defectChance": 0.09,
-          "sabotageChance": 0.03,
+          "sabotageChance": 0.09,
           "inspectionDurationSeconds": null,
           "detectionAccuracy": null,
           "falsePositiveChance": 0.0,
           "faultyProductStrategy": null,
-          "acceptedProductIds": []
+          "acceptedProductIds": [],
+          "eyesightRadius": null
         },
         {
           "role": "QA",
-          "taskDurationSeconds": 1.1,
+          "taskDurationSeconds": 6.1,
           "defectChance": null,
           "sabotageChance": 0.0,
-          "inspectionDurationSeconds": 1.1,
-          "detectionAccuracy": 0.88,
-          "falsePositiveChance": 0.04,
+          "inspectionDurationSeconds": 6.1,
+          "detectionAccuracy": 0.68,
+          "falsePositiveChance": 0.09,
           "faultyProductStrategy": "DESTROY",
           "acceptedProductIds": [
             "ceramic-mug",
             "glass-jar",
             "tea-kettle"
-          ]
+          ],
+          "eyesightRadius": null
         }
       ],
+      "requiredCompletedLevelIds": [],
       "upgradeTree": {
-        "leftUpgradeId": "float-tech-analyst",
-        "rightUpgradeId": "float-tech-foreman"
+        "leftUpgradeId": "anywork-2",
+        "rightUpgradeId": ""
       }
     },
     {
-      "id": "line-inspector-rover",
+      "id": "target-worker",
       "level": 2,
-      "hireCost": 102,
+      "hireCost": 40,
       "walkSpeed": 168.0,
       "skin": "worker_line_inspector_rover",
       "roleProfiles": [
@@ -131,43 +129,31 @@
           "detectionAccuracy": null,
           "falsePositiveChance": 0.0,
           "faultyProductStrategy": null,
-          "acceptedProductIds": []
-        },
-        {
-          "role": "QA",
-          "taskDurationSeconds": 1.3,
-          "defectChance": null,
-          "sabotageChance": 0.0,
-          "inspectionDurationSeconds": 1.3,
-          "detectionAccuracy": 0.89,
-          "falsePositiveChance": 0.03,
-          "faultyProductStrategy": "HAND_TO_PRODUCER",
-          "acceptedProductIds": [
-            "ceramic-mug",
-            "glass-jar",
-            "tea-kettle"
-          ]
+          "acceptedProductIds": [],
+          "eyesightRadius": null
         }
       ],
+      "requiredCompletedLevelIds": [],
       "upgradeTree": null
     },
     {
-      "id": "float-tech-analyst",
+      "id": "anywork-2",
       "level": 2,
-      "hireCost": 124,
+      "hireCost": 50,
       "walkSpeed": 154.0,
       "skin": "worker_float_tech_analyst",
       "roleProfiles": [
         {
           "role": "PRODUCER_OPERATOR",
-          "taskDurationSeconds": 1.2,
+          "taskDurationSeconds": 4.2,
           "defectChance": 0.06,
-          "sabotageChance": 0.02,
+          "sabotageChance": 0.05,
           "inspectionDurationSeconds": null,
           "detectionAccuracy": null,
           "falsePositiveChance": 0.0,
           "faultyProductStrategy": null,
-          "acceptedProductIds": []
+          "acceptedProductIds": [],
+          "eyesightRadius": null
         },
         {
           "role": "QA",
@@ -177,34 +163,39 @@
           "inspectionDurationSeconds": 0.9,
           "detectionAccuracy": 0.92,
           "falsePositiveChance": 0.02,
-          "faultyProductStrategy": "DESTROY",
+          "faultyProductStrategy": "PUT_ON_FREE_TILE",
           "acceptedProductIds": [
             "ceramic-mug",
             "glass-jar",
             "tea-kettle"
-          ]
+          ],
+          "eyesightRadius": null
         }
       ],
-      "upgradeTree": null
+      "requiredCompletedLevelIds": [],
+      "upgradeTree": {
+        "leftUpgradeId": "anywork-3",
+        "rightUpgradeId": ""
+      }
     },
     {
-      "id": "float-tech-foreman",
-      "level": 2,
-      "hireCost": 130,
+      "id": "anywork-3",
+      "level": 3,
+      "hireCost": 40,
       "walkSpeed": 176.0,
       "skin": "worker_float_tech_foreman",
-      "requiredCompletedLevelIds": ["tutorial-shop"],
       "roleProfiles": [
         {
           "role": "PRODUCER_OPERATOR",
-          "taskDurationSeconds": 1.1,
-          "defectChance": 0.07,
+          "taskDurationSeconds": 3.1,
+          "defectChance": 0.03,
           "sabotageChance": 0.02,
           "inspectionDurationSeconds": null,
           "detectionAccuracy": null,
           "falsePositiveChance": 0.0,
           "faultyProductStrategy": null,
-          "acceptedProductIds": []
+          "acceptedProductIds": [],
+          "eyesightRadius": null
         },
         {
           "role": "QA",
@@ -214,13 +205,17 @@
           "inspectionDurationSeconds": 1.0,
           "detectionAccuracy": 0.91,
           "falsePositiveChance": 0.02,
-          "faultyProductStrategy": "DESTROY",
+          "faultyProductStrategy": "HAND_TO_PRODUCER",
           "acceptedProductIds": [
             "ceramic-mug",
             "glass-jar",
             "tea-kettle"
-          ]
+          ],
+          "eyesightRadius": null
         }
+      ],
+      "requiredCompletedLevelIds": [
+        "tutorial-shop"
       ],
       "upgradeTree": null
     },
@@ -244,6 +239,7 @@
           "eyesightRadius": 4.5
         }
       ],
+      "requiredCompletedLevelIds": [],
       "upgradeTree": {
         "leftUpgradeId": "shop-guard-watcher",
         "rightUpgradeId": "shop-guard-radio"
@@ -255,7 +251,6 @@
       "hireCost": 168,
       "walkSpeed": 138.0,
       "skin": "worker_shop_guard_watcher",
-      "requiredCompletedLevelIds": ["tutorial-shop"],
       "roleProfiles": [
         {
           "role": "SECURITY",
@@ -270,6 +265,9 @@
           "eyesightRadius": 6.0
         }
       ],
+      "requiredCompletedLevelIds": [
+        "tutorial-shop"
+      ],
       "upgradeTree": null
     },
     {
@@ -278,7 +276,6 @@
       "hireCost": 184,
       "walkSpeed": 144.0,
       "skin": "worker_shop_guard_radio",
-      "requiredCompletedLevelIds": ["tutorial-shop"],
       "roleProfiles": [
         {
           "role": "SECURITY",
@@ -292,6 +289,9 @@
           "acceptedProductIds": [],
           "eyesightRadius": 5.5
         }
+      ],
+      "requiredCompletedLevelIds": [
+        "tutorial-shop"
       ],
       "upgradeTree": null
     }
@@ -319,10 +319,12 @@
         }
       ],
       "minimumOperatorWorkerIds": [
-        "line-inspector"
+        "target-intern",
+        "anywork-1"
       ],
       "installCost": 75,
       "operationDurationSeconds": 1.8,
+      "requiredCompletedLevelIds": [],
       "upgradeTree": {
         "leftUpgradeId": "servo-assembler",
         "rightUpgradeId": "precision-assembler"
@@ -332,7 +334,8 @@
         "defectChance": 0.18,
         "faultyProductCapacity": 0
       },
-      "qaProfile": null
+      "qaProfile": null,
+      "recipe": null
     },
     {
       "id": "servo-assembler",
@@ -340,7 +343,6 @@
       "type": "PRODUCER",
       "manuality": "AUTOMATIC",
       "skin": "machine_servo_assembler",
-      "requiredCompletedLevelIds": ["tutorial-shop"],
       "productIds": [],
       "shape": [
         {
@@ -352,13 +354,17 @@
       "minimumOperatorWorkerIds": [],
       "installCost": 160,
       "operationDurationSeconds": 1.0,
+      "requiredCompletedLevelIds": [
+        "tutorial-shop"
+      ],
       "upgradeTree": null,
       "producerProfile": {
         "productId": "glass-jar",
         "defectChance": 0.08,
         "faultyProductCapacity": 3
       },
-      "qaProfile": null
+      "qaProfile": null,
+      "recipe": null
     },
     {
       "id": "precision-assembler",
@@ -377,13 +383,15 @@
       "minimumOperatorWorkerIds": [],
       "installCost": 154,
       "operationDurationSeconds": 1.1,
+      "requiredCompletedLevelIds": [],
       "upgradeTree": null,
       "producerProfile": {
         "productId": "tea-kettle",
         "defectChance": 0.05,
         "faultyProductCapacity": 2
       },
-      "qaProfile": null
+      "qaProfile": null,
+      "recipe": null
     },
     {
       "id": "camera-gate",
@@ -417,6 +425,7 @@
       "minimumOperatorWorkerIds": [],
       "installCost": 90,
       "operationDurationSeconds": 0.8,
+      "requiredCompletedLevelIds": [],
       "upgradeTree": {
         "leftUpgradeId": "spectral-camera-gate",
         "rightUpgradeId": "multi-angle-camera-gate"
@@ -427,7 +436,8 @@
         "detectionAccuracy": 0.86,
         "falsePositiveChance": 0.03,
         "faultyProductStrategy": "DESTROY"
-      }
+      },
+      "recipe": null
     },
     {
       "id": "spectral-camera-gate",
@@ -461,6 +471,7 @@
       "minimumOperatorWorkerIds": [],
       "installCost": 148,
       "operationDurationSeconds": 0.7,
+      "requiredCompletedLevelIds": [],
       "upgradeTree": null,
       "producerProfile": null,
       "qaProfile": {
@@ -468,7 +479,8 @@
         "detectionAccuracy": 0.92,
         "falsePositiveChance": 0.02,
         "faultyProductStrategy": "DESTROY"
-      }
+      },
+      "recipe": null
     },
     {
       "id": "multi-angle-camera-gate",
@@ -502,6 +514,7 @@
       "minimumOperatorWorkerIds": [],
       "installCost": 146,
       "operationDurationSeconds": 0.65,
+      "requiredCompletedLevelIds": [],
       "upgradeTree": null,
       "producerProfile": null,
       "qaProfile": {
@@ -509,7 +522,8 @@
         "detectionAccuracy": 0.9,
         "falsePositiveChance": 0.04,
         "faultyProductStrategy": "PUT_ON_FREE_TILE"
-      }
+      },
+      "recipe": null
     },
     {
       "id": "tea-blender",
@@ -541,6 +555,7 @@
       "minimumOperatorWorkerIds": [],
       "installCost": 200,
       "operationDurationSeconds": 1.5,
+      "requiredCompletedLevelIds": [],
       "upgradeTree": null,
       "producerProfile": null,
       "qaProfile": null,
@@ -590,6 +605,7 @@
       "minimumOperatorWorkerIds": [],
       "installCost": 72,
       "operationDurationSeconds": 0.9,
+      "requiredCompletedLevelIds": [],
       "upgradeTree": null,
       "producerProfile": null,
       "qaProfile": {
@@ -597,7 +613,8 @@
         "detectionAccuracy": 0.79,
         "falsePositiveChance": 0.03,
         "faultyProductStrategy": "PUT_ON_FREE_TILE"
-      }
+      },
+      "recipe": null
     },
     {
       "id": "security-camera",
@@ -625,9 +642,11 @@
       ],
       "installCost": 140,
       "operationDurationSeconds": 1.0,
+      "requiredCompletedLevelIds": [],
       "upgradeTree": null,
       "producerProfile": null,
-      "qaProfile": null
+      "qaProfile": null,
+      "recipe": null
     }
   ],
   "products": [
