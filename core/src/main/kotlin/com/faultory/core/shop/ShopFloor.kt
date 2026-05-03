@@ -13,6 +13,7 @@ import com.faultory.core.content.ProductDefinition
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.content.WorkerRoleProfile
+import com.faultory.core.shop.systems.ConveyorSystem
 import com.faultory.core.shop.systems.SecuritySystem
 import com.faultory.core.shop.systems.ShopFloorState
 import com.faultory.core.shop.systems.WorkerMovementSystem
@@ -51,6 +52,7 @@ class ShopFloor(
 
     private val securitySystem: SecuritySystem = SecuritySystem(state, random)
     private val workerMovementSystem: WorkerMovementSystem = WorkerMovementSystem(state)
+    private val conveyorSystem: ConveyorSystem = ConveyorSystem(state)
 
     val cash: Int
         get() = state.cash
@@ -67,7 +69,6 @@ class ShopFloor(
         get() = state.mutableMachineRecipeStates
     private val pendingShipmentEvents: MutableList<ShipmentEvent>
         get() = state.pendingShipmentEvents
-    private var conveyorProgress = 0f
 
     val placedObjects: List<PlacedShopObject>
         get() = mutablePlacedObjects
@@ -103,7 +104,7 @@ class ShopFloor(
         drainRecipeOutputs(workerProfilesById)
         updateQaInspections(deltaSeconds, workerProfilesById)
         securitySystem.update(workerProfilesById)
-        updateConveyor(deltaSeconds)
+        conveyorSystem.update(deltaSeconds)
         resolveWorkerObjectives()
         pruneEmptyRecipeStates()
     }
@@ -1590,85 +1591,6 @@ class ShopFloor(
         } else {
             random.nextFloat() < config.falsePositiveChance
         }
-    }
-
-    private fun updateConveyor(deltaSeconds: Float) {
-        conveyorProgress += deltaSeconds * GameConfig.conveyorSpeedTilesPerSecond
-        while (conveyorProgress >= 1f) {
-            conveyorProgress -= 1f
-            stepConveyorOnce()
-        }
-    }
-
-    private fun stepConveyorOnce() {
-        for (beltPath in grid.orderedBeltPaths) {
-            for (tile in beltPath.asReversed()) {
-                moveProductOnBelt(tile)
-                moveWorkerOnBelt(tile)
-            }
-        }
-    }
-
-    private fun moveProductOnBelt(tile: TileCoordinate) {
-        val productIndex = mutableActiveProducts.indexOfFirst { it.state == ShopProductState.ON_BELT && it.tile == tile }
-        if (productIndex < 0) {
-            return
-        }
-
-        val product = mutableActiveProducts[productIndex]
-        val nextTile = grid.nextBeltTile(tile)
-        if (nextTile == null) {
-            if (isBeltInputSinkAt(tile)) {
-                return
-            }
-            if (!grid.isShippingEdge(tile)) {
-                return
-            }
-            mutableActiveProducts.removeAt(productIndex)
-            if (!product.isFaulty) {
-                productDefinitionsById[product.productId]?.saleValue?.let(::creditCash)
-            }
-            pendingShipmentEvents += ShipmentEvent(product.productId, product.faultReason)
-            return
-        }
-
-        if (isOccupied(nextTile, ignoreProductId = product.id)) {
-            return
-        }
-
-        mutableActiveProducts[productIndex] = product.copy(tile = nextTile)
-    }
-
-    private fun isBeltInputSinkAt(tile: TileCoordinate): Boolean {
-        return mutablePlacedObjects.any { placedObject ->
-            if (placedObject.kind != PlacedShopObjectKind.MACHINE) return@any false
-            val machineSpec = machineSpecsById[placedObject.catalogId] ?: return@any false
-            if (machineSpec.recipe == null) return@any false
-            slotPositionsFor(placedObject, MachineSlotType.BELT_INPUT)
-                .any { it.accessTile == tile }
-        }
-    }
-
-    private fun moveWorkerOnBelt(tile: TileCoordinate) {
-        val workerIndex = mutablePlacedObjects.indexOfFirst {
-            it.kind == PlacedShopObjectKind.WORKER && it.position == tile
-        }
-        if (workerIndex < 0 || tile !in grid.beltTiles) {
-            return
-        }
-
-        val worker = mutablePlacedObjects[workerIndex]
-        val nextTile = grid.nextBeltTile(tile) ?: return
-        if (isOccupied(nextTile, ignoreObjectId = worker.id, ignoreProductId = worker.carriedProductId)) {
-            return
-        }
-
-        mutablePlacedObjects[workerIndex] = worker.copy(
-            position = nextTile,
-            orientation = Orientation.between(worker.position, nextTile) ?: worker.orientation,
-            movementPath = emptyList(),
-            movementProgress = 0f
-        )
     }
 
     private fun hasAvailableOperatorSlot(
