@@ -2,7 +2,6 @@ package com.faultory.core.shop
 
 import com.badlogic.gdx.utils.Disposable
 import com.faultory.core.config.GameConfig
-import com.faultory.core.content.FaultyProductStrategy
 import com.faultory.core.content.MachineRecipe
 import com.faultory.core.content.MachineSlotPosition
 import com.faultory.core.content.MachineSlotType
@@ -12,8 +11,8 @@ import com.faultory.core.content.Manuality
 import com.faultory.core.content.ProductDefinition
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
-import com.faultory.core.content.WorkerRoleProfile
 import com.faultory.core.shop.systems.ConveyorSystem
+import com.faultory.core.shop.systems.QaSystem
 import com.faultory.core.shop.systems.SecuritySystem
 import com.faultory.core.shop.systems.ShopFloorState
 import com.faultory.core.shop.systems.WorkerMovementSystem
@@ -53,6 +52,7 @@ class ShopFloor(
     private val securitySystem: SecuritySystem = SecuritySystem(state, random)
     private val workerMovementSystem: WorkerMovementSystem = WorkerMovementSystem(state)
     private val conveyorSystem: ConveyorSystem = ConveyorSystem(state)
+    private val qaSystem: QaSystem = QaSystem(state, random)
 
     val cash: Int
         get() = state.cash
@@ -102,7 +102,7 @@ class ShopFloor(
         acceptBeltInputs()
         updateMachineProduction(deltaSeconds, workerProfilesById)
         drainRecipeOutputs(workerProfilesById)
-        updateQaInspections(deltaSeconds, workerProfilesById)
+        qaSystem.update(deltaSeconds, workerProfilesById)
         securitySystem.update(workerProfilesById)
         conveyorSystem.update(deltaSeconds)
         resolveWorkerObjectives()
@@ -386,7 +386,7 @@ class ShopFloor(
             return WorkerAssignmentResult.Failure(WorkerAssignmentFailureReason.INELIGIBLE_QA)
         }
 
-        val candidatesByPost = collectQaPostCandidates(ignoreWorkerId = worker.id)
+        val candidatesByPost = qaSystem.collectQaPostCandidates(ignoreWorkerId = worker.id)
             .associateBy { it.postTile }
         if (candidatesByPost.isEmpty()) {
             return WorkerAssignmentResult.Failure(WorkerAssignmentFailureReason.NO_QA_POST)
@@ -1159,7 +1159,7 @@ class ShopFloor(
     ) {
         val qaPostTile = worker.qaPostTile ?: return
         if (qaPostTile == worker.position) {
-            val beltTile = qaInspectionTileForWorker(worker.copy(position = qaPostTile))
+            val beltTile = qaSystem.qaInspectionTileForWorker(worker.copy(position = qaPostTile))
             val orientation = beltTile?.let { Orientation.between(qaPostTile, it) } ?: worker.orientation
             mutablePlacedObjects[workerIndex] = worker.copy(
                 movementPath = emptyList(),
@@ -1180,417 +1180,6 @@ class ShopFloor(
             movementProgress = 0f,
             orientation = Orientation.between(worker.position, path.firstOrNull() ?: worker.position) ?: worker.orientation
         )
-    }
-
-    private fun updateQaInspections(
-        deltaSeconds: Float,
-        workerProfilesById: Map<String, WorkerProfile>
-    ) {
-        startQaInspections(workerProfilesById)
-
-        val statesSnapshot = mutableQaInspectionStates.toList()
-        for (state in statesSnapshot) {
-            val inspectionIndex = mutableQaInspectionStates.indexOfFirst { it.inspectorObjectId == state.inspectorObjectId }
-            if (inspectionIndex < 0) {
-                continue
-            }
-
-            val currentState = mutableQaInspectionStates[inspectionIndex]
-            if (currentState.isComplete) {
-                continue
-            }
-
-            val inspector = findObjectById(currentState.inspectorObjectId) ?: continue
-            val config = qaConfigFor(inspector, workerProfilesById, requireReady = true) ?: continue
-            val product = productById(currentState.productId) ?: run {
-                mutableQaInspectionStates.removeAt(inspectionIndex)
-                clearWorkerHold(inspector.id)
-                continue
-            }
-
-            val updatedProgress = (currentState.progressSeconds + deltaSeconds).coerceAtMost(config.inspectionDurationSeconds)
-            val isComplete = updatedProgress >= config.inspectionDurationSeconds
-            mutableQaInspectionStates[inspectionIndex] = currentState.copy(
-                progressSeconds = updatedProgress,
-                isComplete = isComplete,
-                classifiedAsFaulty = if (isComplete) classifyProduct(product, config) else null
-            )
-        }
-
-        for (state in mutableQaInspectionStates.filter { it.isComplete }.toList()) {
-            resolveCompletedQaInspection(state, workerProfilesById)
-        }
-    }
-
-    private fun startQaInspections(workerProfilesById: Map<String, WorkerProfile>) {
-        startMachineQaInspections(workerProfilesById)
-        startWorkerQaInspections(workerProfilesById)
-    }
-
-    private fun startMachineQaInspections(workerProfilesById: Map<String, WorkerProfile>) {
-        for (machine in mutablePlacedObjects.filter { it.kind == PlacedShopObjectKind.MACHINE }) {
-            if (mutableQaInspectionStates.any { it.inspectorObjectId == machine.id }) {
-                continue
-            }
-
-            val machineSpec = machineSpecsById[machine.catalogId] ?: continue
-            if (machineSpec.type != MachineType.QA) {
-                continue
-            }
-
-            val config = qaConfigFor(machine, workerProfilesById, requireReady = true) ?: continue
-            val beltTile = qaInspectionTileForMachine(machine) ?: continue
-            val product = productAtBeltTile(beltTile) ?: continue
-            if (!config.accepts(product.productId)) {
-                continue
-            }
-            if (machine.id in product.inspectedByObjectIds) {
-                continue
-            }
-
-            holdProductForInspection(product.id, machine.id)
-            mutableQaInspectionStates += QaInspectionState(
-                inspectorObjectId = machine.id,
-                productId = product.id,
-                beltTile = beltTile
-            )
-        }
-    }
-
-    private fun startWorkerQaInspections(workerProfilesById: Map<String, WorkerProfile>) {
-        for (worker in mutablePlacedObjects.filter { it.kind == PlacedShopObjectKind.WORKER }) {
-            if (mutableQaInspectionStates.any { it.inspectorObjectId == worker.id }) {
-                continue
-            }
-            if (worker.carriedProductId != null || worker.qaPostTile == null || !isWorkerAtQaPost(worker)) {
-                continue
-            }
-
-            val config = qaConfigFor(worker, workerProfilesById, requireReady = true) ?: continue
-            val beltTile = qaInspectionTileForWorker(worker) ?: continue
-            val product = productAtBeltTile(beltTile) ?: continue
-            if (!config.accepts(product.productId)) {
-                continue
-            }
-            if (worker.id in product.inspectedByObjectIds) {
-                continue
-            }
-
-            holdProductForInspection(product.id, worker.id)
-            mutableQaInspectionStates += QaInspectionState(
-                inspectorObjectId = worker.id,
-                productId = product.id,
-                beltTile = beltTile
-            )
-        }
-    }
-
-    private fun resolveCompletedQaInspection(
-        state: QaInspectionState,
-        workerProfilesById: Map<String, WorkerProfile>
-    ) {
-        val inspectionIndex = mutableQaInspectionStates.indexOfFirst { it.inspectorObjectId == state.inspectorObjectId }
-        if (inspectionIndex < 0) {
-            return
-        }
-
-        val inspector = findObjectById(state.inspectorObjectId) ?: run {
-            mutableQaInspectionStates.removeAt(inspectionIndex)
-            return
-        }
-        val config = qaConfigFor(inspector, workerProfilesById, requireReady = false) ?: run {
-            mutableQaInspectionStates.removeAt(inspectionIndex)
-            return
-        }
-        val product = productById(state.productId) ?: run {
-            clearWorkerHold(inspector.id)
-            mutableQaInspectionStates.removeAt(inspectionIndex)
-            return
-        }
-
-        markProductInspectedBy(product.id, inspector.id)
-
-        val handled = when (state.classifiedAsFaulty) {
-            true -> when (config.faultyProductStrategy) {
-                FaultyProductStrategy.DESTROY -> destroyHeldProduct(product.id, inspector.id)
-                FaultyProductStrategy.PUT_ON_FREE_TILE -> placeFaultyProductOnFreeTile(product.id, inspector, state.beltTile)
-                FaultyProductStrategy.HAND_TO_PRODUCER -> handFaultyProductToProducer(product.id, inspector, state.beltTile)
-            }
-
-            false -> returnInspectedProductToBelt(product.id, inspector.id, state.beltTile)
-            null -> false
-        }
-
-        if (handled) {
-            mutableQaInspectionStates.removeAt(inspectionIndex)
-        }
-    }
-
-    private fun holdProductForInspection(
-        productId: String,
-        holderObjectId: String
-    ) {
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
-        if (productIndex < 0) {
-            return
-        }
-
-        val holder = findObjectById(holderObjectId)
-        val workerIndex = mutablePlacedObjects.indexOfFirst { it.id == holderObjectId && it.kind == PlacedShopObjectKind.WORKER }
-        val product = mutableActiveProducts[productIndex]
-        mutableActiveProducts[productIndex] = product.copy(
-            state = ShopProductState.CARRIED,
-            tile = null,
-            carrierWorkerId = if (holder?.kind == PlacedShopObjectKind.WORKER) holderObjectId else null,
-            holderObjectId = holderObjectId
-        )
-        if (workerIndex >= 0) {
-            val worker = mutablePlacedObjects[workerIndex]
-            mutablePlacedObjects[workerIndex] = worker.copy(
-                carriedProductId = productId,
-                movementPath = emptyList(),
-                movementProgress = 0f
-            )
-        }
-    }
-
-    private fun returnInspectedProductToBelt(
-        productId: String,
-        inspectorId: String,
-        beltTile: TileCoordinate
-    ): Boolean {
-        if (isOccupied(beltTile, ignoreProductId = productId)) {
-            return false
-        }
-
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
-        if (productIndex < 0) {
-            return false
-        }
-
-        mutableActiveProducts[productIndex] = mutableActiveProducts[productIndex].copy(
-            state = ShopProductState.ON_BELT,
-            tile = beltTile,
-            carrierWorkerId = null,
-            holderObjectId = null,
-            reworkTargetMachineId = null
-        )
-        clearWorkerHold(inspectorId)
-        return true
-    }
-
-    private fun destroyHeldProduct(
-        productId: String,
-        inspectorId: String
-    ): Boolean {
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
-        if (productIndex < 0) {
-            return false
-        }
-
-        mutableActiveProducts.removeAt(productIndex)
-        clearWorkerHold(inspectorId)
-        return true
-    }
-
-    private fun placeFaultyProductOnFreeTile(
-        productId: String,
-        inspector: PlacedShopObject,
-        beltTile: TileCoordinate
-    ): Boolean {
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
-        if (productIndex < 0) {
-            return false
-        }
-
-        val targetTile = grid.orthogonalNeighbors(beltTile)
-            .filter { candidate ->
-                candidate !in grid.beltTiles &&
-                    !isOccupied(candidate, ignoreProductId = productId, ignoreObjectId = inspector.id)
-            }
-            .minWithOrNull(compareBy<TileCoordinate> { manhattanDistance(it, inspector.position) }.thenBy { it.x }.thenBy { it.y })
-            ?: return false
-
-        mutableActiveProducts[productIndex] = mutableActiveProducts[productIndex].copy(
-            state = ShopProductState.ON_FLOOR,
-            tile = targetTile,
-            carrierWorkerId = null,
-            holderObjectId = null,
-            reworkTargetMachineId = null
-        )
-        clearWorkerHold(inspector.id)
-        return true
-    }
-
-    private fun handFaultyProductToProducer(
-        productId: String,
-        inspector: PlacedShopObject,
-        originTile: TileCoordinate
-    ): Boolean {
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
-        if (productIndex < 0) {
-            return false
-        }
-
-        val targetWorker = nearestAvailableProducerWorker(originTile)
-        if (targetWorker != null) {
-            val workerIndex = mutablePlacedObjects.indexOfFirst { it.id == targetWorker.id }
-            if (workerIndex >= 0) {
-                mutableActiveProducts[productIndex] = mutableActiveProducts[productIndex].copy(
-                    state = ShopProductState.CARRIED,
-                    tile = null,
-                    carrierWorkerId = targetWorker.id,
-                    holderObjectId = targetWorker.id,
-                    reworkTargetMachineId = targetWorker.assignedMachineId
-                )
-                mutablePlacedObjects[workerIndex] = targetWorker.copy(
-                    carriedProductId = productId,
-                    movementPath = emptyList(),
-                    movementProgress = 0f
-                )
-                clearWorkerHold(inspector.id)
-                return true
-            }
-        }
-
-        val automaticProducer = nearestAutomaticProducerWithCapacity(originTile)
-        if (automaticProducer != null) {
-            val machineIndex = mutablePlacedObjects.indexOfFirst { it.id == automaticProducer.id }
-            if (machineIndex >= 0) {
-                mutablePlacedObjects[machineIndex] = automaticProducer.copy(
-                    faultyInventoryCount = automaticProducer.faultyInventoryCount + 1
-                )
-                mutableActiveProducts.removeAt(productIndex)
-                clearWorkerHold(inspector.id)
-                return true
-            }
-        }
-
-        return false
-    }
-
-    private fun nearestAvailableProducerWorker(originTile: TileCoordinate): PlacedShopObject? {
-        return mutablePlacedObjects
-            .asSequence()
-            .filter { it.kind == PlacedShopObjectKind.WORKER }
-            .filter { it.workerRole == WorkerRole.PRODUCER_OPERATOR }
-            .filter { it.assignedMachineId != null && it.assignedSlotIndex != null }
-            .filter { it.carriedProductId == null && it.movementPath.isEmpty() }
-            .filter(::isWorkerAtAssignedSlot)
-            .filter { worker ->
-                val machine = worker.assignedMachineId?.let(::findObjectById) ?: return@filter false
-                val machineSpec = machineSpecsById[machine.catalogId] ?: return@filter false
-                machineSpec.type == MachineType.PRODUCER
-            }
-            .minWithOrNull(compareBy<PlacedShopObject> { manhattanDistance(it.position, originTile) }.thenBy { it.id })
-    }
-
-    private fun nearestAutomaticProducerWithCapacity(originTile: TileCoordinate): PlacedShopObject? {
-        return mutablePlacedObjects
-            .asSequence()
-            .filter { it.kind == PlacedShopObjectKind.MACHINE }
-            .filter { machine ->
-                val machineSpec = machineSpecsById[machine.catalogId] ?: return@filter false
-                val producerProfile = machineSpec.producerProfile ?: return@filter false
-                machineSpec.type == MachineType.PRODUCER &&
-                    machineSpec.manuality == Manuality.AUTOMATIC &&
-                    producerProfile.faultyProductCapacity > 0 &&
-                    machine.faultyInventoryCount < producerProfile.faultyProductCapacity
-            }
-            .minWithOrNull(compareBy<PlacedShopObject> { manhattanDistance(it.position, originTile) }.thenBy { it.id })
-    }
-
-    private fun qaConfigFor(
-        inspector: PlacedShopObject,
-        workerProfilesById: Map<String, WorkerProfile>,
-        requireReady: Boolean
-    ): QaInspectorConfig? {
-        return when (inspector.kind) {
-            PlacedShopObjectKind.MACHINE -> {
-                val machineSpec = machineSpecsById[inspector.catalogId] ?: return null
-                if (machineSpec.type != MachineType.QA) {
-                    return null
-                }
-
-                if (requireReady && machineSpec.manuality == Manuality.HUMAN_OPERATED) {
-                    val operator = operatorWorkerForMachine(inspector.id) ?: return null
-                    if (!isWorkerAtAssignedSlot(operator) || operator.carriedProductId != null || operator.movementPath.isNotEmpty()) {
-                        return null
-                    }
-                    val workerProfile = workerProfilesById[operator.catalogId] ?: return null
-                    if (!machineSpec.canAcceptOperator(workerProfile, workerProfilesById)) {
-                        return null
-                    }
-                }
-
-                val qaProfile = machineSpec.qaProfile ?: return null
-                QaInspectorConfig(
-                    inspectionDurationSeconds = qaProfile.inspectionDurationSeconds,
-                    detectionAccuracy = qaProfile.detectionAccuracy,
-                    falsePositiveChance = qaProfile.falsePositiveChance,
-                    faultyProductStrategy = qaProfile.faultyProductStrategy,
-                    acceptedProductIds = machineSpec.productIds.toSet()
-                )
-            }
-
-            PlacedShopObjectKind.WORKER -> {
-                val workerProfile = workerProfilesById[inspector.catalogId] ?: return null
-                val qaRoleProfile = workerProfile.profileFor(WorkerRole.QA) ?: return null
-                if (requireReady) {
-                    if (inspector.qaPostTile == null || !isWorkerAtQaPost(inspector) || inspector.movementPath.isNotEmpty()) {
-                        return null
-                    }
-                }
-                val inspectionDuration = qaRoleProfile.inspectionDurationSeconds ?: return null
-                val detectionAccuracy = qaRoleProfile.detectionAccuracy ?: return null
-                val strategy = qaRoleProfile.faultyProductStrategy ?: return null
-                QaInspectorConfig(
-                    inspectionDurationSeconds = inspectionDuration,
-                    detectionAccuracy = detectionAccuracy,
-                    falsePositiveChance = qaRoleProfile.falsePositiveChance,
-                    faultyProductStrategy = strategy,
-                    acceptedProductIds = qaRoleProfile.acceptedProductIds.toSet()
-                )
-            }
-        }
-    }
-
-    private fun qaInspectionTileForMachine(machine: PlacedShopObject): TileCoordinate? {
-        return slotPositionsFor(machine, MachineSlotType.QA).firstOrNull()?.accessTile
-    }
-
-    private fun qaInspectionTileForWorker(worker: PlacedShopObject): TileCoordinate? {
-        val qaPostTile = worker.qaPostTile ?: return null
-        val beltTile = qaPostTile + worker.orientation.step()
-        return beltTile.takeIf { it in grid.beltTiles }
-    }
-
-    private fun collectQaPostCandidates(ignoreWorkerId: String? = null): List<QaPostCandidate> {
-        val currentWorkerPosition = ignoreWorkerId?.let(::findObjectById)?.position
-        return grid.beltTiles
-            .flatMap { beltTile ->
-                grid.orthogonalNeighbors(beltTile)
-                    .filter { postTile ->
-                        postTile !in grid.beltTiles &&
-                            (postTile == currentWorkerPosition || !isOccupied(postTile, ignoreObjectId = ignoreWorkerId))
-                    }
-                    .mapNotNull { postTile ->
-                        val orientation = Orientation.between(postTile, beltTile) ?: return@mapNotNull null
-                        QaPostCandidate(postTile = postTile, beltTile = beltTile, orientation = orientation)
-                    }
-            }
-            .distinctBy { it.postTile }
-    }
-
-    private fun classifyProduct(
-        product: ShopProduct,
-        config: QaInspectorConfig
-    ): Boolean {
-        return if (product.isFaulty) {
-            random.nextFloat() < config.detectionAccuracy
-        } else {
-            random.nextFloat() < config.falsePositiveChance
-        }
     }
 
     private fun hasAvailableOperatorSlot(
@@ -1694,23 +1283,7 @@ class ShopFloor(
 
     private fun productById(productId: String?): ShopProduct? = state.productById(productId)
 
-    private fun markProductInspectedBy(productId: String, inspectorId: String) {
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
-        if (productIndex < 0) {
-            return
-        }
-        val product = mutableActiveProducts[productIndex]
-        if (inspectorId in product.inspectedByObjectIds) {
-            return
-        }
-        mutableActiveProducts[productIndex] = product.copy(
-            inspectedByObjectIds = product.inspectedByObjectIds + inspectorId
-        )
-    }
-
     private fun productAtBeltTile(tile: TileCoordinate): ShopProduct? = state.productAtBeltTile(tile)
-
-    private fun clearWorkerHold(workerId: String) = state.clearWorkerHold(workerId)
 
     private fun createProductId(): String = state.createProductId()
 
@@ -1730,24 +1303,6 @@ private data class DeliveryPlan(
     val beltTile: TileCoordinate,
     val path: List<TileCoordinate>
 )
-
-private data class QaPostCandidate(
-    val postTile: TileCoordinate,
-    val beltTile: TileCoordinate,
-    val orientation: Orientation
-)
-
-private data class QaInspectorConfig(
-    val inspectionDurationSeconds: Float,
-    val detectionAccuracy: Float,
-    val falsePositiveChance: Float,
-    val faultyProductStrategy: FaultyProductStrategy,
-    val acceptedProductIds: Set<String>
-) {
-    fun accepts(productId: String): Boolean {
-        return acceptedProductIds.isEmpty() || productId in acceptedProductIds
-    }
-}
 
 sealed interface WorkerAssignmentResult {
     data class Success(
