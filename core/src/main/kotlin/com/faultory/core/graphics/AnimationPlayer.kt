@@ -33,17 +33,18 @@ class AnimationPlayer {
         if (frames.isEmpty()) {
             return null
         }
-        if (clip.fps <= 0f) {
-            return frames.first()
-        }
 
         val elapsed = state.elapsed.coerceAtLeast(0f)
-        val frameIndex = floor(elapsed * clip.fps).toInt().coerceAtLeast(0)
+        val frameIndex = floor(elapsed / FRAME_DURATION).toInt().coerceAtLeast(0)
         val resolvedIndex = if (clip.loop) {
             frameIndex % frames.size
         } else {
             frameIndex.coerceAtMost(frames.lastIndex)
         }
         return frames[resolvedIndex]
+    }
+
+    companion object {
+        private const val FRAME_DURATION = 0.1f
     }
 }

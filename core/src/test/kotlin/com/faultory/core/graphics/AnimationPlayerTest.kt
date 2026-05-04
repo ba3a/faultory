@@ -38,7 +38,7 @@ class AnimationPlayerTest {
 
         val region = player.regionName(
             clip,
-            AnimationState(SkinActions.WALK, Orientation.NORTH, elapsed = 0.8f)
+            AnimationState(SkinActions.WALK, Orientation.NORTH, elapsed = 0.3f)
         )
 
         assertEquals("north_0", region)
@@ -78,7 +78,6 @@ class AnimationPlayerTest {
                 Orientation.NORTH to listOf("north_0", "north_1", "north_2"),
                 Orientation.SOUTH to listOf("south_0", "south_1", "south_2")
             ),
-            fps = 4f,
             loop = loop
         )
     }

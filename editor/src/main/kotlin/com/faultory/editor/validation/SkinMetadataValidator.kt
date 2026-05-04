@@ -48,14 +48,6 @@ object SkinMetadataValidator {
     ): List<ValidationIssue> {
         val issues = mutableListOf<ValidationIssue>()
 
-        if (clip.fps <= 0f) {
-            issues += ValidationIssue(
-                Severity.ERROR,
-                "Action '$actionName' fps must be greater than zero",
-                fieldName = "actions.$actionName.fps",
-            )
-        }
-
         if (clip.frames.isEmpty()) {
             issues += ValidationIssue(
                 Severity.WARNING,

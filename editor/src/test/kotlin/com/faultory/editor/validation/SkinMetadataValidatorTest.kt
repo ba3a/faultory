@@ -126,32 +126,6 @@ class SkinMetadataValidatorTest {
     }
 
     @Test
-    fun `non-positive fps is an error`() {
-        val skin = SkinDefinition(
-            atlas = "textures/demo.atlas",
-            actions = mapOf(
-                "idle" to ActionClip(
-                    frames = mapOf(
-                        Orientation.NORTH to listOf("idle_north_000"),
-                        Orientation.EAST to listOf("idle_east_000"),
-                        Orientation.SOUTH to listOf("idle_south_000"),
-                        Orientation.WEST to listOf("idle_west_000"),
-                    ),
-                    fps = 0f,
-                ),
-            ),
-        )
-
-        val issues = SkinMetadataValidator.validate(
-            skin,
-            listOf("idle_north_000", "idle_east_000", "idle_south_000", "idle_west_000"),
-        )
-
-        val fpsIssue = issues.single { it.fieldName == "actions.idle.fps" }
-        assertEquals(Severity.ERROR, fpsIssue.severity)
-    }
-
-    @Test
     fun `empty actions map emits warning and no other issues`() {
         val skin = SkinDefinition(atlas = "textures/demo.atlas", actions = emptyMap())
 

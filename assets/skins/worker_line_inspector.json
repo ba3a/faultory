@@ -16,7 +16,6 @@
           "idle_west_000"
         ]
       },
-      "fps": 8.0,
       "loop": true
     },
     "walk": {
@@ -52,7 +51,6 @@
           "walk_west_008"
         ]
       },
-      "fps": 1152.0,
       "loop": true
     }
   }

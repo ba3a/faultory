@@ -8,7 +8,6 @@ import com.badlogic.gdx.utils.Array as GdxArray
 import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.shop.Orientation
 import com.faultory.editor.graphics.AtlasBaker
-import com.faultory.editor.graphics.ClipDurationPolicy
 import com.faultory.editor.graphics.FrameImportService
 import com.faultory.editor.graphics.SkinStateService
 import com.faultory.editor.validation.Severity
@@ -25,7 +24,7 @@ import java.nio.file.Path
 class AnimationsPanel(
     private val assetsRoot: Path,
     private val skinId: String,
-    private val actionDurations: Map<String, Float>,
+    private val actions: List<String>,
     private val stageProvider: () -> Stage?,
     private val onValidationIssues: (List<ValidationIssue>) -> Unit,
 ) : Disposable {
@@ -78,16 +77,13 @@ class AnimationsPanel(
         }
         gridTable.row()
 
-        for (action in actionDurations.keys) {
+        for (action in actions) {
             gridTable.add(VisLabel(action)).left().pad(4f)
-            val duration = actionDurations.getValue(action)
             for (orientation in Orientation.entries) {
                 val cell = AnimationCell(
                     action = action,
                     orientation = orientation,
-                    clipDurationSeconds = duration,
                     onUpload = { requestUpload(action, orientation) },
-                    onLoopsChanged = { loops -> applyLoopsChange(action, orientation, loops) },
                 )
                 cell.render(atlas, skin)
                 cells[CellKey(action, orientation)] = cell
@@ -130,16 +126,11 @@ class AnimationsPanel(
             val baseSkin = skinStateService.ensureExists(skinId)
             val regionNames = frameImportService.importFrames(skinId, action, orientation, sources)
 
-            val duration = actionDurations.getValue(action)
-            val currentLoops = cells[CellKey(action, orientation)]?.currentLoops() ?: 1
-            val fps = ClipDurationPolicy.fpsFor(regionNames.size, currentLoops, duration)
-
             val updated = skinStateService.setOrientationFrames(
                 current = baseSkin,
                 action = action,
                 orientation = orientation,
                 regionNames = regionNames,
-                fps = fps,
             )
             skinStateService.save(skinId, updated)
             skin = updated
@@ -167,19 +158,6 @@ class AnimationsPanel(
             statusLabel.setText("Upload/bake failed: ${t.message ?: t.javaClass.simpleName}")
             rebuildGrid()
         }
-    }
-
-    private fun applyLoopsChange(action: String, orientation: Orientation, loops: Int) {
-        val currentSkin = skin ?: return
-        val clip = currentSkin.actions[action] ?: return
-        val frames = clip.frames[orientation].orEmpty()
-        if (frames.isEmpty()) return
-        val duration = actionDurations.getValue(action)
-        val newFps = ClipDurationPolicy.fpsFor(frames.size, loops, duration)
-        val updated = skinStateService.setActionFps(currentSkin, action, newFps)
-        skinStateService.save(skinId, updated)
-        skin = updated
-        cells[CellKey(action, orientation)]?.render(atlas, skin)
     }
 
     private fun reportValidation(regionNames: List<String>? = null) {

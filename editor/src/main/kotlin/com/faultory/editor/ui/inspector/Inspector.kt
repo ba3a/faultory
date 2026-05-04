@@ -8,7 +8,6 @@ import com.faultory.core.content.WorkerRole
 import com.faultory.core.graphics.SkinActions
 import com.faultory.core.i18n.MessageKey
 import com.faultory.core.shop.ShopBlueprint
-import com.faultory.editor.graphics.ClipDurationPolicy
 import com.faultory.editor.i18n.TranslationStore
 import com.faultory.editor.model.EditorSession
 import com.faultory.editor.repository.EditorJson
@@ -207,7 +206,7 @@ class Inspector(
         val panel = AnimationsPanel(
             assetsRoot = repository.rootPath,
             skinId = spec.skinId,
-            actionDurations = spec.actionDurations,
+            actions = spec.actions,
             stageProvider = { actor.stage },
             onValidationIssues = { issues ->
                 currentSkinIssues = issues
@@ -218,7 +217,7 @@ class Inspector(
         content.add(panel.actor).colspan(2).growX().left().pad(4f).row()
     }
 
-    private data class SkinSpec(val skinId: String, val actionDurations: Map<String, Float>)
+    private data class SkinSpec(val skinId: String, val actions: List<String>)
 
     private fun skinSpecFor(selection: AssetSelection): SkinSpec? {
         return when (selection) {
@@ -226,10 +225,7 @@ class Inspector(
                 worker.skin.takeIf { it.isNotBlank() }?.let { skinId ->
                     SkinSpec(
                         skinId = skinId,
-                        actionDurations = linkedMapOf(
-                            SkinActions.IDLE to ClipDurationPolicy.durationFor(worker, SkinActions.IDLE),
-                            SkinActions.WALK to ClipDurationPolicy.durationFor(worker, SkinActions.WALK),
-                        ),
+                        actions = listOf(SkinActions.IDLE, SkinActions.WALK),
                     )
                 }
             }
@@ -237,10 +233,7 @@ class Inspector(
                 machine.skin.takeIf { it.isNotBlank() }?.let { skinId ->
                     SkinSpec(
                         skinId = skinId,
-                        actionDurations = linkedMapOf(
-                            SkinActions.IDLE to ClipDurationPolicy.durationFor(machine, SkinActions.IDLE),
-                            SkinActions.WORKING to ClipDurationPolicy.durationFor(machine, SkinActions.WORKING),
-                        ),
+                        actions = listOf(SkinActions.IDLE, SkinActions.WORKING),
                     )
                 }
             }

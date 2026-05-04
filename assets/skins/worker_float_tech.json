@@ -16,7 +16,6 @@
           "idle_east_000"
         ]
       },
-      "fps": 1.0,
       "loop": true
     },
     "walk": {
@@ -50,7 +49,6 @@
           "walk_south_004"
         ]
       },
-      "fps": 3700.0,
       "loop": true
     }
   }

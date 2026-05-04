@@ -38,7 +38,6 @@ class SkinDefinitionAssetLoaderTest {
                         "SOUTH": ["walk_south_000", "walk_south_001"],
                         "WEST": ["walk_west_000", "walk_west_001"]
                       },
-                      "fps": 12.0,
                       "loop": false
                     }
                   }
@@ -59,9 +58,7 @@ class SkinDefinitionAssetLoaderTest {
 
             assertEquals("textures/worker_line_inspector.atlas", definition.atlas)
             assertEquals(listOf("idle_north_000"), definition.actions[SkinActions.IDLE]?.frames?.get(Orientation.NORTH))
-            assertEquals(8f, definition.actions[SkinActions.IDLE]?.fps)
             assertEquals(true, definition.actions[SkinActions.IDLE]?.loop)
-            assertEquals(12f, definition.actions[SkinActions.WALK]?.fps)
             assertEquals(false, definition.actions[SkinActions.WALK]?.loop)
             assertNull(loader.getDependencies(skinFile.toString(), fileHandle, null))
         } finally {

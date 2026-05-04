@@ -28,7 +28,6 @@ class SkinDefinitionJsonTest {
                         Orientation.SOUTH to listOf("walk_south_000", "walk_south_001"),
                         Orientation.WEST to listOf("walk_west_000", "walk_west_001")
                     ),
-                    fps = 12f,
                     loop = false
                 )
             )

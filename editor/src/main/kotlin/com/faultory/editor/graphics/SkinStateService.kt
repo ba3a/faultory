@@ -47,25 +47,16 @@ class SkinStateService(private val assetsRoot: Path) {
         action: String,
         orientation: Orientation,
         regionNames: List<String>,
-        fps: Float,
     ): SkinDefinition {
         val existing = current.actions[action]
         val frames = (existing?.frames ?: emptyMap()).toMutableMap()
         frames[orientation] = regionNames
         val updatedClip = ActionClip(
             frames = frames,
-            fps = fps,
             loop = existing?.loop ?: true,
         )
         val actions = current.actions.toMutableMap()
         actions[action] = updatedClip
-        return current.copy(actions = actions)
-    }
-
-    fun setActionFps(current: SkinDefinition, action: String, fps: Float): SkinDefinition {
-        val existing = current.actions[action] ?: return current
-        val actions = current.actions.toMutableMap()
-        actions[action] = existing.copy(fps = fps)
         return current.copy(actions = actions)
     }
 }
