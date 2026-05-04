@@ -5,6 +5,7 @@ This repository is a Kotlin-first Gradle multi-module desktop game scaffold, not
 
 - `core` contains the game runtime, domain models, JSON loaders, save handling, screen flow, and simulation systems.
 - `desktop` contains the LWJGL3 launcher only.
+- `editor` contains the standalone LibGDX asset editor. It owns validation (`editor.validation`), backup/restore (`editor.backup`), atlas baking (`editor.graphics`), i18n (`editor.i18n`), reflection-driven inspector UI (`editor.ui.inspector`), and the asset repository (`editor.repository`). Run with `.\gradlew.bat :editor:run --console plain`.
 - `assets` contains runtime JSON content loaded by LibGDX at startup. It is not a Gradle module.
 - `buildSrc` contains the shared Gradle convention plugin (`buildsrc.convention.kotlin-jvm`) used by the modules.
 
@@ -13,6 +14,7 @@ Current architecture is package-by-responsibility, not controller/service/reposi
 - Bootstrap: `FaultoryGame`, `DesktopLauncher`
 - Presentation: `core.screens`
 - Domain/config/content: `core.shop`, `core.content`, `core.systems`, `core.config`, `core.assets`
+- Shop simulation systems: `core.shop.systems` — `ShopFloorState` (shared mutable state + helpers), `ConveyorSystem`, `ProductionSystem`, `QaSystem`, `WorkerObjectiveSystem`, `WorkerMovementSystem`, `SecuritySystem`. `ShopFloor` is a thin facade that wires these together.
 - Persistence: `core.save`
 
 Current data flow:
@@ -34,13 +36,13 @@ Use the Gradle wrapper from the repository root.
 
 - Build the whole project: `.\gradlew.bat build --console plain`
 - Run all tests: `.\gradlew.bat test --console plain`
-- Run the application: `.\gradlew.bat :desktop:run --console plain`
-- Run a single test: not applicable at the moment because there are no test classes under `core/src/test` or `desktop/src/test`
+- Run the game: `.\gradlew.bat :desktop:run --console plain`
+- Run the asset editor: `.\gradlew.bat :editor:run --console plain`
+- Run a single test class: `.\gradlew.bat :core:test --tests "com.faultory.core.shop.ShopFloorProductionTest" --console plain`
 
 Notes:
 
 - `:desktop:run` sets the working directory to `assets`, which is required for LibGDX file loading.
-- `test` currently reports `NO-SOURCE` because no tests exist yet.
 
 ## Development Workflow (step-by-step, mandatory)
 1. Explore the relevant code and assets before editing. Read the touched packages, loaders, and JSON files first.
@@ -65,6 +67,7 @@ Follow the existing package boundaries in `core/src/main/kotlin/com/faultory/cor
 - Put global runtime constants in `core.config.GameConfig`.
 - Put JSON-backed catalog/content models in `core.content` as `@Serializable data class`es.
 - Put shop/level layout models in `core.shop` as `@Serializable data class`es.
+- Put shop simulation logic in `core.shop.systems`. New `update*` behaviour belongs in one of the six focused system classes or a new one — never directly in `ShopFloor`.
 - Put screen classes in `core.screens`. Screen names end with `Screen`.
 - Put time-step or simulation coordinators in `core.systems`. System/coordinator names are noun-based, such as `ProductionDayDirector`.
 - Put save models, codecs, and repository implementations in `core.save`.
@@ -94,7 +97,9 @@ There are no repositories in the Spring Data sense. The only repository pattern 
 - Do not rename packages, assets, or JSON fields unless the task requires it. JSON names are part of the current content/save format.
 - Do not change the desktop launcher contract unless startup behavior actually needs to change.
 - Do not put new gameplay/domain code in `desktop`.
+- Do not bleed editor logic into `core`. The `editor` module may read `core` models, but `core` must not depend on `editor`.
 - Do not revive or repurpose the currently empty `core.world` package unless the task explicitly calls for it. The active domain packages are `core.shop`, `core.content`, `core.systems`, and `core.save`.
+- Do not add simulation logic to `ShopFloor` directly. `ShopFloor` is a thin facade; behaviour belongs in `core.shop.systems` (`ConveyorSystem`, `ProductionSystem`, `QaSystem`, `WorkerObjectiveSystem`, `WorkerMovementSystem`, `SecuritySystem`).
 
 ## Testing Rules
 - Always run `.\gradlew.bat test --console plain` after changes.
