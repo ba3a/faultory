@@ -5,10 +5,14 @@ import com.faultory.core.shop.MachineRecipeState
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.QaInspectionState
 import com.faultory.core.shop.ShopProduct
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class GameSave(
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     val version: Int = CURRENT_VERSION,
     val slotId: String,
     val createdAtEpochMillis: Long,
