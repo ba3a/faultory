@@ -25,7 +25,8 @@ Desktop-only factory-quality scaffold built with Kotlin, LibGDX, and `kotlinx.se
 .\gradlew.bat :editor:run --console plain    # run the asset editor
 .\gradlew.bat build --console plain          # full build
 .\gradlew.bat test --console plain           # run tests
-- `./gradlew :desktop:run`
-- `./gradlew build`
-- `./gradlew :editor:run`
+ 
 ```
+`./gradlew :desktop:run`
+`./gradlew build`
+`./gradlew :editor:run`

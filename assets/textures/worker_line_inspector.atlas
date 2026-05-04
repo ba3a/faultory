@@ -1,55 +1,153 @@
 
 worker_line_inspector.png
-size: 256, 64
+size: 1024, 64
 format: RGBA8888
 filter: Nearest, Nearest
 repeat: none
 idle_east_000
   rotate: false
-  xy: 2, 2
-  size: 40, 60
-  orig: 40, 60
-  offset: 0, 0
-  index: -1
-walk_east_000
-  rotate: false
-  xy: 2, 2
-  size: 40, 60
-  orig: 40, 60
+  xy: 44, 2
+  size: 34, 60
+  orig: 34, 60
   offset: 0, 0
   index: -1
 idle_south_000
   rotate: false
-  xy: 44, 2
+  xy: 2, 2
   size: 40, 60
   orig: 40, 60
   offset: 0, 0
   index: -1
-walk_east_003
+idle_west_000
   rotate: false
-  xy: 44, 2
-  size: 40, 60
-  orig: 40, 60
+  xy: 80, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_east_000
+  rotate: false
+  xy: 116, 2
+  size: 34, 60
+  orig: 34, 60
   offset: 0, 0
   index: -1
 walk_east_001
   rotate: false
-  xy: 86, 2
-  size: 40, 60
-  orig: 40, 60
+  xy: 152, 2
+  size: 34, 60
+  orig: 34, 60
   offset: 0, 0
   index: -1
 walk_east_002
   rotate: false
-  xy: 128, 2
-  size: 40, 60
-  orig: 40, 60
+  xy: 188, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_east_003
+  rotate: false
+  xy: 224, 2
+  size: 34, 60
+  orig: 34, 60
   offset: 0, 0
   index: -1
 walk_east_004
   rotate: false
-  xy: 170, 2
-  size: 40, 60
-  orig: 40, 60
+  xy: 260, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_east_005
+  rotate: false
+  xy: 296, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_east_006
+  rotate: false
+  xy: 332, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_east_007
+  rotate: false
+  xy: 368, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_east_008
+  rotate: false
+  xy: 404, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_west_000
+  rotate: false
+  xy: 440, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_west_001
+  rotate: false
+  xy: 476, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_west_002
+  rotate: false
+  xy: 512, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_west_003
+  rotate: false
+  xy: 548, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_west_004
+  rotate: false
+  xy: 584, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_west_005
+  rotate: false
+  xy: 620, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_west_006
+  rotate: false
+  xy: 656, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_west_007
+  rotate: false
+  xy: 692, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_west_008
+  rotate: false
+  xy: 728, 2
+  size: 34, 60
+  orig: 34, 60
   offset: 0, 0
   index: -1
