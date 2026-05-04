@@ -72,13 +72,11 @@ class ShopFloor(
     val machineRecipeStates: List<MachineRecipeState>
         get() = mutableMachineRecipeStates
 
-    fun machineProductionStateFor(machineId: String): MachineProductionState? {
-        return mutableMachineProductionStates.firstOrNull { it.machineId == machineId }
-    }
+    fun machineProductionStateFor(machineId: String): MachineProductionState? =
+        state.machineProductionStateFor(machineId)
 
-    fun machineRecipeStateFor(machineId: String): MachineRecipeState? {
-        return mutableMachineRecipeStates.firstOrNull { it.machineId == machineId }
-    }
+    fun machineRecipeStateFor(machineId: String): MachineRecipeState? =
+        state.machineRecipeStateFor(machineId)
 
     fun update(
         deltaSeconds: Float,
@@ -231,11 +229,7 @@ class ShopFloor(
 
     fun findObjectById(objectId: String): PlacedShopObject? = state.findObjectById(objectId)
 
-    fun objectAt(tile: TileCoordinate): PlacedShopObject? {
-        return mutablePlacedObjects.lastOrNull { placedObject ->
-            tile in occupiedTilesFor(placedObject)
-        }
-    }
+    fun objectAt(tile: TileCoordinate): PlacedShopObject? = state.objectAtTile(tile)
 
     fun createObjectId(kind: PlacedShopObjectKind): String = state.createObjectId(kind)
 

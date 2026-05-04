@@ -30,12 +30,108 @@ internal class ShopFloorState(
     var cash: Int = initialCash
         private set
 
-    val mutablePlacedObjects: MutableList<PlacedShopObject> = initialPlacements.toMutableList()
-    val mutableActiveProducts: MutableList<ShopProduct> = initialProducts.toMutableList()
-    val mutableMachineProductionStates: MutableList<MachineProductionState> = initialMachineProductionStates.toMutableList()
-    val mutableQaInspectionStates: MutableList<QaInspectionState> = initialQaInspectionStates.toMutableList()
-    val mutableMachineRecipeStates: MutableList<MachineRecipeState> = initialMachineRecipeStates.toMutableList()
+    private val placedObjectsIndex: IdIndexedMutableList<PlacedShopObject> =
+        IdIndexedMutableList(initialPlacements) { it.id }
+    val mutablePlacedObjects: MutableList<PlacedShopObject> = placedObjectsIndex
+
+    private val activeProductsIndex: IdIndexedMutableList<ShopProduct> =
+        IdIndexedMutableList(initialProducts) { it.id }
+    val mutableActiveProducts: MutableList<ShopProduct> = activeProductsIndex
+
+    private val machineProductionStatesIndex: IdIndexedMutableList<MachineProductionState> =
+        IdIndexedMutableList(initialMachineProductionStates) { it.machineId }
+    val mutableMachineProductionStates: MutableList<MachineProductionState> = machineProductionStatesIndex
+
+    private val qaInspectionStatesIndex: IdIndexedMutableList<QaInspectionState> =
+        IdIndexedMutableList(initialQaInspectionStates) { it.inspectorObjectId }
+    val mutableQaInspectionStates: MutableList<QaInspectionState> = qaInspectionStatesIndex
+
+    private val machineRecipeStatesIndex: IdIndexedMutableList<MachineRecipeState> =
+        IdIndexedMutableList(initialMachineRecipeStates) { it.machineId }
+    val mutableMachineRecipeStates: MutableList<MachineRecipeState> = machineRecipeStatesIndex
+
     val pendingShipmentEvents: MutableList<ShipmentEvent> = mutableListOf()
+
+    private val operatorWorkerByMachineId: HashMap<String, PlacedShopObject> = HashMap()
+    private val productByBeltTile: HashMap<TileCoordinate, ShopProduct> = HashMap()
+
+    private var tileOccupancyDirty: Boolean = true
+    private val placedObjectIdByTile: HashMap<TileCoordinate, String> = HashMap()
+    private val productIdByTile: HashMap<TileCoordinate, String> = HashMap()
+
+    init {
+        placedObjectsIndex.addMutationListener { old, new ->
+            tileOccupancyDirty = true
+            updateOperatorWorkerIndex(old, new)
+        }
+        activeProductsIndex.addMutationListener { old, new ->
+            tileOccupancyDirty = true
+            updateProductByBeltTileIndex(old, new)
+        }
+        rebuildSecondaryIndicesFromScratch()
+    }
+
+    private fun updateOperatorWorkerIndex(old: PlacedShopObject?, new: PlacedShopObject?) {
+        if (old != null && old.kind == PlacedShopObjectKind.WORKER) {
+            val machineId = old.assignedMachineId
+            if (machineId != null && operatorWorkerByMachineId[machineId]?.id == old.id) {
+                operatorWorkerByMachineId.remove(machineId)
+            }
+        }
+        if (new != null && new.kind == PlacedShopObjectKind.WORKER) {
+            val machineId = new.assignedMachineId
+            if (machineId != null && new.assignedSlotIndex != null) {
+                operatorWorkerByMachineId[machineId] = new
+            }
+        }
+    }
+
+    private fun updateProductByBeltTileIndex(old: ShopProduct?, new: ShopProduct?) {
+        if (old != null && old.state == ShopProductState.ON_BELT && old.tile != null) {
+            if (productByBeltTile[old.tile]?.id == old.id) {
+                productByBeltTile.remove(old.tile)
+            }
+        }
+        if (new != null && new.state == ShopProductState.ON_BELT && new.tile != null) {
+            productByBeltTile[new.tile] = new
+        }
+    }
+
+    private fun rebuildSecondaryIndicesFromScratch() {
+        operatorWorkerByMachineId.clear()
+        for (placed in placedObjectsIndex) {
+            if (placed.kind == PlacedShopObjectKind.WORKER) {
+                val machineId = placed.assignedMachineId
+                if (machineId != null && placed.assignedSlotIndex != null) {
+                    operatorWorkerByMachineId[machineId] = placed
+                }
+            }
+        }
+        productByBeltTile.clear()
+        for (product in activeProductsIndex) {
+            if (product.state == ShopProductState.ON_BELT && product.tile != null) {
+                productByBeltTile[product.tile] = product
+            }
+        }
+        tileOccupancyDirty = true
+    }
+
+    private fun ensureTileOccupancyIndex() {
+        if (!tileOccupancyDirty) return
+        placedObjectIdByTile.clear()
+        for (placed in placedObjectsIndex) {
+            for (tile in occupiedTilesFor(placed)) {
+                placedObjectIdByTile[tile] = placed.id
+            }
+        }
+        productIdByTile.clear()
+        for (product in activeProductsIndex) {
+            if (product.state != ShopProductState.CARRIED && product.tile != null) {
+                productIdByTile[product.tile] = product.id
+            }
+        }
+        tileOccupancyDirty = false
+    }
 
     var nextObjectSequence: Int = initialPlacements
         .mapNotNull { sequenceOf(it.id) }
@@ -67,15 +163,28 @@ internal class ShopFloorState(
     }
 
     fun findObjectById(objectId: String): PlacedShopObject? {
-        return mutablePlacedObjects.firstOrNull { it.id == objectId }
+        return placedObjectsIndex.byId(objectId)
     }
 
     fun productById(productId: String?): ShopProduct? {
-        return mutableActiveProducts.firstOrNull { it.id == productId }
+        if (productId == null) return null
+        return activeProductsIndex.byId(productId)
     }
 
     fun productAtBeltTile(tile: TileCoordinate): ShopProduct? {
-        return mutableActiveProducts.firstOrNull { it.state == ShopProductState.ON_BELT && it.tile == tile }
+        return productByBeltTile[tile]
+    }
+
+    fun machineProductionStateFor(machineId: String): MachineProductionState? =
+        machineProductionStatesIndex.byId(machineId)
+
+    fun machineRecipeStateFor(machineId: String): MachineRecipeState? =
+        machineRecipeStatesIndex.byId(machineId)
+
+    fun objectAtTile(tile: TileCoordinate): PlacedShopObject? {
+        ensureTileOccupancyIndex()
+        val id = placedObjectIdByTile[tile] ?: return null
+        return placedObjectsIndex.byId(id)
     }
 
     fun occupiedTilesFor(placedObject: PlacedShopObject): Set<TileCoordinate> {
@@ -106,11 +215,16 @@ internal class ShopFloorState(
         ignoreObjectId: String? = null,
         ignoreProductId: String? = null
     ): Boolean {
-        return mutablePlacedObjects.any { placedObject ->
-            placedObject.id != ignoreObjectId && tile in occupiedTilesFor(placedObject)
-        } || mutableActiveProducts.any { product ->
-            product.id != ignoreProductId && product.state != ShopProductState.CARRIED && product.tile == tile
+        ensureTileOccupancyIndex()
+        val occupyingObjectId = placedObjectIdByTile[tile]
+        if (occupyingObjectId != null && occupyingObjectId != ignoreObjectId) {
+            return true
         }
+        val occupyingProductId = productIdByTile[tile]
+        if (occupyingProductId != null && occupyingProductId != ignoreProductId) {
+            return true
+        }
+        return false
     }
 
     fun blockedTilesForPath(
@@ -150,11 +264,7 @@ internal class ShopFloorState(
     }
 
     fun operatorWorkerForMachine(machineId: String): PlacedShopObject? {
-        return mutablePlacedObjects.firstOrNull { placedObject ->
-            placedObject.kind == PlacedShopObjectKind.WORKER &&
-                placedObject.assignedMachineId == machineId &&
-                placedObject.assignedSlotIndex != null
-        }
+        return operatorWorkerByMachineId[machineId]
     }
 
     fun clearWorkerHold(workerId: String) {
