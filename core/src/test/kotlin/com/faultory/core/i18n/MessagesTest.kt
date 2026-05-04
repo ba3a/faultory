@@ -53,6 +53,15 @@ class MessagesTest {
     }
 
     @Test
+    fun `format returns correct result after locale switch`() {
+        val before = Messages.format(MessageKey.UPGRADE_COST, 42)
+        LocaleManager.setLocale(Locale.forLanguageTag("ru"))
+        LocaleManager.setLocale(SupportedLocale.fallback)
+        val after = Messages.format(MessageKey.UPGRADE_COST, 42)
+        assertEquals(before, after)
+    }
+
+    @Test
     fun `setLocale switches active bundle`() {
         LocaleManager.setLocale(Locale.forLanguageTag("ru"))
         assertEquals("Открыть уровень", Messages.text(MessageKey.LEVEL_SELECT_OPEN))

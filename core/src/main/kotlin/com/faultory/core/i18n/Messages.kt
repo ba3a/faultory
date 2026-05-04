@@ -1,9 +1,16 @@
 package com.faultory.core.i18n
 
 import java.text.MessageFormat
+import java.util.Locale
 import java.util.MissingResourceException
 
 object Messages {
+    private val formatCache = HashMap<Pair<MessageKey, Locale>, MessageFormat>()
+
+    init {
+        LocaleManager.addListener { formatCache.clear() }
+    }
+
     fun text(key: MessageKey): String {
         require(!key.isCatalog) { "Use Messages.catalog(...) for catalog keys: ${key.path}" }
         return try {
@@ -14,8 +21,9 @@ object Messages {
     }
 
     fun format(key: MessageKey, vararg args: Any?): String {
-        val pattern = text(key)
-        return MessageFormat(pattern, LocaleManager.currentLocale).format(args)
+        val locale = LocaleManager.currentLocale
+        val mf = formatCache.getOrPut(key to locale) { MessageFormat(text(key), locale) }
+        return mf.format(args)
     }
 
     fun catalog(key: MessageKey, id: String): String {
