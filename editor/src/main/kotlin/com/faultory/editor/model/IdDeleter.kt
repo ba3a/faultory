@@ -109,9 +109,16 @@ class IdDeleter(
 
     private fun stripProductFromMachine(machine: MachineSpec, id: String): MachineSpec {
         val productIds = machine.productIds.filterNot { it == id }
-        val producer = machine.producerProfile?.let { if (it.productId == id) null else it }
-        return if (productIds == machine.productIds && producer == machine.producerProfile) machine
-        else machine.copy(productIds = productIds, producerProfile = producer)
+        val recipe = machine.recipe?.let {
+            if (it.outputProductId == id) {
+                null
+            } else {
+                val inputs = it.inputs.filterNot { input -> input.productId == id }
+                if (inputs == it.inputs) it else it.copy(inputs = inputs)
+            }
+        }
+        return if (productIds == machine.productIds && recipe == machine.recipe) machine
+        else machine.copy(productIds = productIds, recipe = recipe)
     }
 
     private fun stripProductFromWorker(worker: WorkerProfile, id: String): WorkerProfile {

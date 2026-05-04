@@ -152,11 +152,16 @@ class IdRenamer(
 
     private fun renameProductRefsInMachine(machine: MachineSpec, oldId: String, newId: String): MachineSpec {
         val productIds = machine.productIds.map { if (it == oldId) newId else it }
-        val producer = machine.producerProfile?.let {
-            if (it.productId == oldId) it.copy(productId = newId) else it
+        val recipe = machine.recipe?.let {
+            val outputProductId = if (it.outputProductId == oldId) newId else it.outputProductId
+            val inputs = it.inputs.map { input ->
+                if (input.productId == oldId) input.copy(productId = newId) else input
+            }
+            if (outputProductId == it.outputProductId && inputs == it.inputs) it
+            else it.copy(outputProductId = outputProductId, inputs = inputs)
         }
-        return if (productIds == machine.productIds && producer == machine.producerProfile) machine
-        else machine.copy(productIds = productIds, producerProfile = producer)
+        return if (productIds == machine.productIds && recipe == machine.recipe) machine
+        else machine.copy(productIds = productIds, recipe = recipe)
     }
 
     private fun renameProductRefsInWorker(worker: WorkerProfile, oldId: String, newId: String): WorkerProfile {

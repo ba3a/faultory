@@ -61,7 +61,7 @@ class SkinReferencesTest {
     private fun machine(id: String, skin: String): MachineSpec = MachineSpec(
         id = id,
         level = 1,
-        type = MachineType.PRODUCER,
+        type = MachineType.QA,
         manuality = Manuality.AUTOMATIC,
         skin = skin,
         installCost = 0,

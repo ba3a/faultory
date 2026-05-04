@@ -66,11 +66,11 @@ object MachineValidator : Validator<AssetSelection.Machine> {
 
         when (machine.type) {
             MachineType.PRODUCER -> {
-                if (machine.producerProfile == null) {
+                if (machine.recipe == null) {
                     issues += ValidationIssue(
                         Severity.ERROR,
-                        "PRODUCER machine requires producerProfile",
-                        fieldName = "producerProfile",
+                        "PRODUCER machine requires recipe",
+                        fieldName = "recipe",
                     )
                 }
                 if (machine.qaProfile != null) {
@@ -89,22 +89,15 @@ object MachineValidator : Validator<AssetSelection.Machine> {
                         fieldName = "qaProfile",
                     )
                 }
-                if (machine.producerProfile != null) {
+                if (machine.recipe != null) {
                     issues += ValidationIssue(
                         Severity.ERROR,
-                        "QA machine must not have producerProfile",
-                        fieldName = "producerProfile",
+                        "QA machine must not have recipe",
+                        fieldName = "recipe",
                     )
                 }
             }
             MachineType.SECURITY_CAMERA -> {
-                if (machine.producerProfile != null) {
-                    issues += ValidationIssue(
-                        Severity.ERROR,
-                        "SECURITY_CAMERA machine must not have producerProfile",
-                        fieldName = "producerProfile",
-                    )
-                }
                 if (machine.qaProfile != null) {
                     issues += ValidationIssue(
                         Severity.ERROR,

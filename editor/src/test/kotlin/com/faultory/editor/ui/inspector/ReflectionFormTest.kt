@@ -4,12 +4,13 @@ import com.faultory.core.content.BinaryUpgradeTree
 import com.faultory.core.content.FaultyProductStrategy
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.LevelStarThresholds
+import com.faultory.core.content.MachineRecipe
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.MachineType
 import com.faultory.core.content.Manuality
-import com.faultory.core.content.ProducerMachineProfile
 import com.faultory.core.content.ProductDefinition
 import com.faultory.core.content.QaMachineProfile
+import com.faultory.core.content.RecipeInput
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -43,6 +44,11 @@ class ReflectionFormTest {
             skin = "press-skin",
             installCost = 100,
             operationDurationSeconds = 2.5f,
+            recipe = MachineRecipe(
+                inputs = emptyList(),
+                outputProductId = "gear",
+                durationSeconds = 2.5f,
+            ),
         )
 
         val editors = ReflectionForm.editorsFor(machine)
@@ -62,13 +68,12 @@ class ReflectionFormTest {
         val machine = MachineSpec(
             id = "press",
             level = 1,
-            type = MachineType.PRODUCER,
+            type = MachineType.QA,
             manuality = Manuality.AUTOMATIC,
             skin = "press-skin",
             installCost = 100,
             operationDurationSeconds = 2.5f,
             upgradeTree = null,
-            producerProfile = null,
             qaProfile = null,
         )
 
@@ -78,7 +83,6 @@ class ReflectionFormTest {
         assertEquals(
             listOf(
                 NullableEditor("upgradeTree"),
-                NullableEditor("producerProfile"),
                 NullableEditor("qaProfile"),
                 NullableEditor("recipe"),
             ),
@@ -98,8 +102,10 @@ class ReflectionFormTest {
             installCost = 100,
             operationDurationSeconds = 2.5f,
             upgradeTree = BinaryUpgradeTree(leftUpgradeId = "press-v2", rightUpgradeId = null),
-            producerProfile = ProducerMachineProfile(
-                productId = "gear",
+            recipe = MachineRecipe(
+                inputs = listOf(RecipeInput(productId = "gear", quantity = 2)),
+                outputProductId = "bolt",
+                durationSeconds = 2.5f,
                 defectChance = 0.1f,
                 faultyProductCapacity = 3,
             ),
@@ -122,15 +128,24 @@ class ReflectionFormTest {
             upgradeTree.children,
         )
 
-        val producerProfile = editors.filterIsInstance<ClassEditor>().single { it.fieldName == "producerProfile" }
+        val recipe = editors.filterIsInstance<ClassEditor>().single { it.fieldName == "recipe" }
+        assertEquals(
+            listOf("inputs", "outputProductId", "durationSeconds", "defectChance", "faultyProductCapacity"),
+            recipe.children.map { it.fieldName },
+        )
+        val inputs = recipe.children.filterIsInstance<ClassListEditor>().single { it.fieldName == "inputs" }
+        assertEquals(1, inputs.items.size)
         assertEquals(
             listOf(
                 StringEditor("productId", "gear"),
-                FloatEditor("defectChance", 0.1f),
-                IntEditor("faultyProductCapacity", 3),
+                IntEditor("quantity", 2),
             ),
-            producerProfile.children,
+            inputs.items.single().editors,
         )
+        assertEquals(StringEditor("outputProductId", "bolt"), recipe.children.single { it.fieldName == "outputProductId" })
+        assertEquals(FloatEditor("durationSeconds", 2.5f), recipe.children.single { it.fieldName == "durationSeconds" })
+        assertEquals(FloatEditor("defectChance", 0.1f), recipe.children.single { it.fieldName == "defectChance" })
+        assertEquals(IntEditor("faultyProductCapacity", 3), recipe.children.single { it.fieldName == "faultyProductCapacity" })
 
         val qaProfile = editors.filterIsInstance<ClassEditor>().single { it.fieldName == "qaProfile" }
         assertEquals(
@@ -149,7 +164,7 @@ class ReflectionFormTest {
         val machine = MachineSpec(
             id = "press",
             level = 1,
-            type = MachineType.PRODUCER,
+            type = MachineType.QA,
             manuality = Manuality.HUMAN_OPERATED,
             skin = "press-skin",
             productIds = listOf("gear", "bolt"),

@@ -6,7 +6,9 @@ import kotlinx.serialization.Serializable
 data class MachineRecipe(
     val inputs: List<RecipeInput>,
     val outputProductId: String,
-    val durationSeconds: Float
+    val durationSeconds: Float,
+    val defectChance: Float = 0f,
+    val faultyProductCapacity: Int = 0
 )
 
 @Serializable

@@ -6,8 +6,8 @@ import com.faultory.core.content.MachineSlotType
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.MachineType
 import com.faultory.core.content.FaultyProductStrategy
+import com.faultory.core.content.MachineRecipe
 import com.faultory.core.content.Manuality
-import com.faultory.core.content.ProducerMachineProfile
 import com.faultory.core.content.QaMachineProfile
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
@@ -325,8 +325,10 @@ class ShopFloorAssignmentTest {
             minimumOperatorWorkerIds = listOf("line-inspector"),
             installCost = 75,
             operationDurationSeconds = 1.8f,
-            producerProfile = ProducerMachineProfile(
-                productId = "ceramic-mug",
+            recipe = MachineRecipe(
+                inputs = emptyList(),
+                outputProductId = "ceramic-mug",
+                durationSeconds = 1.8f,
                 defectChance = 0.18f
             )
         )

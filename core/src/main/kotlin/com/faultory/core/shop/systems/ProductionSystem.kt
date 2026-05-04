@@ -4,6 +4,7 @@ import com.faultory.core.config.GameConfig
 import com.faultory.core.content.MachineRecipe
 import com.faultory.core.content.MachineSlotType
 import com.faultory.core.content.MachineSpec
+import com.faultory.core.content.MachineType
 import com.faultory.core.content.Manuality
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
@@ -37,38 +38,10 @@ internal class ProductionSystem(
     ) {
         for (machine in placedMachines) {
             val machineSpec = machineSpecsById[machine.catalogId] ?: continue
-            val recipe = machineSpec.recipe
-            if (recipe != null) {
-                tickRecipeMachine(machine, machineSpec, recipe, deltaSeconds, workerProfilesById)
-                continue
-            }
-            val producerProfile = machineSpec.producerProfile ?: continue
-            val existingStateIndex = mutableMachineProductionStates.indexOfFirst { it.machineId == machine.id }
-            if (existingStateIndex < 0) {
-                if (canStartProduction(machine, machineSpec, workerProfilesById)) {
-                    mutableMachineProductionStates += MachineProductionState(
-                        machineId = machine.id,
-                        productInstanceId = state.createProductId(),
-                        productId = producerProfile.productId,
-                        faultReason = rollFaultReason(machine, machineSpec, workerProfilesById),
-                        progressSeconds = 0f,
-                        isComplete = false
-                    )
-                }
-                continue
-            }
-
-            val productionState = mutableMachineProductionStates[existingStateIndex]
-            if (!productionState.isComplete) {
-                val updatedProgress = (productionState.progressSeconds + deltaSeconds).coerceAtMost(machineSpec.operationDurationSeconds)
-                mutableMachineProductionStates[existingStateIndex] = productionState.copy(
-                    progressSeconds = updatedProgress,
-                    isComplete = updatedProgress >= machineSpec.operationDurationSeconds
-                )
-            }
+            if (machineSpec.type != MachineType.PRODUCER) continue
+            val recipe = machineSpec.recipe ?: continue
+            tickRecipeMachine(machine, machineSpec, recipe, deltaSeconds, workerProfilesById)
         }
-
-        resolveCompletedProduction(workerProfilesById)
     }
 
     private fun tickRecipeMachine(
@@ -91,12 +64,21 @@ internal class ProductionSystem(
             if (!canStartRecipeProduction(machine, machineSpec, workerProfilesById)) {
                 return
             }
-            replaceRecipeState(recipeState.copy(inputBuffer = subtractInputs(recipeState.inputBuffer, recipe)))
+            val inputFault = recipeState.accumulatedInputFault
+            replaceRecipeState(
+                recipeState.copy(
+                    inputBuffer = subtractInputs(recipeState.inputBuffer, recipe),
+                    accumulatedInputFault = null
+                )
+            )
             mutableMachineProductionStates += MachineProductionState(
                 machineId = machine.id,
                 productInstanceId = state.createProductId(),
                 productId = recipe.outputProductId,
-                faultReason = null,
+                faultReason = worstFault(
+                    inputFault,
+                    rollFaultReason(machine, machineSpec, recipe, workerProfilesById)
+                ),
                 progressSeconds = 0f,
                 isComplete = false
             )
@@ -116,9 +98,25 @@ internal class ProductionSystem(
         }
 
         val updatedProgress = (productionState.progressSeconds + deltaSeconds).coerceAtMost(recipe.durationSeconds)
+        val isComplete = updatedProgress >= recipe.durationSeconds
+        if (isComplete) {
+            val completedState = productionState.copy(
+                progressSeconds = updatedProgress,
+                isComplete = true
+            )
+            val queued = QueuedMachineOutput(
+                productInstanceId = completedState.productInstanceId,
+                productId = completedState.productId,
+                faultReason = completedState.faultReason
+            )
+            replaceRecipeState(recipeState.copy(outputQueue = recipeState.outputQueue + queued))
+            mutableMachineProductionStates.removeAt(productionIndex)
+            return
+        }
+
         mutableMachineProductionStates[productionIndex] = productionState.copy(
             progressSeconds = updatedProgress,
-            isComplete = updatedProgress >= recipe.durationSeconds
+            isComplete = false
         )
     }
 
@@ -146,6 +144,10 @@ internal class ProductionSystem(
         machineSpec: MachineSpec,
         workerProfilesById: Map<String, WorkerProfile>
     ): Boolean {
+        val recipe = machineSpec.recipe ?: return false
+        if (recipe.faultyProductCapacity > 0 && machine.faultyInventoryCount >= recipe.faultyProductCapacity) {
+            return false
+        }
         if (machineSpec.manuality == Manuality.AUTOMATIC) {
             return true
         }
@@ -183,6 +185,7 @@ internal class ProductionSystem(
     fun acceptBeltInputs() {
         for (machine in placedMachines) {
             val machineSpec = machineSpecsById[machine.catalogId] ?: continue
+            if (machineSpec.type != MachineType.PRODUCER) continue
             val recipe = machineSpec.recipe ?: continue
             val inputSlots = state.slotPositionsFor(machine, MachineSlotType.BELT_INPUT)
             if (inputSlots.isEmpty()) continue
@@ -201,7 +204,11 @@ internal class ProductionSystem(
 
                 replaceRecipeState(
                     recipeState.copy(
-                        inputBuffer = recipeState.inputBuffer + (product.productId to currentCount + 1)
+                        inputBuffer = recipeState.inputBuffer + (product.productId to currentCount + 1),
+                        accumulatedInputFault = worstFault(
+                            recipeState.accumulatedInputFault,
+                            product.faultReason
+                        )
                     )
                 )
                 val productIndex = mutableActiveProducts.indexOfFirst { it.id == product.id }
@@ -300,129 +307,6 @@ internal class ProductionSystem(
         return true
     }
 
-    private fun resolveCompletedProduction(workerProfilesById: Map<String, WorkerProfile>) {
-        val completedStates = mutableMachineProductionStates.filter { it.isComplete }
-        for (productionState in completedStates) {
-            val machine = state.findObjectById(productionState.machineId)
-            if (machine == null) {
-                mutableMachineProductionStates.removeAll { it.machineId == productionState.machineId }
-                continue
-            }
-            val machineSpec = machineSpecsById[machine.catalogId] ?: continue
-            val handled = when (machineSpec.manuality) {
-                Manuality.AUTOMATIC -> tryDispenseAutomaticProduct(machine, productionState)
-                Manuality.HUMAN_OPERATED -> tryDispenseHumanOperatedProduct(machine, productionState)
-            }
-            if (handled) {
-                mutableMachineProductionStates.removeAll { it.machineId == productionState.machineId }
-            }
-        }
-    }
-
-    private fun tryDispenseHumanOperatedProduct(
-        machine: PlacedShopObject,
-        productionState: MachineProductionState
-    ): Boolean {
-        val outputAccess = state.slotPositionsFor(machine, MachineSlotType.BELT_OUTPUT).firstOrNull()?.accessTile
-        if (outputAccess != null) {
-            if (outputAccess !in grid.beltTiles) return false
-            if (state.isOccupied(outputAccess)) return false
-            mutableActiveProducts += ShopProduct(
-                id = productionState.productInstanceId,
-                productId = productionState.productId,
-                sourceMachineId = machine.id,
-                faultReason = productionState.faultReason,
-                state = ShopProductState.ON_BELT,
-                tile = outputAccess
-            )
-            return true
-        }
-        return tryHandProductToWorker(machine, productionState)
-    }
-
-    private fun canStartProduction(
-        machine: PlacedShopObject,
-        machineSpec: MachineSpec,
-        workerProfilesById: Map<String, WorkerProfile>
-    ): Boolean {
-        if (!automaticProducerCanWork(machine, machineSpec)) {
-            return false
-        }
-        if (machineSpec.manuality == Manuality.AUTOMATIC) {
-            return true
-        }
-
-        val operator = state.operatorWorkerForMachine(machine.id) ?: return false
-        if (!state.isWorkerAtAssignedSlot(operator)) {
-            return false
-        }
-        if (operator.carriedProductId != null || operator.movementPath.isNotEmpty()) {
-            return false
-        }
-
-        val workerProfile = workerProfilesById[operator.catalogId] ?: return false
-        return machineSpec.canAcceptOperator(workerProfile, workerProfilesById)
-    }
-
-    private fun automaticProducerCanWork(
-        machine: PlacedShopObject,
-        machineSpec: MachineSpec
-    ): Boolean {
-        val capacity = machineSpec.producerProfile?.faultyProductCapacity ?: return true
-        return capacity <= 0 || machine.faultyInventoryCount < capacity
-    }
-
-    private fun tryHandProductToWorker(
-        machine: PlacedShopObject,
-        productionState: MachineProductionState
-    ): Boolean {
-        val worker = state.operatorWorkerForMachine(machine.id) ?: return false
-        if (!state.isWorkerAtAssignedSlot(worker) || worker.carriedProductId != null) {
-            return false
-        }
-
-        val workerIndex = mutablePlacedObjects.indexOfFirst { it.id == worker.id }
-        if (workerIndex < 0) {
-            return false
-        }
-
-        mutableActiveProducts += ShopProduct(
-            id = productionState.productInstanceId,
-            productId = productionState.productId,
-            sourceMachineId = machine.id,
-            faultReason = productionState.faultReason,
-            state = ShopProductState.CARRIED,
-            carrierWorkerId = worker.id,
-            holderObjectId = worker.id
-        )
-        mutablePlacedObjects[workerIndex] = worker.copy(
-            carriedProductId = productionState.productInstanceId,
-            movementPath = emptyList(),
-            movementProgress = 0f
-        )
-        return true
-    }
-
-    private fun tryDispenseAutomaticProduct(
-        machine: PlacedShopObject,
-        productionState: MachineProductionState
-    ): Boolean {
-        val outputTile = preferredAutomaticOutputTile(machine) ?: return false
-        if (state.isOccupied(outputTile)) {
-            return false
-        }
-
-        mutableActiveProducts += ShopProduct(
-            id = productionState.productInstanceId,
-            productId = productionState.productId,
-            sourceMachineId = machine.id,
-            faultReason = productionState.faultReason,
-            state = if (outputTile in grid.beltTiles) ShopProductState.ON_BELT else ShopProductState.ON_FLOOR,
-            tile = outputTile
-        )
-        return true
-    }
-
     private fun preferredAutomaticOutputTile(machine: PlacedShopObject): TileCoordinate? {
         val machineTiles = state.occupiedTilesFor(machine)
         return machineTiles
@@ -443,11 +327,11 @@ internal class ProductionSystem(
     private fun rollFaultReason(
         machine: PlacedShopObject,
         machineSpec: MachineSpec,
+        recipe: MachineRecipe,
         workerProfilesById: Map<String, WorkerProfile>
     ): ProductFaultReason? {
-        val producerDefectChance = machineSpec.producerProfile?.defectChance ?: return null
         if (machineSpec.manuality == Manuality.AUTOMATIC) {
-            return if (random.nextFloat() < producerDefectChance) {
+            return if (random.nextFloat() < recipe.defectChance) {
                 ProductFaultReason.PRODUCTION_DEFECT
             } else {
                 null
@@ -457,11 +341,23 @@ internal class ProductionSystem(
         val operatorWorker = state.operatorWorkerForMachine(machine.id) ?: return null
         val workerProfile = workerProfilesById[operatorWorker.catalogId] ?: return null
         val workerRoleProfile = workerProfile.profileFor(WorkerRole.PRODUCER_OPERATOR) ?: return null
-        val workerDefectChance = workerRoleProfile.defectChance ?: return null
+        val workerDefectChance = workerRoleProfile.defectChance
 
         return when {
             random.nextFloat() < workerRoleProfile.sabotageChance -> ProductFaultReason.SABOTAGE
-            random.nextFloat() < producerDefectChance * workerDefectChance -> ProductFaultReason.PRODUCTION_DEFECT
+            workerDefectChance != null &&
+                random.nextFloat() < recipe.defectChance * workerDefectChance -> ProductFaultReason.PRODUCTION_DEFECT
+            else -> null
+        }
+    }
+
+    private fun worstFault(
+        a: ProductFaultReason?,
+        b: ProductFaultReason?
+    ): ProductFaultReason? {
+        return when {
+            a == ProductFaultReason.SABOTAGE || b == ProductFaultReason.SABOTAGE -> ProductFaultReason.SABOTAGE
+            a == ProductFaultReason.PRODUCTION_DEFECT || b == ProductFaultReason.PRODUCTION_DEFECT -> ProductFaultReason.PRODUCTION_DEFECT
             else -> null
         }
     }

@@ -60,6 +60,87 @@ class ShopFloorRecipeTest {
     }
 
     @Test
+    fun `faulty belt input propagates PRODUCTION_DEFECT to recipe output`() {
+        val recipeMachine = recipeSpec(defectChance = 0f)
+        val shopFloor = ShopFloor(
+            blueprint = chainedBeltBlueprint(),
+            machineSpecsById = mapOf(recipeMachine.id to recipeMachine),
+            initialPlacements = listOf(
+                PlacedShopObject(
+                    id = "blender-1",
+                    catalogId = recipeMachine.id,
+                    kind = PlacedShopObjectKind.MACHINE,
+                    position = TileCoordinate(10, 10),
+                    orientation = Orientation.NORTH
+                )
+            ),
+            initialProducts = listOf(
+                ShopProduct(
+                    id = "input-mug",
+                    productId = "ceramic-mug",
+                    sourceMachineId = "external",
+                    faultReason = ProductFaultReason.PRODUCTION_DEFECT,
+                    state = ShopProductState.ON_BELT,
+                    tile = TileCoordinate(9, 10)
+                ),
+                ShopProduct(
+                    id = "input-jar",
+                    productId = "glass-jar",
+                    sourceMachineId = "external",
+                    state = ShopProductState.ON_BELT,
+                    tile = TileCoordinate(8, 10)
+                )
+            )
+        )
+
+        repeat(40) { shopFloor.update(0.1f, emptyMap()) }
+
+        val output = assertNotNull(shopFloor.activeProducts.firstOrNull { it.productId == "tea-kettle" })
+        assertEquals(ProductFaultReason.PRODUCTION_DEFECT, output.faultReason)
+    }
+
+    @Test
+    fun `sabotaged belt input propagates SABOTAGE to recipe output and overrides machine defect`() {
+        val recipeMachine = recipeSpec(defectChance = 1f)
+        val shopFloor = ShopFloor(
+            blueprint = chainedBeltBlueprint(),
+            machineSpecsById = mapOf(recipeMachine.id to recipeMachine),
+            initialPlacements = listOf(
+                PlacedShopObject(
+                    id = "blender-1",
+                    catalogId = recipeMachine.id,
+                    kind = PlacedShopObjectKind.MACHINE,
+                    position = TileCoordinate(10, 10),
+                    orientation = Orientation.NORTH
+                )
+            ),
+            initialProducts = listOf(
+                ShopProduct(
+                    id = "input-mug",
+                    productId = "ceramic-mug",
+                    sourceMachineId = "external",
+                    faultReason = ProductFaultReason.SABOTAGE,
+                    state = ShopProductState.ON_BELT,
+                    tile = TileCoordinate(9, 10)
+                ),
+                ShopProduct(
+                    id = "input-jar",
+                    productId = "glass-jar",
+                    sourceMachineId = "external",
+                    faultReason = ProductFaultReason.PRODUCTION_DEFECT,
+                    state = ShopProductState.ON_BELT,
+                    tile = TileCoordinate(8, 10)
+                )
+            )
+        )
+
+        repeat(40) { shopFloor.update(0.1f, emptyMap()) }
+
+        val output = assertNotNull(shopFloor.activeProducts.firstOrNull { it.productId == "tea-kettle" })
+        assertEquals(ProductFaultReason.SABOTAGE, output.faultReason)
+    }
+
+    @Test
     fun `belt freezes when downstream machine input buffer is full`() {
         val recipeMachine = recipeSpec(durationSeconds = 100f)
         val shopFloor = ShopFloor(
@@ -143,7 +224,11 @@ class ShopFloorRecipeTest {
         assertEquals(true, shopFloor.canPlaceObject(validPlacement))
     }
 
-    private fun recipeSpec(durationSeconds: Float = 0.5f): MachineSpec {
+    private fun recipeSpec(
+        durationSeconds: Float = 0.5f,
+        defectChance: Float = 0f,
+        faultyProductCapacity: Int = 0
+    ): MachineSpec {
         return MachineSpec(
             id = "tea-blender",
             level = 1,
@@ -163,7 +248,9 @@ class ShopFloorRecipeTest {
                     RecipeInput("glass-jar", 1)
                 ),
                 outputProductId = "tea-kettle",
-                durationSeconds = durationSeconds
+                durationSeconds = durationSeconds,
+                defectChance = defectChance,
+                faultyProductCapacity = faultyProductCapacity
             )
         )
     }

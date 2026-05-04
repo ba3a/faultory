@@ -7,7 +7,6 @@ import com.faultory.core.content.MachineSlotType
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.MachineType
 import com.faultory.core.content.Manuality
-import com.faultory.core.content.ProducerMachineProfile
 import com.faultory.core.content.RecipeInput
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
@@ -139,8 +138,10 @@ class ShopFloorRecipeFetchTest {
             minimumOperatorWorkerIds = listOf(workerProfile.id),
             installCost = 100,
             operationDurationSeconds = 0.1f,
-            producerProfile = ProducerMachineProfile(
-                productId = "ceramic-mug",
+            recipe = MachineRecipe(
+                inputs = emptyList(),
+                outputProductId = "ceramic-mug",
+                durationSeconds = 0.1f,
                 defectChance = 0f
             )
         )

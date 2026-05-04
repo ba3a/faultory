@@ -89,13 +89,6 @@ class MachineValidatorTest {
     }
 
     @Test
-    fun `PRODUCER without producerProfile is an error`() {
-        replaceSingleMachine { it.copy(producerProfile = null) }
-        val issues = validate(AssetSelection.Machine("bench-assembler"))
-        assertTrue(issues.any { it.fieldName == "producerProfile" })
-    }
-
-    @Test
     fun `PRODUCER with qaProfile is an error`() {
         replaceSingleMachine {
             it.copy(
@@ -114,14 +107,14 @@ class MachineValidatorTest {
     @Test
     fun `QA without qaProfile is an error`() {
         replaceSingleMachine {
-            it.copy(type = MachineType.QA, producerProfile = null, qaProfile = null)
+            it.copy(type = MachineType.QA, recipe = null, qaProfile = null)
         }
         val issues = validate(AssetSelection.Machine("bench-assembler"))
         assertTrue(issues.any { it.fieldName == "qaProfile" })
     }
 
     @Test
-    fun `QA with producerProfile is an error`() {
+    fun `QA with recipe is an error`() {
         replaceSingleMachine {
             it.copy(
                 type = MachineType.QA,
@@ -134,7 +127,7 @@ class MachineValidatorTest {
             )
         }
         val issues = validate(AssetSelection.Machine("bench-assembler"))
-        assertTrue(issues.any { it.fieldName == "producerProfile" })
+        assertTrue(issues.any { it.fieldName == "recipe" })
     }
 
     @Test

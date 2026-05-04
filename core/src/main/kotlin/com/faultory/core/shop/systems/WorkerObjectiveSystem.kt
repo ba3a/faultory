@@ -6,6 +6,7 @@ import com.faultory.core.shop.MachineRecipeState
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
+import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
@@ -228,7 +229,11 @@ internal class WorkerObjectiveSystem(
             val current = recipeState.inputBuffer[carriedProduct.productId] ?: 0
             replaceRecipeState(
                 recipeState.copy(
-                    inputBuffer = recipeState.inputBuffer + (carriedProduct.productId to current + 1)
+                    inputBuffer = recipeState.inputBuffer + (carriedProduct.productId to current + 1),
+                    accumulatedInputFault = worstFault(
+                        recipeState.accumulatedInputFault,
+                        carriedProduct.faultReason
+                    )
                 )
             )
         }
@@ -256,6 +261,17 @@ internal class WorkerObjectiveSystem(
             state.mutableMachineRecipeStates[idx] = recipeState
         } else {
             state.mutableMachineRecipeStates += recipeState
+        }
+    }
+
+    private fun worstFault(
+        a: ProductFaultReason?,
+        b: ProductFaultReason?
+    ): ProductFaultReason? {
+        return when {
+            a == ProductFaultReason.SABOTAGE || b == ProductFaultReason.SABOTAGE -> ProductFaultReason.SABOTAGE
+            a == ProductFaultReason.PRODUCTION_DEFECT || b == ProductFaultReason.PRODUCTION_DEFECT -> ProductFaultReason.PRODUCTION_DEFECT
+            else -> null
         }
     }
 

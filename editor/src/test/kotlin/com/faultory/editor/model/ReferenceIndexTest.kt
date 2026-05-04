@@ -34,7 +34,7 @@ class ReferenceIndexTest {
     }
 
     @Test
-    fun `product referenced from machine producerProfile and worker acceptedProductIds`() {
+    fun `product referenced from machine recipe and worker acceptedProductIds`() {
         val worker = repository.shopCatalog.workers.single()
         val newProfiles = worker.roleProfiles.map { profile ->
             if (profile.role == WorkerRole.PRODUCER_OPERATOR) {

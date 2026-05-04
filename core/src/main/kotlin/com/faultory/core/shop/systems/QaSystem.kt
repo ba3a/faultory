@@ -335,11 +335,11 @@ internal class QaSystem(
             .asSequence()
             .filter { machine ->
                 val machineSpec = machineSpecsById[machine.catalogId] ?: return@filter false
-                val producerProfile = machineSpec.producerProfile ?: return@filter false
+                val recipe = machineSpec.recipe ?: return@filter false
                 machineSpec.type == MachineType.PRODUCER &&
                     machineSpec.manuality == Manuality.AUTOMATIC &&
-                    producerProfile.faultyProductCapacity > 0 &&
-                    machine.faultyInventoryCount < producerProfile.faultyProductCapacity
+                    recipe.faultyProductCapacity > 0 &&
+                    machine.faultyInventoryCount < recipe.faultyProductCapacity
             }
             .minWithOrNull(compareBy<PlacedShopObject> { state.manhattanDistance(it.position, originTile) }.thenBy { it.id })
     }

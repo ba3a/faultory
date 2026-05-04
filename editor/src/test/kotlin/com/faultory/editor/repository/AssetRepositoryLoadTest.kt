@@ -35,7 +35,7 @@ class AssetRepositoryLoadTest {
         assertEquals("bench-assembler", machine.id)
         assertEquals(MachineType.PRODUCER, machine.type)
         assertEquals(Manuality.HUMAN_OPERATED, machine.manuality)
-        assertEquals("ceramic-mug", machine.producerProfile?.productId)
+        assertEquals("ceramic-mug", machine.recipe?.outputProductId)
     }
 
     @Test

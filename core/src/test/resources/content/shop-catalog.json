@@ -95,8 +95,10 @@
         "leftUpgradeId": "servo-assembler",
         "rightUpgradeId": "precision-assembler"
       },
-      "producerProfile": {
-        "productId": "ceramic-mug",
+      "recipe": {
+        "inputs": [],
+        "outputProductId": "ceramic-mug",
+        "durationSeconds": 1.8,
         "defectChance": 0.18,
         "faultyProductCapacity": 0
       }

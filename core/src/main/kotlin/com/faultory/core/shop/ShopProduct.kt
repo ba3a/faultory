@@ -54,10 +54,11 @@ data class QueuedMachineOutput(
 data class MachineRecipeState(
     val machineId: String,
     val inputBuffer: Map<String, Int> = emptyMap(),
-    val outputQueue: List<QueuedMachineOutput> = emptyList()
+    val outputQueue: List<QueuedMachineOutput> = emptyList(),
+    val accumulatedInputFault: ProductFaultReason? = null
 ) {
     val isEmpty: Boolean
-        get() = inputBuffer.isEmpty() && outputQueue.isEmpty()
+        get() = inputBuffer.isEmpty() && outputQueue.isEmpty() && accumulatedInputFault == null
 }
 
 @Serializable

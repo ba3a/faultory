@@ -1,12 +1,12 @@
 package com.faultory.core.shop
 
+import com.faultory.core.content.MachineRecipe
 import com.faultory.core.content.MachineShapeTile
 import com.faultory.core.content.MachineSlotSpec
 import com.faultory.core.content.MachineSlotType
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.MachineType
 import com.faultory.core.content.Manuality
-import com.faultory.core.content.ProducerMachineProfile
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.content.WorkerRoleProfile
@@ -170,8 +170,10 @@ class ShopFloorProductionTest {
             minimumOperatorWorkerIds = listOf("line-inspector"),
             installCost = 50,
             operationDurationSeconds = durationSeconds,
-            producerProfile = ProducerMachineProfile(
-                productId = "ceramic-mug",
+            recipe = MachineRecipe(
+                inputs = emptyList(),
+                outputProductId = "ceramic-mug",
+                durationSeconds = durationSeconds,
                 defectChance = defectChance
             )
         )

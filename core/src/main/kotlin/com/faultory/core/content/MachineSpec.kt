@@ -20,13 +20,15 @@ data class MachineSpec(
     val operationDurationSeconds: Float,
     val requiredCompletedLevelIds: List<String> = emptyList(),
     val upgradeTree: BinaryUpgradeTree? = null,
-    val producerProfile: ProducerMachineProfile? = null,
     val qaProfile: QaMachineProfile? = null,
     val recipe: MachineRecipe? = null
 ) {
     init {
         require(slots.count { it.type == MachineSlotType.BELT_OUTPUT } <= 1) {
             "Machine $id may not declare more than one BELT_OUTPUT slot"
+        }
+        require(type != MachineType.PRODUCER || recipe != null) {
+            "PRODUCER machine $id requires a recipe"
         }
     }
 
@@ -75,7 +77,7 @@ data class MachineSpec(
         return canBeOperatedBy(worker, workersById)
     }
 
-    fun producedProductId(): String? = producerProfile?.productId
+    fun producedProductId(): String? = recipe?.outputProductId
 
     fun occupiedTiles(
         anchorTile: TileCoordinate,
@@ -122,13 +124,6 @@ enum class Manuality {
     HUMAN_OPERATED,
     AUTOMATIC
 }
-
-@Serializable
-data class ProducerMachineProfile(
-    val productId: String,
-    val defectChance: Float,
-    val faultyProductCapacity: Int = 0
-)
 
 @Serializable
 data class QaMachineProfile(

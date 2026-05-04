@@ -33,12 +33,21 @@ class ReferenceIndex(private val repository: AssetRepository) {
                     )
                 }
             }
-            if (machine.producerProfile?.productId == productId) {
+            if (machine.recipe?.outputProductId == productId) {
                 out += Reference(
                     source = AssetSelection.Machine(machine.id),
-                    field = "producerProfile.productId",
+                    field = "recipe.outputProductId",
                     description = "Machine '${machine.id}' produces this product",
                 )
+            }
+            machine.recipe?.inputs?.forEachIndexed { index, input ->
+                if (input.productId == productId) {
+                    out += Reference(
+                        source = AssetSelection.Machine(machine.id),
+                        field = "recipe.inputs[$index].productId",
+                        description = "Machine '${machine.id}' consumes this product in its recipe",
+                    )
+                }
             }
         }
         repository.shopCatalog.workers.forEach { worker ->
