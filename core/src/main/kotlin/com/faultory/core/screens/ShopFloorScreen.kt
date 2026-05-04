@@ -182,6 +182,5 @@ class ShopFloorScreen(
         if (Gdx.input.inputProcessor === input) {
             Gdx.input.inputProcessor = null
         }
-        shopFloor.dispose()
     }
 }

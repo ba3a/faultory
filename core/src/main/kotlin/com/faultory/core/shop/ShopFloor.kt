@@ -1,6 +1,5 @@
 package com.faultory.core.shop
 
-import com.badlogic.gdx.utils.Disposable
 import com.faultory.core.content.*
 import com.faultory.core.shop.systems.*
 import com.faultory.core.systems.BeltSupplyFeeder
@@ -18,7 +17,7 @@ class ShopFloor(
     initialCash: Int = 0,
     private val beltSupplyFeeder: BeltSupplyFeeder? = null,
     random: Random = Random.Default
-) : Disposable {
+) {
 
     val grid = ShopGrid(blueprint)
 
@@ -461,8 +460,6 @@ class ShopFloor(
         return mutableActiveProducts.any { it.state != ShopProductState.CARRIED && it.tile == tile }
     }
 
-    override fun dispose() {
-    }
 }
 
 sealed interface WorkerAssignmentResult {
