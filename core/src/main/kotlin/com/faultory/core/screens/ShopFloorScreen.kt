@@ -179,6 +179,9 @@ class ShopFloorScreen(
     }
 
     override fun dispose() {
+        if (Gdx.input.inputProcessor === input) {
+            Gdx.input.inputProcessor = null
+        }
         shopFloor.dispose()
     }
 }
