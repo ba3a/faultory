@@ -263,17 +263,14 @@ internal class ShopFloorState(
         ignoreWorkerId: String? = null,
         ignoreCarriedProductId: String? = null
     ): Set<TileCoordinate> {
+        ensureTileOccupancyIndex()
         return buildSet {
-            mutablePlacedObjects
-                .asSequence()
-                .filter { it.id != ignoreWorkerId }
-                .flatMap { occupiedTilesFor(it).asSequence() }
-                .forEach(::add)
-            mutableActiveProducts
-                .asSequence()
-                .filter { it.id != ignoreCarriedProductId && it.state != ShopProductState.CARRIED }
-                .mapNotNull { it.tile }
-                .forEach(::add)
+            placedObjectIdByTile.forEach { (tile, objectId) ->
+                if (objectId != ignoreWorkerId) add(tile)
+            }
+            productIdByTile.forEach { (tile, productId) ->
+                if (productId != ignoreCarriedProductId) add(tile)
+            }
         }
     }
 
