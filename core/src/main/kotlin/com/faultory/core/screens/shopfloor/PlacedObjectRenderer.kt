@@ -57,42 +57,30 @@ class PlacedObjectRenderer(
 
         val bufferTotal = recipeState.inputBuffer.values.sum()
         if (bufferTotal > 0) {
-            renderer.color = Color(0.55f, 0.78f, 0.92f, 1f)
+            renderer.color = RECIPE_INPUT_BUFFER
             for (i in 0 until bufferTotal.coerceAtMost(6)) {
-                renderer.rect(
-                    baseX + 4f + (i * 4f),
-                    baseY + 4f,
-                    3f,
-                    3f
-                )
+                renderer.rect(baseX + 4f + (i * 4f), baseY + 4f, 3f, 3f)
             }
         }
 
         val queueSize = recipeState.outputQueue.size
         if (queueSize > 0) {
-            renderer.color = Color(0.96f, 0.82f, 0.34f, 1f)
+            renderer.color = RECIPE_OUTPUT_QUEUE
             for (i in 0 until queueSize.coerceAtMost(6)) {
-                renderer.rect(
-                    baseX + GameConfig.tileSize - 7f - (i * 4f),
-                    baseY + GameConfig.tileSize - 7f,
-                    3f,
-                    3f
-                )
+                renderer.rect(baseX + GameConfig.tileSize - 7f - (i * 4f), baseY + GameConfig.tileSize - 7f, 3f, 3f)
             }
         }
     }
 
     private fun drawAssignmentTargetHover(renderer: ShapeRenderer) {
-        if (!workerAssignment.hasPendingAssignment) {
-            return
-        }
+        if (!workerAssignment.hasPendingAssignment) return
 
         val machine = hoverState.hoveredTile
             ?.let(shopFloor::objectAt)
             ?.takeIf { it.kind == PlacedShopObjectKind.MACHINE }
             ?: return
 
-        renderer.color = Color(0.98f, 0.88f, 0.61f, 1f)
+        renderer.color = ASSIGNMENT_HOVER
         for (tile in shopFloor.occupiedTilesFor(machine)) {
             renderer.rect(
                 shopFloor.grid.worldXFor(tile) + 1f,
@@ -130,7 +118,7 @@ class PlacedObjectRenderer(
     private fun drawPlacedObjectOutline(renderer: ShapeRenderer, placedObject: PlacedShopObject) {
         if (placedObject.kind == PlacedShopObjectKind.WORKER) {
             val renderPosition = geometry.renderPositionFor(placedObject)
-            renderer.color = Color(0.89f, 0.95f, 0.98f, 1f)
+            renderer.color = WORKER_OUTLINE
             renderer.circle(
                 renderPosition.worldX + GameConfig.tileSize / 2f,
                 renderPosition.worldY + GameConfig.tileSize / 2f,
@@ -138,7 +126,7 @@ class PlacedObjectRenderer(
             )
 
             if (placedObject.id == workerAssignment.assignmentPendingWorkerId) {
-                renderer.color = Color(0.99f, 0.90f, 0.62f, 1f)
+                renderer.color = ShopFloorPalette.HIGHLIGHT_GOLD
                 renderer.circle(
                     renderPosition.worldX + GameConfig.tileSize / 2f,
                     renderPosition.worldY + GameConfig.tileSize / 2f,
@@ -162,9 +150,9 @@ class PlacedObjectRenderer(
     private fun drawProductFill(renderer: ShapeRenderer, product: ShopProduct) {
         val renderPosition = geometry.renderPositionFor(product) ?: return
         renderer.color = when (product.faultReason) {
-            ProductFaultReason.SABOTAGE -> Color(0.90f, 0.24f, 0.28f, 1f)
-            ProductFaultReason.PRODUCTION_DEFECT -> Color(0.83f, 0.46f, 0.20f, 1f)
-            null -> Color(0.86f, 0.89f, 0.74f, 1f)
+            ProductFaultReason.SABOTAGE -> PRODUCT_SABOTAGED
+            ProductFaultReason.PRODUCTION_DEFECT -> PRODUCT_DEFECTIVE
+            null -> PRODUCT_OK
         }
         renderer.rect(
             renderPosition.worldX + 12f,
@@ -177,9 +165,9 @@ class PlacedObjectRenderer(
     private fun drawProductOutline(renderer: ShapeRenderer, product: ShopProduct) {
         val renderPosition = geometry.renderPositionFor(product) ?: return
         renderer.color = when (product.state) {
-            ShopProductState.ON_BELT -> Color(0.97f, 0.97f, 0.86f, 1f)
-            ShopProductState.ON_FLOOR -> Color(0.91f, 0.94f, 0.97f, 1f)
-            ShopProductState.CARRIED -> Color(0.99f, 0.90f, 0.62f, 1f)
+            ShopProductState.ON_BELT -> PRODUCT_OUTLINE_ON_BELT
+            ShopProductState.ON_FLOOR -> PRODUCT_OUTLINE_ON_FLOOR
+            ShopProductState.CARRIED -> ShopFloorPalette.HIGHLIGHT_GOLD
         }
         renderer.rect(
             renderPosition.worldX + 10f,
@@ -191,11 +179,7 @@ class PlacedObjectRenderer(
 
     private fun drawOrientationMarker(renderer: ShapeRenderer, placedObject: PlacedShopObject) {
         val marker = geometry.orientationMarkerFor(placedObject)
-        renderer.color = if (placedObject.kind == PlacedShopObjectKind.WORKER) {
-            Color(0.97f, 0.98f, 0.99f, 1f)
-        } else {
-            Color(0.15f, 0.16f, 0.18f, 1f)
-        }
+        renderer.color = if (placedObject.kind == PlacedShopObjectKind.WORKER) ORIENTATION_MARKER_WORKER else ORIENTATION_MARKER_MACHINE
         renderer.line(marker.centerX, marker.centerY, marker.tipX, marker.tipY)
 
         val wingLength = 4f
@@ -211,26 +195,29 @@ class PlacedObjectRenderer(
     }
 
     private fun drawFailureBlink(renderer: ShapeRenderer) {
-        if (!failureBlink.isVisibleFrame()) {
-            return
-        }
+        if (!failureBlink.isVisibleFrame()) return
         val machineId = failureBlink.machineId ?: return
         val machine = shopFloor.findObjectById(machineId) ?: return
 
-        renderer.color = Color(0.97f, 0.28f, 0.24f, 1f)
+        renderer.color = FAILURE_BLINK
         for (tile in shopFloor.occupiedTilesFor(machine)) {
-            renderer.rect(
-                shopFloor.grid.worldXFor(tile),
-                shopFloor.grid.worldYFor(tile),
-                GameConfig.tileSize,
-                GameConfig.tileSize
-            )
-            renderer.rect(
-                shopFloor.grid.worldXFor(tile) + 3f,
-                shopFloor.grid.worldYFor(tile) + 3f,
-                GameConfig.tileSize - 6f,
-                GameConfig.tileSize - 6f
-            )
+            renderer.rect(shopFloor.grid.worldXFor(tile), shopFloor.grid.worldYFor(tile), GameConfig.tileSize, GameConfig.tileSize)
+            renderer.rect(shopFloor.grid.worldXFor(tile) + 3f, shopFloor.grid.worldYFor(tile) + 3f, GameConfig.tileSize - 6f, GameConfig.tileSize - 6f)
         }
+    }
+
+    private companion object {
+        private val RECIPE_INPUT_BUFFER = Color(0.55f, 0.78f, 0.92f, 1f)
+        private val RECIPE_OUTPUT_QUEUE = Color(0.96f, 0.82f, 0.34f, 1f)
+        private val ASSIGNMENT_HOVER = Color(0.98f, 0.88f, 0.61f, 1f)
+        private val WORKER_OUTLINE = Color(0.89f, 0.95f, 0.98f, 1f)
+        private val PRODUCT_SABOTAGED = Color(0.90f, 0.24f, 0.28f, 1f)
+        private val PRODUCT_DEFECTIVE = Color(0.83f, 0.46f, 0.20f, 1f)
+        private val PRODUCT_OK = Color(0.86f, 0.89f, 0.74f, 1f)
+        private val PRODUCT_OUTLINE_ON_BELT = Color(0.97f, 0.97f, 0.86f, 1f)
+        private val PRODUCT_OUTLINE_ON_FLOOR = Color(0.91f, 0.94f, 0.97f, 1f)
+        private val ORIENTATION_MARKER_WORKER = Color(0.97f, 0.98f, 0.99f, 1f)
+        private val ORIENTATION_MARKER_MACHINE = Color(0.15f, 0.16f, 0.18f, 1f)
+        private val FAILURE_BLINK = Color(0.97f, 0.28f, 0.24f, 1f)
     }
 }

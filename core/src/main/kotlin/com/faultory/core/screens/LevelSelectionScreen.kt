@@ -153,13 +153,13 @@ class LevelSelectionScreen(
 
     private fun drawShapes(renderer: ShapeRenderer) {
         renderer.begin(ShapeRenderer.ShapeType.Filled)
-        renderer.color = Color(0.10f, 0.12f, 0.14f, 1f)
+        renderer.color = BACKGROUND
         renderer.rect(0f, 0f, GameConfig.virtualWidth, GameConfig.virtualHeight)
 
-        renderer.color = Color(0.14f, 0.17f, 0.20f, 1f)
+        renderer.color = TITLE_BAND
         renderer.rect(72f, GameConfig.virtualHeight - 180f, GameConfig.virtualWidth - 144f, 96f)
 
-        renderer.color = Color(0.16f, 0.20f, 0.24f, 1f)
+        renderer.color = LANGUAGE_BUTTON_FILL
         renderer.rect(languageButtonBounds.x, languageButtonBounds.y, languageButtonBounds.width, languageButtonBounds.height)
 
         for (index in levelCatalog.levels.indices) {
@@ -167,33 +167,33 @@ class LevelSelectionScreen(
             val locked = level.id in lockedLevelIds
             val bounds = cardBounds[index]
             renderer.color = when {
-                locked && index == selectedIndex -> Color(0.20f, 0.20f, 0.22f, 1f)
-                locked -> Color(0.13f, 0.14f, 0.16f, 1f)
-                index == selectedIndex -> Color(0.22f, 0.58f, 0.62f, 1f)
-                else -> Color(0.18f, 0.21f, 0.24f, 1f)
+                locked && index == selectedIndex -> CARD_FILL_LOCKED_SELECTED
+                locked -> CARD_FILL_LOCKED
+                index == selectedIndex -> CARD_FILL_SELECTED
+                else -> CARD_FILL_DEFAULT
             }
             renderer.rect(bounds.x, bounds.y, bounds.width, bounds.height)
 
             renderer.color = when {
-                locked -> Color(0.28f, 0.24f, 0.20f, 1f)
-                index == selectedIndex -> Color(0.90f, 0.74f, 0.29f, 1f)
-                else -> Color(0.32f, 0.38f, 0.42f, 1f)
+                locked -> CARD_BAND_LOCKED
+                index == selectedIndex -> CARD_BAND_SELECTED
+                else -> CARD_BAND_DEFAULT
             }
             renderer.rect(bounds.x, bounds.y + bounds.height - 14f, bounds.width, 14f)
         }
         renderer.end()
 
         renderer.begin(ShapeRenderer.ShapeType.Line)
-        renderer.color = Color(0.55f, 0.61f, 0.66f, 1f)
+        renderer.color = LANGUAGE_BUTTON_BORDER
         renderer.rect(languageButtonBounds.x, languageButtonBounds.y, languageButtonBounds.width, languageButtonBounds.height)
         for (index in levelCatalog.levels.indices) {
             val level = levelCatalog.levels[index]
             val locked = level.id in lockedLevelIds
             val bounds = cardBounds[index]
             renderer.color = when {
-                locked -> Color(0.32f, 0.34f, 0.38f, 1f)
-                index == selectedIndex -> Color(0.98f, 0.88f, 0.61f, 1f)
-                else -> Color(0.43f, 0.49f, 0.54f, 1f)
+                locked -> CARD_BORDER_LOCKED
+                index == selectedIndex -> CARD_BORDER_SELECTED
+                else -> CARD_BORDER_DEFAULT
             }
             renderer.rect(bounds.x, bounds.y, bounds.width, bounds.height)
         }
@@ -206,15 +206,15 @@ class LevelSelectionScreen(
         batch.projectionMatrix = viewport.camera.combined
 
         batch.begin()
-        font.color = Color(0.94f, 0.95f, 0.96f, 1f)
+        font.color = TITLE_TEXT
         titleLayout.setText(font, Messages.text(MessageKey.LEVEL_SELECT_TITLE))
         font.draw(batch, titleLayout, 96f, GameConfig.virtualHeight - 118f)
 
-        font.color = Color(0.76f, 0.80f, 0.84f, 1f)
+        font.color = SUBTITLE_TEXT
         subtitleLayout.setText(font, Messages.text(MessageKey.LEVEL_SELECT_HINT))
         font.draw(batch, subtitleLayout, 96f, GameConfig.virtualHeight - 146f)
 
-        font.color = Color(0.90f, 0.93f, 0.95f, 1f)
+        font.color = LANGUAGE_BUTTON_TEXT
         val languageLabel = LocaleManager.currentLocale.toLanguageTag().uppercase()
         titleLayout.setText(font, languageLabel)
         font.draw(
@@ -229,18 +229,18 @@ class LevelSelectionScreen(
             val locked = level.id in lockedLevelIds
             val bounds = cardBounds[index]
 
-            font.color = if (locked) Color(0.62f, 0.64f, 0.68f, 1f) else Color(0.98f, 0.99f, 1f, 1f)
+            font.color = if (locked) CARD_TITLE_TEXT_LOCKED else CARD_TITLE_TEXT
             titleLayout.setText(font, Messages.catalog(MessageKey.LEVEL_DISPLAYNAME, level.id))
             font.draw(batch, titleLayout, bounds.x + 28f, bounds.y + bounds.height - 42f)
 
-            font.color = if (locked) Color(0.55f, 0.58f, 0.62f, 1f) else Color(0.83f, 0.87f, 0.90f, 1f)
+            font.color = if (locked) CARD_SUBTITLE_TEXT_LOCKED else CARD_SUBTITLE_TEXT
             subtitleLayout.setText(font, Messages.catalog(MessageKey.LEVEL_SUBTITLE, level.id))
             font.draw(batch, subtitleLayout, bounds.x + 28f, bounds.y + bounds.height - 74f)
 
             font.color = when {
-                locked -> Color(0.78f, 0.66f, 0.42f, 1f)
-                index == selectedIndex -> Color(1f, 0.92f, 0.68f, 1f)
-                else -> Color(0.74f, 0.78f, 0.82f, 1f)
+                locked -> CARD_FOOTER_TEXT_LOCKED
+                index == selectedIndex -> CARD_FOOTER_TEXT_SELECTED
+                else -> CARD_FOOTER_TEXT
             }
             val footerText = if (locked) {
                 val missing = missingPrereqsByLevelId[level.id].orEmpty()
@@ -253,7 +253,7 @@ class LevelSelectionScreen(
         }
 
         if (lockedMessageTimer > 0f) {
-            font.color = Color(1f, 0.78f, 0.46f, 1f)
+            font.color = LOCKED_MESSAGE_TEXT
             val message = lockedSelectionMessage()
             if (message != null) {
                 hintLayout.setText(font, message)
@@ -314,5 +314,33 @@ class LevelSelectionScreen(
         scratchVector.set(screenX.toFloat(), screenY.toFloat(), 0f)
         viewport.unproject(scratchVector)
         return cardBounds.indexOfFirst { it.contains(scratchVector.x, scratchVector.y) }
+    }
+
+    private companion object {
+        private val BACKGROUND = Color(0.10f, 0.12f, 0.14f, 1f)
+        private val TITLE_BAND = Color(0.14f, 0.17f, 0.20f, 1f)
+        private val LANGUAGE_BUTTON_FILL = Color(0.16f, 0.20f, 0.24f, 1f)
+        private val CARD_FILL_LOCKED_SELECTED = Color(0.20f, 0.20f, 0.22f, 1f)
+        private val CARD_FILL_LOCKED = Color(0.13f, 0.14f, 0.16f, 1f)
+        private val CARD_FILL_SELECTED = Color(0.22f, 0.58f, 0.62f, 1f)
+        private val CARD_FILL_DEFAULT = Color(0.18f, 0.21f, 0.24f, 1f)
+        private val CARD_BAND_LOCKED = Color(0.28f, 0.24f, 0.20f, 1f)
+        private val CARD_BAND_SELECTED = Color(0.90f, 0.74f, 0.29f, 1f)
+        private val CARD_BAND_DEFAULT = Color(0.32f, 0.38f, 0.42f, 1f)
+        private val LANGUAGE_BUTTON_BORDER = Color(0.55f, 0.61f, 0.66f, 1f)
+        private val CARD_BORDER_LOCKED = Color(0.32f, 0.34f, 0.38f, 1f)
+        private val CARD_BORDER_SELECTED = Color(0.98f, 0.88f, 0.61f, 1f)
+        private val CARD_BORDER_DEFAULT = Color(0.43f, 0.49f, 0.54f, 1f)
+        private val TITLE_TEXT = Color(0.94f, 0.95f, 0.96f, 1f)
+        private val SUBTITLE_TEXT = Color(0.76f, 0.80f, 0.84f, 1f)
+        private val LANGUAGE_BUTTON_TEXT = Color(0.90f, 0.93f, 0.95f, 1f)
+        private val CARD_TITLE_TEXT_LOCKED = Color(0.62f, 0.64f, 0.68f, 1f)
+        private val CARD_TITLE_TEXT = Color(0.98f, 0.99f, 1f, 1f)
+        private val CARD_SUBTITLE_TEXT_LOCKED = Color(0.55f, 0.58f, 0.62f, 1f)
+        private val CARD_SUBTITLE_TEXT = Color(0.83f, 0.87f, 0.90f, 1f)
+        private val CARD_FOOTER_TEXT_LOCKED = Color(0.78f, 0.66f, 0.42f, 1f)
+        private val CARD_FOOTER_TEXT_SELECTED = Color(1f, 0.92f, 0.68f, 1f)
+        private val CARD_FOOTER_TEXT = Color(0.74f, 0.78f, 0.82f, 1f)
+        private val LOCKED_MESSAGE_TEXT = Color(1f, 0.78f, 0.46f, 1f)
     }
 }

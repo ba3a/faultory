@@ -22,35 +22,19 @@ class HudRenderer(
 ) : ShopFloorLayer {
     override fun drawFill(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
-        renderer.color = if (hoverState.isBackButtonHovered) {
-            Color(0.24f, 0.31f, 0.37f, 1f)
-        } else {
-            Color(0.16f, 0.20f, 0.24f, 1f)
-        }
+        renderer.color = if (hoverState.isBackButtonHovered) BUTTON_FILL_HOVERED else BUTTON_FILL_DEFAULT
         renderer.rect(BACK_BUTTON_BOUNDS.x, BACK_BUTTON_BOUNDS.y, BACK_BUTTON_BOUNDS.width, BACK_BUTTON_BOUNDS.height)
 
-        renderer.color = if (hoverState.isLanguageButtonHovered) {
-            Color(0.24f, 0.31f, 0.37f, 1f)
-        } else {
-            Color(0.16f, 0.20f, 0.24f, 1f)
-        }
+        renderer.color = if (hoverState.isLanguageButtonHovered) BUTTON_FILL_HOVERED else BUTTON_FILL_DEFAULT
         renderer.rect(LANGUAGE_BUTTON_BOUNDS.x, LANGUAGE_BUTTON_BOUNDS.y, LANGUAGE_BUTTON_BOUNDS.width, LANGUAGE_BUTTON_BOUNDS.height)
     }
 
     override fun drawLine(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
-        renderer.color = if (hoverState.isBackButtonHovered) {
-            Color(0.98f, 0.88f, 0.61f, 1f)
-        } else {
-            Color(0.55f, 0.61f, 0.66f, 1f)
-        }
+        renderer.color = if (hoverState.isBackButtonHovered) BUTTON_BORDER_HOVERED else BUTTON_BORDER_DEFAULT
         renderer.rect(BACK_BUTTON_BOUNDS.x, BACK_BUTTON_BOUNDS.y, BACK_BUTTON_BOUNDS.width, BACK_BUTTON_BOUNDS.height)
 
-        renderer.color = if (hoverState.isLanguageButtonHovered) {
-            Color(0.98f, 0.88f, 0.61f, 1f)
-        } else {
-            Color(0.55f, 0.61f, 0.66f, 1f)
-        }
+        renderer.color = if (hoverState.isLanguageButtonHovered) BUTTON_BORDER_HOVERED else BUTTON_BORDER_DEFAULT
         renderer.rect(LANGUAGE_BUTTON_BOUNDS.x, LANGUAGE_BUTTON_BOUNDS.y, LANGUAGE_BUTTON_BOUNDS.width, LANGUAGE_BUTTON_BOUNDS.height)
     }
 
@@ -60,11 +44,11 @@ class HudRenderer(
         val titleLayout = ctx.titleLayout
         val hintLayout = ctx.hintLayout
 
-        font.color = Color(0.95f, 0.96f, 0.97f, 1f)
+        font.color = TITLE_TEXT
         titleLayout.setText(font, Messages.catalog(MessageKey.LEVEL_DISPLAYNAME, level.id))
         font.draw(batch, titleLayout, 32f, GameConfig.virtualHeight - 28f)
 
-        font.color = Color(0.76f, 0.80f, 0.84f, 1f)
+        font.color = ShopFloorPalette.TEXT_SECONDARY
         hintLayout.setText(
             font,
             Messages.format(
@@ -90,19 +74,11 @@ class HudRenderer(
         )
         font.draw(batch, hintLayout, 32f, GameConfig.virtualHeight - 76f)
 
-        font.color = if (hoverState.isBackButtonHovered) {
-            Color(1f, 0.94f, 0.71f, 1f)
-        } else {
-            Color(0.90f, 0.93f, 0.95f, 1f)
-        }
+        font.color = if (hoverState.isBackButtonHovered) ShopFloorPalette.TEXT_HIGHLIGHT_GOLD else BUTTON_TEXT_DEFAULT
         titleLayout.setText(font, Messages.text(MessageKey.HUD_BACK_TO_LEVELS))
         font.draw(batch, titleLayout, BACK_BUTTON_BOUNDS.x + 16f, BACK_BUTTON_BOUNDS.y + 26f)
 
-        font.color = if (hoverState.isLanguageButtonHovered) {
-            Color(1f, 0.94f, 0.71f, 1f)
-        } else {
-            Color(0.90f, 0.93f, 0.95f, 1f)
-        }
+        font.color = if (hoverState.isLanguageButtonHovered) ShopFloorPalette.TEXT_HIGHLIGHT_GOLD else BUTTON_TEXT_DEFAULT
         val languageLabel = LocaleManager.currentLocale.toLanguageTag().uppercase()
         titleLayout.setText(font, languageLabel)
         font.draw(
@@ -163,5 +139,12 @@ class HudRenderer(
             80f,
             40f
         )
+
+        private val BUTTON_FILL_HOVERED = Color(0.24f, 0.31f, 0.37f, 1f)
+        private val BUTTON_FILL_DEFAULT = Color(0.16f, 0.20f, 0.24f, 1f)
+        private val BUTTON_BORDER_HOVERED = Color(0.98f, 0.88f, 0.61f, 1f)
+        private val BUTTON_BORDER_DEFAULT = Color(0.55f, 0.61f, 0.66f, 1f)
+        private val TITLE_TEXT = Color(0.95f, 0.96f, 0.97f, 1f)
+        private val BUTTON_TEXT_DEFAULT = Color(0.90f, 0.93f, 0.95f, 1f)
     }
 }

@@ -7,10 +7,10 @@ import com.faultory.core.shop.ShopFloor
 class GridBackgroundRenderer(private val shopFloor: ShopFloor) : ShopFloorLayer {
     override fun drawFill(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
-        renderer.color = Color(0.08f, 0.09f, 0.11f, 1f)
+        renderer.color = BACKGROUND
         renderer.rect(0f, 0f, GameConfig.virtualWidth, GameConfig.virtualHeight)
 
-        renderer.color = Color(0.12f, 0.15f, 0.18f, 1f)
+        renderer.color = PLAY_AREA
         renderer.rect(
             0f,
             GameConfig.bankHeight,
@@ -18,13 +18,13 @@ class GridBackgroundRenderer(private val shopFloor: ShopFloor) : ShopFloorLayer 
             GameConfig.virtualHeight - GameConfig.hudHeight - GameConfig.bankHeight
         )
 
-        renderer.color = Color(0.11f, 0.13f, 0.16f, 1f)
+        renderer.color = HUD_BAND
         renderer.rect(0f, GameConfig.virtualHeight - GameConfig.hudHeight, GameConfig.virtualWidth, GameConfig.hudHeight)
 
-        renderer.color = Color(0.10f, 0.11f, 0.14f, 1f)
+        renderer.color = BANK_BAND
         renderer.rect(0f, 0f, GameConfig.virtualWidth, GameConfig.bankHeight)
 
-        renderer.color = Color(0.20f, 0.33f, 0.42f, 1f)
+        renderer.color = BELT_FILL
         for (beltTile in shopFloor.grid.beltTiles) {
             renderer.rect(
                 shopFloor.grid.worldXFor(beltTile),
@@ -37,7 +37,7 @@ class GridBackgroundRenderer(private val shopFloor: ShopFloor) : ShopFloorLayer 
 
     override fun drawLine(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
-        renderer.color = Color(0.18f, 0.22f, 0.26f, 1f)
+        renderer.color = GRID_LINE
 
         var currentX = 0f
         while (currentX <= GameConfig.virtualWidth) {
@@ -51,7 +51,7 @@ class GridBackgroundRenderer(private val shopFloor: ShopFloor) : ShopFloorLayer 
             currentY += GameConfig.tileSize
         }
 
-        renderer.color = Color(0.37f, 0.54f, 0.67f, 1f)
+        renderer.color = BELT_OUTLINE
         for (beltTile in shopFloor.grid.beltTiles) {
             renderer.rect(
                 shopFloor.grid.worldXFor(beltTile),
@@ -60,5 +60,15 @@ class GridBackgroundRenderer(private val shopFloor: ShopFloor) : ShopFloorLayer 
                 GameConfig.tileSize
             )
         }
+    }
+
+    private companion object {
+        private val BACKGROUND = Color(0.08f, 0.09f, 0.11f, 1f)
+        private val PLAY_AREA = Color(0.12f, 0.15f, 0.18f, 1f)
+        private val HUD_BAND = Color(0.11f, 0.13f, 0.16f, 1f)
+        private val BANK_BAND = Color(0.10f, 0.11f, 0.14f, 1f)
+        private val BELT_FILL = Color(0.20f, 0.33f, 0.42f, 1f)
+        private val GRID_LINE = Color(0.18f, 0.22f, 0.26f, 1f)
+        private val BELT_OUTLINE = Color(0.37f, 0.54f, 0.67f, 1f)
     }
 }
