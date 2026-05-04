@@ -68,7 +68,7 @@ class UpgradeFlowController(
 
     private fun applyUpgrade(objectId: String, option: UpgradeOption) {
         if (shopFloor.tryUpgradeObject(objectId, option.targetCatalogId, option.cost)) {
-            shiftLifecycle.persist()
+            shiftLifecycle.markDirty()
         }
     }
 

@@ -5,10 +5,10 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
-class JsonSaveCodec(
+open class JsonSaveCodec(
     private val json: Json = FaultoryJson.instance
 ) {
-    fun encode(save: GameSave): String = json.encodeToString(save)
+    open fun encode(save: GameSave): String = json.encodeToString(save)
 
     fun decode(rawJson: String): GameSave = json.decodeFromString(rawJson)
 

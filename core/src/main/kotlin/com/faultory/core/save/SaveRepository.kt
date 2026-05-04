@@ -3,7 +3,10 @@ package com.faultory.core.save
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.files.FileHandle
 import com.faultory.core.config.GameConfig
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import kotlin.text.Charsets
 
 interface SaveRepository {
@@ -38,13 +41,38 @@ class LocalSaveRepository(
 
     override fun save(save: GameSave) {
         val handle = handleFor(save.slotId)
+        val tmpHandle = handleFor("${save.slotId}$TMP_SUFFIX")
         handle.parent().mkdirs()
-        handle.writeString(codec.encode(save), false, Charsets.UTF_8.name())
+
+        val encoded = codec.encode(save)
+        try {
+            tmpHandle.writeString(encoded, false, Charsets.UTF_8.name())
+        } catch (t: Throwable) {
+            runCatching { tmpHandle.delete() }
+            throw t
+        }
+
+        val tmpPath = tmpHandle.file().toPath()
+        val destPath = handle.file().toPath()
+        try {
+            Files.move(
+                tmpPath,
+                destPath,
+                StandardCopyOption.ATOMIC_MOVE,
+                StandardCopyOption.REPLACE_EXISTING
+            )
+        } catch (_: AtomicMoveNotSupportedException) {
+            Gdx.app?.log(LOG_TAG, "Atomic rename unsupported for $destPath; falling back to non-atomic replace")
+            Files.move(tmpPath, destPath, StandardCopyOption.REPLACE_EXISTING)
+        }
     }
 
     private fun handleFor(slotId: String): FileHandle = handleFactory(slotId)
 
     companion object {
+        private const val TMP_SUFFIX = ".tmp"
+        private const val LOG_TAG = "LocalSaveRepository"
+
         private fun defaultHandleFor(rootDirectory: String, slotId: String): FileHandle {
             val path = Paths.get(
                 rootDirectory,

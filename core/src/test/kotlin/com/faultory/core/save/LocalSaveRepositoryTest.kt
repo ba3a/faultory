@@ -270,6 +270,79 @@ class LocalSaveRepositoryTest {
         }
     }
 
+    @Test
+    fun `save uses an atomic rename and leaves no tmp file behind on success`() {
+        val tempRoot = createTempDirectory("faultory-save-test")
+        try {
+            val slotId = "atomic-slot"
+            val repository = LocalSaveRepository(
+                rootDirectory = tempRoot.toString(),
+                handleFactory = { currentSlotId ->
+                    FileHandle(saveFileFor(tempRoot, currentSlotId).toFile())
+                }
+            )
+            val gameSave = GameSave.forLevel(
+                slotId = slotId,
+                shopId = "tutorial-shop",
+                unlockedWorkerIds = listOf("line-inspector"),
+                unlockedMachineIds = listOf("bench-assembler")
+            )
+
+            repository.save(gameSave)
+
+            val saveFile = saveFileFor(tempRoot, slotId)
+            val tmpFile = saveFileFor(tempRoot, "$slotId.tmp")
+            assertTrue(saveFile.toFile().exists())
+            assertFalse(tmpFile.toFile().exists())
+            assertNotNull(repository.load(slotId))
+        } finally {
+            tempRoot.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `save preserves the previous slot file when encoding fails`() {
+        val tempRoot = createTempDirectory("faultory-save-test")
+        try {
+            val slotId = "encode-fail-slot"
+            val saveFile = saveFileFor(tempRoot, slotId)
+            saveFile.parent.createDirectories()
+            val originalContents = """{"slotId":"$slotId","placeholder":true}"""
+            saveFile.writeText(originalContents, Charsets.UTF_8)
+
+            var encodeCalls = 0
+            val explodingCodec = object : JsonSaveCodec() {
+                override fun encode(save: GameSave): String {
+                    encodeCalls++
+                    throw IllegalStateException("boom")
+                }
+            }
+            val repository = LocalSaveRepository(
+                codec = explodingCodec,
+                rootDirectory = tempRoot.toString(),
+                handleFactory = { currentSlotId ->
+                    FileHandle(saveFileFor(tempRoot, currentSlotId).toFile())
+                }
+            )
+            val gameSave = GameSave.forLevel(
+                slotId = slotId,
+                shopId = "tutorial-shop",
+                unlockedWorkerIds = listOf("line-inspector"),
+                unlockedMachineIds = listOf("bench-assembler")
+            )
+
+            val failure = runCatching { repository.save(gameSave) }
+            assertTrue(failure.isFailure)
+            assertEquals(1, encodeCalls)
+
+            assertTrue(saveFile.toFile().exists())
+            assertEquals(originalContents, saveFile.toFile().readText(Charsets.UTF_8))
+            assertFalse(saveFileFor(tempRoot, "$slotId.tmp").toFile().exists())
+        } finally {
+            tempRoot.toFile().deleteRecursively()
+        }
+    }
+
     private fun saveFileFor(rootDirectory: Path, slotId: String): Path {
         return rootDirectory.resolve(GameConfig.saveDirectoryName).resolve("$slotId.json")
     }

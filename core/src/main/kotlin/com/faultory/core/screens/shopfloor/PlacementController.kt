@@ -34,7 +34,7 @@ class PlacementController(
             shopFloor.creditCash(cost)
             return false
         }
-        shiftLifecycle.persist()
+        shiftLifecycle.markDirty()
         bankPanel.clearSelection()
         return true
     }

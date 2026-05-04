@@ -51,7 +51,7 @@ class MachineDragController(
             return true
         }
 
-        shiftLifecycle.persist()
+        shiftLifecycle.markDirty()
         return true
     }
 

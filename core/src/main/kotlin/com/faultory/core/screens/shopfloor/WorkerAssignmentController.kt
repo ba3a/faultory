@@ -73,7 +73,7 @@ class WorkerAssignmentController(
             ObjectContextAction.ASSIGN_TO_QA -> {
                 bankPanel.clearSelection()
                 when (shopFloor.assignWorkerToQa(menu.objectId, catalogLookup.workerProfilesById)) {
-                    is WorkerAssignmentResult.Success -> shiftLifecycle.persist()
+                    is WorkerAssignmentResult.Success -> shiftLifecycle.markDirty()
                     is WorkerAssignmentResult.Failure -> {}
                 }
                 true
@@ -103,7 +103,7 @@ class WorkerAssignmentController(
         return when (val result = shopFloor.assignWorkerToMachine(workerId, machine.id, catalogLookup.workerProfilesById)) {
             is WorkerAssignmentResult.Success -> {
                 assignmentPendingWorkerId = null
-                shiftLifecycle.persist()
+                shiftLifecycle.markDirty()
                 true
             }
 

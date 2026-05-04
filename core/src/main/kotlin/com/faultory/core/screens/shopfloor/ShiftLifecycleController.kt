@@ -33,6 +33,7 @@ class ShiftLifecycleController(
 
     private var autosaveElapsedSeconds = 0f
     private var persistOnHide = true
+    private var dirty = false
 
     fun tick(delta: Float): Float {
         if (isShiftEnded) {
@@ -48,11 +49,17 @@ class ShiftLifecycleController(
         shopFloor.update(activeDelta, workerProfilesById)
         for (shipment in shopFloor.consumeShipmentEvents()) {
             dayDirector.recordShipment(shipment.productId, shipment.faultReason)
+            dirty = true
         }
         dayDirector.update(activeDelta)
+        if (activeDelta > 0f) {
+            dirty = true
+        }
         autosaveElapsedSeconds += activeDelta
         if (autosaveElapsedSeconds >= GameConfig.autosaveIntervalSeconds) {
-            persist()
+            if (dirty) {
+                persist()
+            }
             autosaveElapsedSeconds = 0f
         }
         return activeDelta
@@ -66,6 +73,10 @@ class ShiftLifecycleController(
         currentSave = currentSave.copy(lastCompletedRun = dayDirector.completedRunStats())
         persist()
         return true
+    }
+
+    fun markDirty() {
+        dirty = true
     }
 
     fun persist() {
@@ -84,10 +95,11 @@ class ShiftLifecycleController(
             )
         )
         game.saveRepository.save(currentSave)
+        dirty = false
     }
 
     fun persistIfNeededOnHide() {
-        if (persistOnHide) {
+        if (persistOnHide && dirty) {
             persist()
         }
     }
@@ -95,6 +107,7 @@ class ShiftLifecycleController(
     fun replayLevel() {
         currentSave = currentSave.resetForReplay(shopFloor.blueprint.id, level.startingCash)
         game.saveRepository.save(currentSave)
+        dirty = false
         persistOnHide = false
         game.openLevel(level)
     }
