@@ -3,6 +3,7 @@ package com.faultory.core.screens
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.ScreenAdapter
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.g2d.TextureAtlas
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.FitViewport
@@ -12,6 +13,8 @@ import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.ShopCatalog
+import com.faultory.core.graphics.SkinDefinition
+import com.faultory.core.graphics.SkinReferences
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.ShopGrid
@@ -26,6 +29,7 @@ class BootScreen(
 ) : ScreenAdapter() {
     private val viewport = FitViewport(GameConfig.virtualWidth, GameConfig.virtualHeight)
     private var transitioned = false
+    private var atlasesEnqueued = false
 
     override fun show() {
         viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
@@ -42,12 +46,39 @@ class BootScreen(
         drawProgress(game.assetManager.progress)
 
         if (done && !transitioned) {
+            if (!atlasesEnqueued) {
+                enqueueAtlases()
+                atlasesEnqueued = true
+                return
+            }
             transitioned = true
             if (level == null) {
                 game.openLevelSelection()
             } else {
                 startLevel(level)
             }
+        }
+    }
+
+    private fun enqueueAtlases() {
+        val assetManager = game.assetManager
+        if (!assetManager.isLoaded(AssetPaths.shopCatalog)) return
+        val catalog = assetManager.get(AssetPaths.shopCatalog, ShopCatalog::class.java)
+        val atlasPaths = SkinReferences.referencedAtlasPaths(catalog) { skinId ->
+            val path = AssetPaths.skinPath(skinId)
+            if (assetManager.isLoaded(path)) {
+                assetManager.get(path, SkinDefinition::class.java)
+            } else {
+                null
+            }
+        }
+        atlasPaths.forEach { atlasPath ->
+            if (assetManager.isLoaded(atlasPath)) return@forEach
+            if (!Gdx.files.internal(atlasPath).exists()) {
+                Gdx.app?.log(LOG_TAG, "Atlas '$atlasPath' not found; renderer will fall back to shapes.")
+                return@forEach
+            }
+            assetManager.load(atlasPath, TextureAtlas::class.java)
         }
     }
 
@@ -138,5 +169,9 @@ class BootScreen(
         renderer.color = Color(0.55f, 0.60f, 0.64f, 1f)
         renderer.rect(x, y, barWidth, barHeight)
         renderer.end()
+    }
+
+    private companion object {
+        const val LOG_TAG = "BootScreen"
     }
 }

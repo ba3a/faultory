@@ -8,4 +8,14 @@ object SkinReferences {
             .filter { it.isNotBlank() }
             .distinct()
             .sorted()
+
+    fun referencedAtlasPaths(
+        catalog: ShopCatalog,
+        definitionLookup: (String) -> SkinDefinition?
+    ): List<String> =
+        referencedSkinIds(catalog)
+            .mapNotNull { definitionLookup(it)?.atlas }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
 }
