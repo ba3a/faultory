@@ -8,7 +8,6 @@ import com.faultory.core.content.WorkerRoleProfile
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.plus
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.TileCoordinate
 import kotlin.random.Random
@@ -18,13 +17,14 @@ internal class SecuritySystem(
     private val random: Random
 ) {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
+    private val placedWorkers get() = state.placedWorkers
     private val mutableMachineProductionStates get() = state.mutableMachineProductionStates
     private val machineSpecsById get() = state.machineSpecsById
     private val grid get() = state.grid
 
     fun update(workerProfilesById: Map<String, WorkerProfile>) {
-        val securityWorkers = mutablePlacedObjects
-            .filter { it.kind == PlacedShopObjectKind.WORKER && it.workerRole == WorkerRole.SECURITY }
+        val securityWorkers = placedWorkers
+            .filter { it.workerRole == WorkerRole.SECURITY }
         if (securityWorkers.isEmpty()) return
 
         val saboteursById = activeSaboteurs().associateBy { it.id }
@@ -61,9 +61,8 @@ internal class SecuritySystem(
             .map { it.machineId }
             .toSet()
         if (sabotagingMachineIds.isEmpty()) return emptyList()
-        return mutablePlacedObjects.filter { worker ->
-            worker.kind == PlacedShopObjectKind.WORKER &&
-                worker.workerRole == WorkerRole.PRODUCER_OPERATOR &&
+        return placedWorkers.filter { worker ->
+            worker.workerRole == WorkerRole.PRODUCER_OPERATOR &&
                 worker.assignedMachineId in sabotagingMachineIds &&
                 state.isWorkerAtAssignedSlot(worker)
         }

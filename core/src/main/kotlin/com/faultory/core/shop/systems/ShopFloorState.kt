@@ -59,16 +59,42 @@ internal class ShopFloorState(
     private val placedObjectIdByTile: HashMap<TileCoordinate, String> = HashMap()
     private val productIdByTile: HashMap<TileCoordinate, String> = HashMap()
 
+    private val _placedMachines: MutableList<PlacedShopObject> = mutableListOf()
+    private val _placedWorkers: MutableList<PlacedShopObject> = mutableListOf()
+
+    val placedMachines: List<PlacedShopObject> get() = _placedMachines
+    val placedWorkers: List<PlacedShopObject> get() = _placedWorkers
+
     init {
         placedObjectsIndex.addMutationListener { old, new ->
             tileOccupancyDirty = true
             updateOperatorWorkerIndex(old, new)
+            updateKindIndex(old, new)
         }
         activeProductsIndex.addMutationListener { old, new ->
             tileOccupancyDirty = true
             updateProductByBeltTileIndex(old, new)
         }
         rebuildSecondaryIndicesFromScratch()
+    }
+
+    private fun updateKindIndex(old: PlacedShopObject?, new: PlacedShopObject?) {
+        val list = when (old?.kind ?: new?.kind) {
+            PlacedShopObjectKind.MACHINE -> _placedMachines
+            PlacedShopObjectKind.WORKER -> _placedWorkers
+            null -> return
+        }
+        when {
+            old == null -> list += new!!
+            new == null -> {
+                val idx = list.indexOfFirst { it.id == old.id }
+                if (idx >= 0) list.removeAt(idx)
+            }
+            else -> {
+                val idx = list.indexOfFirst { it.id == old.id }
+                if (idx >= 0) list[idx] = new
+            }
+        }
     }
 
     private fun updateOperatorWorkerIndex(old: PlacedShopObject?, new: PlacedShopObject?) {
@@ -99,11 +125,17 @@ internal class ShopFloorState(
 
     private fun rebuildSecondaryIndicesFromScratch() {
         operatorWorkerByMachineId.clear()
+        _placedMachines.clear()
+        _placedWorkers.clear()
         for (placed in placedObjectsIndex) {
-            if (placed.kind == PlacedShopObjectKind.WORKER) {
-                val machineId = placed.assignedMachineId
-                if (machineId != null && placed.assignedSlotIndex != null) {
-                    operatorWorkerByMachineId[machineId] = placed
+            when (placed.kind) {
+                PlacedShopObjectKind.MACHINE -> _placedMachines += placed
+                PlacedShopObjectKind.WORKER -> {
+                    _placedWorkers += placed
+                    val machineId = placed.assignedMachineId
+                    if (machineId != null && placed.assignedSlotIndex != null) {
+                        operatorWorkerByMachineId[machineId] = placed
+                    }
                 }
             }
         }

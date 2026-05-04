@@ -39,6 +39,8 @@ internal class QaSystem(
     private val random: Random
 ) {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
+    private val placedMachines get() = state.placedMachines
+    private val placedWorkers get() = state.placedWorkers
     private val mutableActiveProducts get() = state.mutableActiveProducts
     private val mutableQaInspectionStates get() = state.mutableQaInspectionStates
     private val machineSpecsById get() = state.machineSpecsById
@@ -106,7 +108,7 @@ internal class QaSystem(
     }
 
     private fun startMachineQaInspections(workerProfilesById: Map<String, WorkerProfile>) {
-        for (machine in mutablePlacedObjects.filter { it.kind == PlacedShopObjectKind.MACHINE }) {
+        for (machine in placedMachines) {
             if (mutableQaInspectionStates.any { it.inspectorObjectId == machine.id }) continue
 
             val machineSpec = machineSpecsById[machine.catalogId] ?: continue
@@ -128,7 +130,7 @@ internal class QaSystem(
     }
 
     private fun startWorkerQaInspections(workerProfilesById: Map<String, WorkerProfile>) {
-        for (worker in mutablePlacedObjects.filter { it.kind == PlacedShopObjectKind.WORKER }) {
+        for (worker in placedWorkers) {
             if (mutableQaInspectionStates.any { it.inspectorObjectId == worker.id }) continue
             if (worker.carriedProductId != null || worker.qaPostTile == null || !state.isWorkerAtQaPost(worker)) continue
 
@@ -314,9 +316,8 @@ internal class QaSystem(
     }
 
     private fun nearestAvailableProducerWorker(originTile: TileCoordinate): PlacedShopObject? {
-        return mutablePlacedObjects
+        return placedWorkers
             .asSequence()
-            .filter { it.kind == PlacedShopObjectKind.WORKER }
             .filter { it.workerRole == WorkerRole.PRODUCER_OPERATOR }
             .filter { it.assignedMachineId != null && it.assignedSlotIndex != null }
             .filter { it.carriedProductId == null && it.movementPath.isEmpty() }
@@ -330,9 +331,8 @@ internal class QaSystem(
     }
 
     private fun nearestAutomaticProducerWithCapacity(originTile: TileCoordinate): PlacedShopObject? {
-        return mutablePlacedObjects
+        return placedMachines
             .asSequence()
-            .filter { it.kind == PlacedShopObjectKind.MACHINE }
             .filter { machine ->
                 val machineSpec = machineSpecsById[machine.catalogId] ?: return@filter false
                 val producerProfile = machineSpec.producerProfile ?: return@filter false

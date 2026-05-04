@@ -10,7 +10,6 @@ import com.faultory.core.content.WorkerRole
 import com.faultory.core.shop.MachineProductionState
 import com.faultory.core.shop.MachineRecipeState
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.QueuedMachineOutput
 import com.faultory.core.shop.ShopProduct
@@ -26,6 +25,7 @@ internal class ProductionSystem(
 ) {
     private val grid get() = state.grid
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
+    private val placedMachines get() = state.placedMachines
     private val mutableActiveProducts get() = state.mutableActiveProducts
     private val mutableMachineProductionStates get() = state.mutableMachineProductionStates
     private val mutableMachineRecipeStates get() = state.mutableMachineRecipeStates
@@ -35,8 +35,7 @@ internal class ProductionSystem(
         deltaSeconds: Float,
         workerProfilesById: Map<String, WorkerProfile>
     ) {
-        val producerMachines = mutablePlacedObjects.filter { it.kind == PlacedShopObjectKind.MACHINE }
-        for (machine in producerMachines) {
+        for (machine in placedMachines) {
             val machineSpec = machineSpecsById[machine.catalogId] ?: continue
             val recipe = machineSpec.recipe
             if (recipe != null) {
@@ -175,18 +174,14 @@ internal class ProductionSystem(
     }
 
     fun pruneEmptyRecipeStates() {
-        val activeMachineIds = mutablePlacedObjects
-            .asSequence()
-            .filter { it.kind == PlacedShopObjectKind.MACHINE }
-            .map { it.id }
-            .toSet()
+        val activeMachineIds = placedMachines.mapTo(HashSet()) { it.id }
         mutableMachineRecipeStates.removeAll { recipeState ->
             recipeState.machineId !in activeMachineIds || recipeState.isEmpty
         }
     }
 
     fun acceptBeltInputs() {
-        for (machine in mutablePlacedObjects.filter { it.kind == PlacedShopObjectKind.MACHINE }) {
+        for (machine in placedMachines) {
             val machineSpec = machineSpecsById[machine.catalogId] ?: continue
             val recipe = machineSpec.recipe ?: continue
             val inputSlots = state.slotPositionsFor(machine, MachineSlotType.BELT_INPUT)
