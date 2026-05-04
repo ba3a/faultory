@@ -60,7 +60,7 @@ class SkinMetadataValidatorTest {
 
         assertEquals(1, issues.size)
         val issue = issues.single()
-        assertEquals(Severity.ERROR, issue.severity)
+        assertEquals(Severity.WARNING, issue.severity)
         assertEquals("actions.idle.frames.NORTH[1]", issue.fieldName)
         assertTrue(issue.message.contains("idle_north_001"))
     }

@@ -1,6 +1,5 @@
 package com.faultory.editor.validation
 
-import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRoleProfile
 import com.faultory.editor.ui.tree.AssetSelection
 
@@ -47,24 +46,20 @@ object WorkerValidator : Validator<AssetSelection.Worker> {
         }
 
         worker.upgradeTree?.let { tree ->
-            tree.leftUpgradeId?.let { id ->
-                if (workers.none { it.id == id }) {
-                    issues += ValidationIssue(
-                        Severity.ERROR,
-                        "leftUpgradeId '$id' does not resolve to a worker",
-                        fieldName = "upgradeTree.leftUpgradeId",
-                    )
+            fun validate(id: String?, branch: String) {
+                id?.takeIf { it.isNotBlank() }
+                ?.let {
+                    if (workers.none { w -> w.id == it }) {
+                        issues += ValidationIssue(
+                            Severity.ERROR,
+                            "$branch '$it' does not resolve to a worker",
+                            fieldName = "upgradeTree.$branch",
+                        )
+                    }
                 }
             }
-            tree.rightUpgradeId?.let { id ->
-                if (workers.none { it.id == id }) {
-                    issues += ValidationIssue(
-                        Severity.ERROR,
-                        "rightUpgradeId '$id' does not resolve to a worker",
-                        fieldName = "upgradeTree.rightUpgradeId",
-                    )
-                }
-            }
+            validate(tree.leftUpgradeId, "leftUpgradeId")
+            validate(tree.rightUpgradeId, "rightUpgradeId")
         }
 
         return issues

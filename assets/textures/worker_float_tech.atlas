@@ -1,174 +1,230 @@
 
 worker_float_tech.png
-size: 1024, 64
+size: 1024, 128
 format: RGBA8888
 filter: Nearest, Nearest
 repeat: none
 idle_east_000
   rotate: false
-  xy: 2, 2
-  size: 40, 60
-  orig: 40, 60
-  offset: 0, 0
-  index: -1
-walk_east_000
-  rotate: false
-  xy: 2, 2
+  xy: 2, 64
   size: 40, 60
   orig: 40, 60
   offset: 0, 0
   index: -1
 idle_north_000
   rotate: false
-  xy: 44, 2
+  xy: 2, 2
   size: 40, 60
   orig: 40, 60
   offset: 0, 0
   index: -1
 walk_north_000
   rotate: false
-  xy: 44, 2
+  xy: 2, 2
   size: 40, 60
   orig: 40, 60
   offset: 0, 0
   index: -1
 idle_south_000
   rotate: false
-  xy: 86, 2
+  xy: 44, 64
   size: 40, 60
   orig: 40, 60
   offset: 0, 0
   index: -1
 walk_south_000
   rotate: false
-  xy: 86, 2
+  xy: 44, 64
   size: 40, 60
   orig: 40, 60
   offset: 0, 0
   index: -1
 idle_west_000
   rotate: false
-  xy: 128, 2
+  xy: 44, 2
   size: 40, 60
   orig: 40, 60
   offset: 0, 0
   index: -1
-walk_west_000
+walk_east_000
   rotate: false
-  xy: 128, 2
-  size: 40, 60
-  orig: 40, 60
+  xy: 254, 64
+  size: 34, 60
+  orig: 34, 60
   offset: 0, 0
   index: -1
 walk_east_001
   rotate: false
-  xy: 170, 2
-  size: 40, 60
-  orig: 40, 60
+  xy: 254, 2
+  size: 34, 60
+  orig: 34, 60
   offset: 0, 0
   index: -1
 walk_east_002
   rotate: false
-  xy: 212, 2
-  size: 40, 60
-  orig: 40, 60
+  xy: 290, 64
+  size: 34, 60
+  orig: 34, 60
   offset: 0, 0
   index: -1
 walk_east_003
   rotate: false
-  xy: 254, 2
-  size: 40, 60
-  orig: 40, 60
+  xy: 290, 2
+  size: 34, 60
+  orig: 34, 60
   offset: 0, 0
   index: -1
 walk_east_004
   rotate: false
-  xy: 296, 2
-  size: 40, 60
-  orig: 40, 60
+  xy: 326, 64
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_east_005
+  rotate: false
+  xy: 326, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_east_006
+  rotate: false
+  xy: 362, 64
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_east_007
+  rotate: false
+  xy: 362, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_east_008
+  rotate: false
+  xy: 398, 64
+  size: 34, 60
+  orig: 34, 60
   offset: 0, 0
   index: -1
 walk_north_001
   rotate: false
-  xy: 338, 2
+  xy: 86, 64
   size: 40, 60
   orig: 40, 60
   offset: 0, 0
   index: -1
 walk_north_002
   rotate: false
-  xy: 380, 2
+  xy: 86, 2
   size: 40, 60
   orig: 40, 60
   offset: 0, 0
   index: -1
 walk_north_003
   rotate: false
-  xy: 422, 2
+  xy: 128, 64
   size: 40, 60
   orig: 40, 60
   offset: 0, 0
   index: -1
 walk_north_004
   rotate: false
-  xy: 464, 2
+  xy: 128, 2
   size: 40, 60
   orig: 40, 60
   offset: 0, 0
   index: -1
 walk_south_001
   rotate: false
-  xy: 506, 2
+  xy: 170, 64
   size: 40, 60
   orig: 40, 60
   offset: 0, 0
   index: -1
 walk_south_002
   rotate: false
-  xy: 548, 2
+  xy: 170, 2
   size: 40, 60
   orig: 40, 60
   offset: 0, 0
   index: -1
 walk_south_003
   rotate: false
-  xy: 590, 2
+  xy: 212, 64
   size: 40, 60
   orig: 40, 60
   offset: 0, 0
   index: -1
 walk_south_004
   rotate: false
-  xy: 632, 2
+  xy: 212, 2
   size: 40, 60
   orig: 40, 60
+  offset: 0, 0
+  index: -1
+walk_west_000
+  rotate: false
+  xy: 398, 2
+  size: 34, 60
+  orig: 34, 60
   offset: 0, 0
   index: -1
 walk_west_001
   rotate: false
-  xy: 674, 2
-  size: 40, 60
-  orig: 40, 60
+  xy: 434, 64
+  size: 34, 60
+  orig: 34, 60
   offset: 0, 0
   index: -1
 walk_west_002
   rotate: false
-  xy: 716, 2
-  size: 40, 60
-  orig: 40, 60
+  xy: 434, 2
+  size: 34, 60
+  orig: 34, 60
   offset: 0, 0
   index: -1
 walk_west_003
   rotate: false
-  xy: 758, 2
-  size: 40, 60
-  orig: 40, 60
+  xy: 470, 64
+  size: 34, 60
+  orig: 34, 60
   offset: 0, 0
   index: -1
 walk_west_004
   rotate: false
-  xy: 800, 2
-  size: 40, 60
-  orig: 40, 60
+  xy: 470, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_west_005
+  rotate: false
+  xy: 506, 64
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_west_006
+  rotate: false
+  xy: 506, 2
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_west_007
+  rotate: false
+  xy: 542, 64
+  size: 34, 60
+  orig: 34, 60
+  offset: 0, 0
+  index: -1
+walk_west_008
+  rotate: false
+  xy: 542, 2
+  size: 34, 60
+  orig: 34, 60
   offset: 0, 0
   index: -1

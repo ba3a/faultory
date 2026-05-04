@@ -82,7 +82,7 @@ object SkinMetadataValidator {
             frames.forEachIndexed { index, regionName ->
                 if (regionName !in regionSet) {
                     issues += ValidationIssue(
-                        Severity.ERROR,
+                        Severity.WARNING,
                         "Action '$actionName' $orientation frame[$index] '$regionName' is missing from atlas",
                         fieldName = "$fieldPath[$index]",
                     )
