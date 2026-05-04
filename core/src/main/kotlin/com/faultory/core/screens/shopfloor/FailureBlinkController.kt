@@ -1,5 +1,7 @@
 package com.faultory.core.screens.shopfloor
 
+import com.faultory.core.config.GameConfig
+
 class FailureBlinkController {
     var machineId: String? = null
         private set
@@ -8,7 +10,7 @@ class FailureBlinkController {
 
     fun start(machineId: String) {
         this.machineId = machineId
-        remaining = 0.6f
+        remaining = GameConfig.failureBlinkSeconds
     }
 
     fun update(delta: Float) {

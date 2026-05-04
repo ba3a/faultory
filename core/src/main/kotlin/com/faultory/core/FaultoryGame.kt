@@ -6,7 +6,6 @@ import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
-import com.badlogic.gdx.graphics.g2d.TextureAtlas
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter
@@ -102,10 +101,6 @@ class FaultoryGame : Game() {
     fun openLevel(level: LevelDefinition) {
         assetManager.load(level.shopAssetPath, ShopBlueprint::class.java)
         setScreen(BootScreen(this, level))
-    }
-
-    fun atlas(atlasPath: String): TextureAtlas? {
-        return skinRegistry.atlas(atlasPath)
     }
 
     fun loadOrCreateLevelSave(

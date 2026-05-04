@@ -5,14 +5,13 @@ import java.util.Locale
 import java.util.MissingResourceException
 
 object Messages {
-    private val formatCache = HashMap<Pair<MessageKey, Locale>, MessageFormat>()
+    private val formatCache = HashMap<Pair<UiMessageKey, Locale>, MessageFormat>()
 
     init {
         LocaleManager.addListener { formatCache.clear() }
     }
 
-    fun text(key: MessageKey): String {
-        require(!key.isCatalog) { "Use Messages.catalog(...) for catalog keys: ${key.path}" }
+    fun text(key: UiMessageKey): String {
         return try {
             LocaleManager.currentBundle.getString(key.path)
         } catch (_: MissingResourceException) {
@@ -20,14 +19,13 @@ object Messages {
         }
     }
 
-    fun format(key: MessageKey, vararg args: Any?): String {
+    fun format(key: UiMessageKey, vararg args: Any?): String {
         val locale = LocaleManager.currentLocale
         val mf = formatCache.getOrPut(key to locale) { MessageFormat(text(key), locale) }
         return mf.format(args)
     }
 
-    fun catalog(key: MessageKey, id: String): String {
-        require(key.isCatalog) { "Use Messages.text(...)/format(...) for non-catalog keys: ${key.path}" }
+    fun catalog(key: CatalogMessageKey, id: String): String {
         return LocaleManager.catalogTranslations().resolve(key, id, LocaleManager.currentLocale)
     }
 }

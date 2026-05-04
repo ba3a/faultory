@@ -57,7 +57,7 @@ class ShopFloor(
         get() = state.pendingShipmentEvents
 
     val placedObjects: List<PlacedShopObject>
-        get() = mutablePlacedObjects
+        get() = mutablePlacedObjects.toList()
 
     val activeProducts: List<ShopProduct>
         get() = mutableActiveProducts

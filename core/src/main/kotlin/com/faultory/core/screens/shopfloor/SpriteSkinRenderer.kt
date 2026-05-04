@@ -4,7 +4,6 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.faultory.core.config.GameConfig
 import com.faultory.core.graphics.MachineActionResolver
-import com.faultory.core.graphics.SkinActions
 import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.graphics.SkinRegistry
 import com.faultory.core.graphics.WorkerActionResolver
@@ -18,9 +17,6 @@ class SpriteSkinRenderer(
     private val geometry: ShopFloorGeometry,
     private val drawnIds: MutableSet<String> = mutableSetOf()
 ) : ShopFloorLayer {
-    private val machineActionResolver = MachineActionResolver(shopFloor)
-    private val workerActionResolver = WorkerActionResolver()
-
     fun drawnIdsView(): Set<String> = drawnIds
 
     override fun drawSprite(ctx: ShopFloorRenderContext) {
@@ -61,14 +57,14 @@ class SpriteSkinRenderer(
 
     private fun actionFor(placedObject: PlacedShopObject): String {
         return when (placedObject.kind) {
-            PlacedShopObjectKind.MACHINE -> machineActionResolver.actionFor(placedObject)
-            PlacedShopObjectKind.WORKER -> workerActionResolver.actionFor(placedObject)
+            PlacedShopObjectKind.MACHINE -> MachineActionResolver.actionFor(shopFloor, placedObject)
+            PlacedShopObjectKind.WORKER -> WorkerActionResolver.actionFor(placedObject)
         }
     }
 
     private fun orientationFor(placedObject: PlacedShopObject) = when (placedObject.kind) {
         PlacedShopObjectKind.MACHINE -> placedObject.orientation
-        PlacedShopObjectKind.WORKER -> workerActionResolver.orientationFor(placedObject)
+        PlacedShopObjectKind.WORKER -> WorkerActionResolver.orientationFor(placedObject)
     }
 
     private fun atlasFor(definition: SkinDefinition, ctx: ShopFloorRenderContext) = ctx.atlasProvider(definition.atlas)

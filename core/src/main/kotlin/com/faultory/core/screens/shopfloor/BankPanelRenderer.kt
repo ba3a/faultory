@@ -2,8 +2,9 @@ package com.faultory.core.screens.shopfloor
 
 import com.badlogic.gdx.graphics.Color
 import com.faultory.core.config.GameConfig
-import com.faultory.core.i18n.MessageKey
+import com.faultory.core.i18n.CatalogMessageKey
 import com.faultory.core.i18n.Messages
+import com.faultory.core.i18n.UiMessageKey
 import com.faultory.core.shop.PlacedShopObjectKind
 
 class BankPanelRenderer(private val bankPanel: BankPanel) : ShopFloorLayer {
@@ -45,17 +46,17 @@ class BankPanelRenderer(private val bankPanel: BankPanel) : ShopFloorLayer {
         val hintLayout = ctx.hintLayout
 
         font.color = HEADER_TEXT
-        titleLayout.setText(font, Messages.text(MessageKey.BANK_WORKERS))
+        titleLayout.setText(font, Messages.text(UiMessageKey.BANK_WORKERS))
         font.draw(batch, titleLayout, 40f, GameConfig.bankHeight - 18f)
 
-        titleLayout.setText(font, Messages.text(MessageKey.BANK_MACHINES))
+        titleLayout.setText(font, Messages.text(UiMessageKey.BANK_MACHINES))
         font.draw(batch, titleLayout, GameConfig.virtualWidth / 2f + 40f, GameConfig.bankHeight - 18f)
 
         for (entry in bankPanel.entries) {
             font.color = ENTRY_TITLE_TEXT
             val (nameKey, kindKey) = when (entry.key.kind) {
-                PlacedShopObjectKind.WORKER -> MessageKey.WORKER_DISPLAYNAME to MessageKey.BANK_WORKER
-                PlacedShopObjectKind.MACHINE -> MessageKey.MACHINE_DISPLAYNAME to MessageKey.BANK_MACHINE
+                PlacedShopObjectKind.WORKER -> CatalogMessageKey.WORKER_DISPLAYNAME to UiMessageKey.BANK_WORKER
+                PlacedShopObjectKind.MACHINE -> CatalogMessageKey.MACHINE_DISPLAYNAME to UiMessageKey.BANK_MACHINE
             }
             titleLayout.setText(font, Messages.catalog(nameKey, entry.key.catalogId))
             font.draw(batch, titleLayout, entry.bounds.x + 12f, entry.bounds.y + entry.bounds.height - 20f)

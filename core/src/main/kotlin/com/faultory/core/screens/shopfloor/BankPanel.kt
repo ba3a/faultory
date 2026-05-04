@@ -38,8 +38,8 @@ class BankPanel(private val catalogLookup: CatalogLookup) {
     fun layout() {
         val workerEntries = mutableEntries.filter { it.key.kind == PlacedShopObjectKind.WORKER }
         val machineEntries = mutableEntries.filter { it.key.kind == PlacedShopObjectKind.MACHINE }
-        layoutSection(workerEntries, 40f, 24f)
-        layoutSection(machineEntries, GameConfig.virtualWidth / 2f + 40f, 24f)
+        layoutSection(workerEntries, GameConfig.bankSectionPaddingX, GameConfig.bankSectionPaddingY)
+        layoutSection(machineEntries, GameConfig.virtualWidth / 2f + GameConfig.bankSectionPaddingX, GameConfig.bankSectionPaddingY)
     }
 
     fun toggleSelect(key: BankEntryKey) {
@@ -65,13 +65,10 @@ class BankPanel(private val catalogLookup: CatalogLookup) {
     fun selectedEntry(): BankEntry? = mutableEntries.firstOrNull { it.key == selectedKey }
 
     private fun layoutSection(entries: List<BankEntry>, startX: Float, startY: Float) {
-        val cardWidth = 150f
-        val cardHeight = 92f
-        val gap = 16f
         var currentX = startX
         for (entry in entries) {
-            entry.bounds.set(currentX, startY, cardWidth, cardHeight)
-            currentX += cardWidth + gap
+            entry.bounds.set(currentX, startY, GameConfig.bankCardWidth, GameConfig.bankCardHeight)
+            currentX += GameConfig.bankCardWidth + GameConfig.bankCardGap
         }
     }
 }

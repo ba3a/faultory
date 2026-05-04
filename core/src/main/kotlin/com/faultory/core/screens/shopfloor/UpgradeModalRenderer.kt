@@ -2,8 +2,9 @@ package com.faultory.core.screens.shopfloor
 
 import com.badlogic.gdx.graphics.Color
 import com.faultory.core.config.GameConfig
-import com.faultory.core.i18n.MessageKey
+import com.faultory.core.i18n.CatalogMessageKey
 import com.faultory.core.i18n.Messages
+import com.faultory.core.i18n.UiMessageKey
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
 
@@ -58,14 +59,14 @@ class UpgradeModalRenderer(
         val hintLayout = ctx.hintLayout
 
         font.color = TITLE_TEXT
-        titleLayout.setText(font, Messages.text(MessageKey.UPGRADE_TITLE))
+        titleLayout.setText(font, Messages.text(UiMessageKey.UPGRADE_TITLE))
         font.draw(batch, titleLayout, modal.bounds.x + (modal.bounds.width - titleLayout.width) / 2f, modal.bounds.y + modal.bounds.height - 22f)
 
         for (option in modal.options) {
             val affordable = shopFloor.cash >= option.cost
             val (nameKey, kindKey) = when (option.kind) {
-                PlacedShopObjectKind.WORKER -> MessageKey.WORKER_DISPLAYNAME to MessageKey.UPGRADE_WORKER
-                PlacedShopObjectKind.MACHINE -> MessageKey.MACHINE_DISPLAYNAME to MessageKey.UPGRADE_MACHINE
+                PlacedShopObjectKind.WORKER -> CatalogMessageKey.WORKER_DISPLAYNAME to UiMessageKey.UPGRADE_WORKER
+                PlacedShopObjectKind.MACHINE -> CatalogMessageKey.MACHINE_DISPLAYNAME to UiMessageKey.UPGRADE_MACHINE
             }
             font.color = OPTION_TITLE_TEXT
             titleLayout.setText(font, Messages.catalog(nameKey, option.targetCatalogId))
@@ -76,7 +77,7 @@ class UpgradeModalRenderer(
             font.draw(batch, hintLayout, option.bounds.x + 12f, option.bounds.y + 48f)
 
             font.color = if (affordable) ShopFloorPalette.TEXT_HIGHLIGHT_GOLD else COST_UNAFFORDABLE
-            hintLayout.setText(font, Messages.format(MessageKey.UPGRADE_COST, option.cost))
+            hintLayout.setText(font, Messages.format(UiMessageKey.UPGRADE_COST, option.cost))
             font.draw(batch, hintLayout, option.bounds.x + 12f, option.bounds.y + 24f)
         }
     }

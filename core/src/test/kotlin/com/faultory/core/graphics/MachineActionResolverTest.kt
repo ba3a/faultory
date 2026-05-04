@@ -16,33 +16,29 @@ import kotlin.test.assertEquals
 class MachineActionResolverTest {
     @Test
     fun `action is working when machine production state exists`() {
-        val resolver = MachineActionResolver(
-            ShopFloor(
-                blueprint = blueprint(),
-                machineSpecsById = emptyMap(),
-                initialMachineProductionStates = listOf(
-                    MachineProductionState(
-                        machineId = "machine-1",
-                        productInstanceId = "product-1",
-                        productId = "ceramic-mug"
-                    )
+        val shopFloor = ShopFloor(
+            blueprint = blueprint(),
+            machineSpecsById = emptyMap(),
+            initialMachineProductionStates = listOf(
+                MachineProductionState(
+                    machineId = "machine-1",
+                    productInstanceId = "product-1",
+                    productId = "ceramic-mug"
                 )
             )
         )
 
-        assertEquals(SkinActions.WORKING, resolver.actionFor(machine("machine-1")))
+        assertEquals(SkinActions.WORKING, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
     }
 
     @Test
     fun `action is idle when machine has no active production state`() {
-        val resolver = MachineActionResolver(
-            ShopFloor(
-                blueprint = blueprint(),
-                machineSpecsById = emptyMap()
-            )
+        val shopFloor = ShopFloor(
+            blueprint = blueprint(),
+            machineSpecsById = emptyMap()
         )
 
-        assertEquals(SkinActions.IDLE, resolver.actionFor(machine("machine-1")))
+        assertEquals(SkinActions.IDLE, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
     }
 
     private fun machine(id: String): PlacedShopObject {

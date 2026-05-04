@@ -4,7 +4,7 @@ import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
 
-class WorkerActionResolver {
+object WorkerActionResolver {
     fun actionFor(placedObject: PlacedShopObject): String {
         if (placedObject.kind != PlacedShopObjectKind.WORKER) {
             return SkinActions.IDLE

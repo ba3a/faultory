@@ -14,12 +14,13 @@ import com.badlogic.gdx.utils.viewport.FitViewport
 import com.faultory.core.FaultoryGame
 import com.faultory.core.assets.AssetPaths
 import com.faultory.core.config.GameConfig
+import com.faultory.core.i18n.CatalogMessageKey
 import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.LevelUnlockResolver
 import com.faultory.core.i18n.LocaleManager
-import com.faultory.core.i18n.MessageKey
 import com.faultory.core.i18n.Messages
+import com.faultory.core.i18n.UiMessageKey
 
 class LevelSelectionScreen(
     private val game: FaultoryGame
@@ -207,11 +208,11 @@ class LevelSelectionScreen(
 
         batch.begin()
         font.color = TITLE_TEXT
-        titleLayout.setText(font, Messages.text(MessageKey.LEVEL_SELECT_TITLE))
+        titleLayout.setText(font, Messages.text(UiMessageKey.LEVEL_SELECT_TITLE))
         font.draw(batch, titleLayout, 96f, GameConfig.virtualHeight - 118f)
 
         font.color = SUBTITLE_TEXT
-        subtitleLayout.setText(font, Messages.text(MessageKey.LEVEL_SELECT_HINT))
+        subtitleLayout.setText(font, Messages.text(UiMessageKey.LEVEL_SELECT_HINT))
         font.draw(batch, subtitleLayout, 96f, GameConfig.virtualHeight - 146f)
 
         font.color = LANGUAGE_BUTTON_TEXT
@@ -230,11 +231,11 @@ class LevelSelectionScreen(
             val bounds = cardBounds[index]
 
             font.color = if (locked) CARD_TITLE_TEXT_LOCKED else CARD_TITLE_TEXT
-            titleLayout.setText(font, Messages.catalog(MessageKey.LEVEL_DISPLAYNAME, level.id))
+            titleLayout.setText(font, Messages.catalog(CatalogMessageKey.LEVEL_DISPLAYNAME, level.id))
             font.draw(batch, titleLayout, bounds.x + 28f, bounds.y + bounds.height - 42f)
 
             font.color = if (locked) CARD_SUBTITLE_TEXT_LOCKED else CARD_SUBTITLE_TEXT
-            subtitleLayout.setText(font, Messages.catalog(MessageKey.LEVEL_SUBTITLE, level.id))
+            subtitleLayout.setText(font, Messages.catalog(CatalogMessageKey.LEVEL_SUBTITLE, level.id))
             font.draw(batch, subtitleLayout, bounds.x + 28f, bounds.y + bounds.height - 74f)
 
             font.color = when {
@@ -244,9 +245,9 @@ class LevelSelectionScreen(
             }
             val footerText = if (locked) {
                 val missing = missingPrereqsByLevelId[level.id].orEmpty()
-                Messages.format(MessageKey.LEVEL_SELECT_LOCKED_REQUIRES, missing.joinToString(", "))
+                Messages.format(UiMessageKey.LEVEL_SELECT_LOCKED_REQUIRES, missing.joinToString(", "))
             } else {
-                Messages.text(MessageKey.LEVEL_SELECT_OPEN)
+                Messages.text(UiMessageKey.LEVEL_SELECT_OPEN)
             }
             hintLayout.setText(font, footerText)
             font.draw(batch, hintLayout, bounds.x + 28f, bounds.y + 42f)
@@ -268,7 +269,7 @@ class LevelSelectionScreen(
         if (selectedIndex !in levelCatalog.levels.indices) return null
         val level = levelCatalog.levels[selectedIndex]
         val missing = missingPrereqsByLevelId[level.id] ?: return null
-        return Messages.format(MessageKey.LEVEL_SELECT_LOCKED_HINT, missing.joinToString(", "))
+        return Messages.format(UiMessageKey.LEVEL_SELECT_LOCKED_HINT, missing.joinToString(", "))
     }
 
     private fun layoutCards(levels: List<LevelDefinition>) {

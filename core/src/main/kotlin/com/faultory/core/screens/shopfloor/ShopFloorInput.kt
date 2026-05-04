@@ -208,8 +208,8 @@ class ShopFloorInput(
         val isContextMenuHovered = workerAssignment.updateHover(pointerState.worldX, pointerState.worldY)
         hoverState.hoveredCompletionAction = null
 
-        hoverState.isBackButtonHovered = HudRenderer.BACK_BUTTON_BOUNDS.contains(pointerState.worldX, pointerState.worldY)
-        hoverState.isLanguageButtonHovered = HudRenderer.LANGUAGE_BUTTON_BOUNDS.contains(pointerState.worldX, pointerState.worldY)
+        hoverState.isBackButtonHovered = HudRenderer.backButtonBounds().contains(pointerState.worldX, pointerState.worldY)
+        hoverState.isLanguageButtonHovered = HudRenderer.languageButtonBounds().contains(pointerState.worldX, pointerState.worldY)
         val isHudHovered = hoverState.isBackButtonHovered || hoverState.isLanguageButtonHovered
         bankPanel.updateHover(
             pointerState.worldX,

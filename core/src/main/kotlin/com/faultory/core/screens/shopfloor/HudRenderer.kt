@@ -3,11 +3,12 @@ package com.faultory.core.screens.shopfloor
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Rectangle
 import com.faultory.core.config.GameConfig
+import com.faultory.core.i18n.CatalogMessageKey
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.MachineType
 import com.faultory.core.i18n.LocaleManager
-import com.faultory.core.i18n.MessageKey
 import com.faultory.core.i18n.Messages
+import com.faultory.core.i18n.UiMessageKey
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
 
@@ -22,20 +23,24 @@ class HudRenderer(
 ) : ShopFloorLayer {
     override fun drawFill(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
+        val backButtonBounds = backButtonBounds()
+        val languageButtonBounds = languageButtonBounds()
         renderer.color = if (hoverState.isBackButtonHovered) BUTTON_FILL_HOVERED else BUTTON_FILL_DEFAULT
-        renderer.rect(BACK_BUTTON_BOUNDS.x, BACK_BUTTON_BOUNDS.y, BACK_BUTTON_BOUNDS.width, BACK_BUTTON_BOUNDS.height)
+        renderer.rect(backButtonBounds.x, backButtonBounds.y, backButtonBounds.width, backButtonBounds.height)
 
         renderer.color = if (hoverState.isLanguageButtonHovered) BUTTON_FILL_HOVERED else BUTTON_FILL_DEFAULT
-        renderer.rect(LANGUAGE_BUTTON_BOUNDS.x, LANGUAGE_BUTTON_BOUNDS.y, LANGUAGE_BUTTON_BOUNDS.width, LANGUAGE_BUTTON_BOUNDS.height)
+        renderer.rect(languageButtonBounds.x, languageButtonBounds.y, languageButtonBounds.width, languageButtonBounds.height)
     }
 
     override fun drawLine(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
+        val backButtonBounds = backButtonBounds()
+        val languageButtonBounds = languageButtonBounds()
         renderer.color = if (hoverState.isBackButtonHovered) BUTTON_BORDER_HOVERED else BUTTON_BORDER_DEFAULT
-        renderer.rect(BACK_BUTTON_BOUNDS.x, BACK_BUTTON_BOUNDS.y, BACK_BUTTON_BOUNDS.width, BACK_BUTTON_BOUNDS.height)
+        renderer.rect(backButtonBounds.x, backButtonBounds.y, backButtonBounds.width, backButtonBounds.height)
 
         renderer.color = if (hoverState.isLanguageButtonHovered) BUTTON_BORDER_HOVERED else BUTTON_BORDER_DEFAULT
-        renderer.rect(LANGUAGE_BUTTON_BOUNDS.x, LANGUAGE_BUTTON_BOUNDS.y, LANGUAGE_BUTTON_BOUNDS.width, LANGUAGE_BUTTON_BOUNDS.height)
+        renderer.rect(languageButtonBounds.x, languageButtonBounds.y, languageButtonBounds.width, languageButtonBounds.height)
     }
 
     override fun drawText(ctx: ShopFloorRenderContext) {
@@ -43,16 +48,18 @@ class HudRenderer(
         val font = ctx.font
         val titleLayout = ctx.titleLayout
         val hintLayout = ctx.hintLayout
+        val backButtonBounds = backButtonBounds()
+        val languageButtonBounds = languageButtonBounds()
 
         font.color = TITLE_TEXT
-        titleLayout.setText(font, Messages.catalog(MessageKey.LEVEL_DISPLAYNAME, level.id))
+        titleLayout.setText(font, Messages.catalog(CatalogMessageKey.LEVEL_DISPLAYNAME, level.id))
         font.draw(batch, titleLayout, 32f, GameConfig.virtualHeight - 28f)
 
         font.color = ShopFloorPalette.TEXT_SECONDARY
         hintLayout.setText(
             font,
             Messages.format(
-                MessageKey.HUD_STATUS,
+                UiMessageKey.HUD_STATUS,
                 shopFloor.cash,
                 shiftLifecycle.dayDirector.deliveredGoodProducts,
                 shiftLifecycle.dayDirector.deliveredFaultyProducts,
@@ -64,7 +71,7 @@ class HudRenderer(
         hintLayout.setText(
             font,
             Messages.format(
-                MessageKey.HUD_PROGRESS,
+                UiMessageKey.HUD_PROGRESS,
                 (shiftLifecycle.dayDirector.shiftProgress * 100f).toInt(),
                 level.starThresholds.oneStar,
                 level.starThresholds.twoStar,
@@ -75,8 +82,8 @@ class HudRenderer(
         font.draw(batch, hintLayout, 32f, GameConfig.virtualHeight - 76f)
 
         font.color = if (hoverState.isBackButtonHovered) ShopFloorPalette.TEXT_HIGHLIGHT_GOLD else BUTTON_TEXT_DEFAULT
-        titleLayout.setText(font, Messages.text(MessageKey.HUD_BACK_TO_LEVELS))
-        font.draw(batch, titleLayout, BACK_BUTTON_BOUNDS.x + 16f, BACK_BUTTON_BOUNDS.y + 26f)
+        titleLayout.setText(font, Messages.text(UiMessageKey.HUD_BACK_TO_LEVELS))
+        font.draw(batch, titleLayout, backButtonBounds.x + 16f, backButtonBounds.y + 26f)
 
         font.color = if (hoverState.isLanguageButtonHovered) ShopFloorPalette.TEXT_HIGHLIGHT_GOLD else BUTTON_TEXT_DEFAULT
         val languageLabel = LocaleManager.currentLocale.toLanguageTag().uppercase()
@@ -84,61 +91,69 @@ class HudRenderer(
         font.draw(
             batch,
             titleLayout,
-            LANGUAGE_BUTTON_BOUNDS.x + (LANGUAGE_BUTTON_BOUNDS.width - titleLayout.width) / 2f,
-            LANGUAGE_BUTTON_BOUNDS.y + 26f
+            languageButtonBounds.x + (languageButtonBounds.width - titleLayout.width) / 2f,
+            languageButtonBounds.y + 26f
         )
     }
 
     private fun selectedItemText(): String {
         if (shiftLifecycle.isShiftEnded) {
-            return Messages.text(MessageKey.HUD_SHIFT_COMPLETE)
+            return Messages.text(UiMessageKey.HUD_SHIFT_COMPLETE)
         }
         val assignmentWorker = workerAssignment.assignmentPendingWorkerId
             ?.let(shopFloor::findObjectById)
             ?.let {
                 if (catalogLookup.workerProfilesById[it.catalogId] != null) {
-                    Messages.catalog(MessageKey.WORKER_DISPLAYNAME, it.catalogId)
+                    Messages.catalog(CatalogMessageKey.WORKER_DISPLAYNAME, it.catalogId)
                 } else {
-                    Messages.text(MessageKey.HUD_WORKER_FALLBACK)
+                    Messages.text(UiMessageKey.HUD_WORKER_FALLBACK)
                 }
             }
         if (assignmentWorker != null) {
-            return Messages.format(MessageKey.HUD_ASSIGNING, assignmentWorker)
+            return Messages.format(UiMessageKey.HUD_ASSIGNING, assignmentWorker)
         }
 
         val entry = bankPanel.selectedEntry()
-            ?: return Messages.text(MessageKey.HUD_HELP_DEFAULT)
+            ?: return Messages.text(UiMessageKey.HUD_HELP_DEFAULT)
         val displayName = when (entry.key.kind) {
-            PlacedShopObjectKind.WORKER -> Messages.catalog(MessageKey.WORKER_DISPLAYNAME, entry.key.catalogId)
-            PlacedShopObjectKind.MACHINE -> Messages.catalog(MessageKey.MACHINE_DISPLAYNAME, entry.key.catalogId)
+            PlacedShopObjectKind.WORKER -> Messages.catalog(CatalogMessageKey.WORKER_DISPLAYNAME, entry.key.catalogId)
+            PlacedShopObjectKind.MACHINE -> Messages.catalog(CatalogMessageKey.MACHINE_DISPLAYNAME, entry.key.catalogId)
         }
         return when (entry.key.kind) {
-            PlacedShopObjectKind.WORKER -> Messages.format(MessageKey.HUD_HELP_WORKER, displayName)
+            PlacedShopObjectKind.WORKER -> Messages.format(UiMessageKey.HUD_HELP_WORKER, displayName)
             PlacedShopObjectKind.MACHINE -> {
                 val machine = catalogLookup.machineSpecsById[entry.key.catalogId]
                 if (machine?.type == MachineType.QA) {
-                    Messages.format(MessageKey.HUD_HELP_QA, displayName)
+                    Messages.format(UiMessageKey.HUD_HELP_QA, displayName)
                 } else {
-                    Messages.format(MessageKey.HUD_HELP_PRODUCER, displayName)
+                    Messages.format(UiMessageKey.HUD_HELP_PRODUCER, displayName)
                 }
             }
         }
     }
 
     companion object {
-        val BACK_BUTTON_BOUNDS: Rectangle = Rectangle(
-            GameConfig.virtualWidth - 248f,
-            GameConfig.virtualHeight - 70f,
-            216f,
-            40f
-        )
+        fun backButtonBounds(): Rectangle {
+            return Rectangle(
+                GameConfig.virtualWidth - GameConfig.hudButtonRightInset - GameConfig.hudBackButtonWidth,
+                GameConfig.virtualHeight - GameConfig.hudButtonTopInset - GameConfig.hudButtonHeight,
+                GameConfig.hudBackButtonWidth,
+                GameConfig.hudButtonHeight
+            )
+        }
 
-        val LANGUAGE_BUTTON_BOUNDS: Rectangle = Rectangle(
-            GameConfig.virtualWidth - 336f,
-            GameConfig.virtualHeight - 70f,
-            80f,
-            40f
-        )
+        fun languageButtonBounds(): Rectangle {
+            return Rectangle(
+                GameConfig.virtualWidth -
+                    GameConfig.hudButtonRightInset -
+                    GameConfig.hudBackButtonWidth -
+                    GameConfig.hudButtonGap -
+                    GameConfig.hudLanguageButtonWidth,
+                GameConfig.virtualHeight - GameConfig.hudButtonTopInset - GameConfig.hudButtonHeight,
+                GameConfig.hudLanguageButtonWidth,
+                GameConfig.hudButtonHeight
+            )
+        }
 
         private val BUTTON_FILL_HOVERED = Color(0.24f, 0.31f, 0.37f, 1f)
         private val BUTTON_FILL_DEFAULT = Color(0.16f, 0.20f, 0.24f, 1f)

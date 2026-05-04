@@ -1,5 +1,6 @@
 package com.faultory.editor.i18n
 
+import com.faultory.core.i18n.CatalogMessageKey
 import com.faultory.core.i18n.MessageKey
 import com.faultory.core.i18n.SupportedLocale
 import com.faultory.editor.repository.EditorJson
@@ -129,8 +130,7 @@ class TranslationStore(private val rootPath: Path) {
             messageKey.path.substringAfterLast('.')
 
         fun keysForCategory(category: String): List<MessageKey> {
-            val prefix = "catalog.$category."
-            return MessageKey.values().filter { it.path.startsWith(prefix) }
+            return CatalogMessageKey.entries.filter { it.category == category }
         }
     }
 }

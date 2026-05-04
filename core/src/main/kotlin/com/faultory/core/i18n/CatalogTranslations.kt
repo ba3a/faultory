@@ -18,15 +18,11 @@ class CatalogTranslations(
         cache.clear()
     }
 
-    fun resolve(key: MessageKey, id: String, locale: Locale): String {
-        val parts = key.path.split('.')
-        if (parts.size != 3 || parts[0] != "catalog") return id
-        val category = parts[1]
-        val field = parts[2]
-        val primary = bundleFor(category, id, locale)[field]
+    fun resolve(key: CatalogMessageKey, id: String, locale: Locale): String {
+        val primary = bundleFor(key.category, id, locale)[key.field]
         if (!primary.isNullOrEmpty()) return primary
         if (locale.toLanguageTag() != SupportedLocale.fallback.toLanguageTag()) {
-            val fallback = bundleFor(category, id, SupportedLocale.fallback)[field]
+            val fallback = bundleFor(key.category, id, SupportedLocale.fallback)[key.field]
             if (!fallback.isNullOrEmpty()) return fallback
         }
         return id

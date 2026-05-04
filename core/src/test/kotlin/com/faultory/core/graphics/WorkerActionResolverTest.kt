@@ -10,11 +10,9 @@ import kotlin.test.assertEquals
 class WorkerActionResolverTest {
     @Test
     fun `action is walk while worker is moving along a path`() {
-        val resolver = WorkerActionResolver()
-
         assertEquals(
             SkinActions.WALK,
-            resolver.actionFor(
+            WorkerActionResolver.actionFor(
                 worker(
                     movementPath = listOf(TileCoordinate(6, 5)),
                     movementProgress = 0.4f
@@ -25,11 +23,9 @@ class WorkerActionResolverTest {
 
     @Test
     fun `action is idle when worker has no remaining movement`() {
-        val resolver = WorkerActionResolver()
-
         assertEquals(
             SkinActions.IDLE,
-            resolver.actionFor(
+            WorkerActionResolver.actionFor(
                 worker(
                     movementPath = listOf(TileCoordinate(6, 5)),
                     movementProgress = 1f
@@ -40,11 +36,9 @@ class WorkerActionResolverTest {
 
     @Test
     fun `orientation follows the vector toward the next path tile`() {
-        val resolver = WorkerActionResolver()
-
         assertEquals(
             Orientation.EAST,
-            resolver.orientationFor(
+            WorkerActionResolver.orientationFor(
                 worker(
                     orientation = Orientation.SOUTH,
                     movementPath = listOf(TileCoordinate(6, 5))
@@ -55,11 +49,9 @@ class WorkerActionResolverTest {
 
     @Test
     fun `orientation falls back to placed orientation when path is empty`() {
-        val resolver = WorkerActionResolver()
-
         assertEquals(
             Orientation.WEST,
-            resolver.orientationFor(
+            WorkerActionResolver.orientationFor(
                 worker(
                     orientation = Orientation.WEST,
                     movementPath = emptyList()

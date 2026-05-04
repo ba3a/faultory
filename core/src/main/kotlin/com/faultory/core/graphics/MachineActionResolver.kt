@@ -4,8 +4,8 @@ import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
 
-class MachineActionResolver(private val shopFloor: ShopFloor) {
-    fun actionFor(placedObject: PlacedShopObject): String {
+object MachineActionResolver {
+    fun actionFor(shopFloor: ShopFloor, placedObject: PlacedShopObject): String {
         if (placedObject.kind != PlacedShopObjectKind.MACHINE) {
             return SkinActions.IDLE
         }

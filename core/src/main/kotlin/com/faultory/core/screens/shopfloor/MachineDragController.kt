@@ -39,8 +39,7 @@ class MachineDragController(
         val machine = shopFloor.findObjectById(state.machineId) ?: return true
         val newOrientation = Orientation.fromDrag(
             deltaX = pointerState.worldX - state.startWorldX,
-            deltaY = pointerState.worldY - state.startWorldY,
-            minimumMagnitude = 18f
+            deltaY = pointerState.worldY - state.startWorldY
         ) ?: return true
         if (newOrientation == machine.orientation) {
             return true

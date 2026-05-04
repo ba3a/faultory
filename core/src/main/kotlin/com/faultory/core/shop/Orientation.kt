@@ -1,5 +1,6 @@
 package com.faultory.core.shop
 
+import com.faultory.core.config.GameConfig
 import kotlin.math.abs
 import kotlinx.serialization.Serializable
 
@@ -47,7 +48,11 @@ enum class Orientation {
             }
         }
 
-        fun fromDrag(deltaX: Float, deltaY: Float, minimumMagnitude: Float): Orientation? {
+        fun fromDrag(
+            deltaX: Float,
+            deltaY: Float,
+            minimumMagnitude: Float = GameConfig.machineDragMinimumMagnitudePx
+        ): Orientation? {
             if (abs(deltaX) < minimumMagnitude && abs(deltaY) < minimumMagnitude) {
                 return null
             }

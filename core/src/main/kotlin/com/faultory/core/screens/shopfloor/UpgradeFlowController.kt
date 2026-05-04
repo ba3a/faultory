@@ -121,31 +121,30 @@ data class UpgradeModalState(
 )
 
 object UpgradeModalLayout {
-    private const val cardWidth = 220f
-    private const val cardHeight = 132f
-    private const val cardGap = 32f
-    private const val verticalPadding = 32f
-    private const val titleSpace = 64f
-
     fun build(
         objectId: String,
         kind: PlacedShopObjectKind,
         options: List<UpgradeOption>
     ): UpgradeModalState {
-        val width = options.size * cardWidth + (options.size - 1).coerceAtLeast(0) * cardGap + 64f
-        val height = cardHeight + titleSpace + verticalPadding
+        val width = options.size * GameConfig.upgradeModalCardWidth +
+            (options.size - 1).coerceAtLeast(0) * GameConfig.upgradeModalCardGap +
+            GameConfig.upgradeModalHorizontalPadding * 2f
+        val height = GameConfig.upgradeModalCardHeight +
+            GameConfig.upgradeModalTitleSpace +
+            GameConfig.upgradeModalVerticalPadding
         val x = (GameConfig.virtualWidth - width) / 2f
         val y = (GameConfig.virtualHeight - height) / 2f
-        val cardsTotal = options.size * cardWidth + (options.size - 1).coerceAtLeast(0) * cardGap
+        val cardsTotal = options.size * GameConfig.upgradeModalCardWidth +
+            (options.size - 1).coerceAtLeast(0) * GameConfig.upgradeModalCardGap
         val cardsStartX = x + (width - cardsTotal) / 2f
-        val cardsY = y + verticalPadding
+        val cardsY = y + GameConfig.upgradeModalVerticalPadding
         val laidOut = options.mapIndexed { index, option ->
             option.copy(
                 bounds = Rectangle(
-                    cardsStartX + index * (cardWidth + cardGap),
+                    cardsStartX + index * (GameConfig.upgradeModalCardWidth + GameConfig.upgradeModalCardGap),
                     cardsY,
-                    cardWidth,
-                    cardHeight
+                    GameConfig.upgradeModalCardWidth,
+                    GameConfig.upgradeModalCardHeight
                 )
             )
         }

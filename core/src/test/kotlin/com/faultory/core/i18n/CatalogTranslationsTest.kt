@@ -19,7 +19,7 @@ class CatalogTranslationsTest {
     @Test
     fun `resolves localized displayName when available`() {
         val text = translations.resolve(
-            MessageKey.WORKER_DISPLAYNAME,
+            CatalogMessageKey.WORKER_DISPLAYNAME,
             "line-inspector",
             Locale.forLanguageTag("ru"),
         )
@@ -29,7 +29,7 @@ class CatalogTranslationsTest {
     @Test
     fun `falls back to en-US when locale file missing`() {
         val text = translations.resolve(
-            MessageKey.WORKER_DISPLAYNAME,
+            CatalogMessageKey.WORKER_DISPLAYNAME,
             "no-russian",
             Locale.forLanguageTag("ru"),
         )
@@ -39,7 +39,7 @@ class CatalogTranslationsTest {
     @Test
     fun `unknown id returns id verbatim`() {
         val text = translations.resolve(
-            MessageKey.WORKER_DISPLAYNAME,
+            CatalogMessageKey.WORKER_DISPLAYNAME,
             "ghost",
             SupportedLocale.fallback,
         )
@@ -56,11 +56,11 @@ class CatalogTranslationsTest {
             },
         )
 
-        tracking.resolve(MessageKey.WORKER_DISPLAYNAME, "line-inspector", SupportedLocale.fallback)
-        tracking.resolve(MessageKey.WORKER_DISPLAYNAME, "line-inspector", SupportedLocale.fallback)
+        tracking.resolve(CatalogMessageKey.WORKER_DISPLAYNAME, "line-inspector", SupportedLocale.fallback)
+        tracking.resolve(CatalogMessageKey.WORKER_DISPLAYNAME, "line-inspector", SupportedLocale.fallback)
         val readsBefore = reads
         tracking.invalidateCache()
-        tracking.resolve(MessageKey.WORKER_DISPLAYNAME, "line-inspector", SupportedLocale.fallback)
+        tracking.resolve(CatalogMessageKey.WORKER_DISPLAYNAME, "line-inspector", SupportedLocale.fallback)
 
         assertEquals(true, reads > readsBefore)
     }

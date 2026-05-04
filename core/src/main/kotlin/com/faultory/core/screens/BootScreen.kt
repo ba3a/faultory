@@ -2,7 +2,6 @@ package com.faultory.core.screens
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.ScreenAdapter
-import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.TextureAtlas
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.utils.ScreenUtils
@@ -40,7 +39,7 @@ class BootScreen(
     }
 
     override fun render(delta: Float) {
-        ScreenUtils.clear(0.04f, 0.05f, 0.07f, 1f)
+        ScreenUtils.clear(BootPalette.clear.r, BootPalette.clear.g, BootPalette.clear.b, BootPalette.clear.a)
 
         val done = game.assetManager.update()
         drawProgress(game.assetManager.progress)
@@ -159,22 +158,19 @@ class BootScreen(
         val y = (GameConfig.virtualHeight - barHeight) / 2f
 
         renderer.begin(ShapeRenderer.ShapeType.Filled)
-        renderer.color = BAR_BG
+        renderer.color = BootPalette.progressBarBackground
         renderer.rect(x, y, barWidth, barHeight)
-        renderer.color = BAR_FILL
+        renderer.color = BootPalette.progressBarFill
         renderer.rect(x, y, barWidth * progress.coerceIn(0f, 1f), barHeight)
         renderer.end()
 
         renderer.begin(ShapeRenderer.ShapeType.Line)
-        renderer.color = BAR_BORDER
+        renderer.color = BootPalette.progressBarBorder
         renderer.rect(x, y, barWidth, barHeight)
         renderer.end()
     }
 
     private companion object {
         const val LOG_TAG = "BootScreen"
-        private val BAR_BG = Color(0.14f, 0.17f, 0.20f, 1f)
-        private val BAR_FILL = Color(0.32f, 0.66f, 0.70f, 1f)
-        private val BAR_BORDER = Color(0.55f, 0.60f, 0.64f, 1f)
     }
 }

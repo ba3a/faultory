@@ -2,9 +2,10 @@ package com.faultory.core.screens.shopfloor
 
 import com.badlogic.gdx.graphics.Color
 import com.faultory.core.config.GameConfig
+import com.faultory.core.i18n.CatalogMessageKey
 import com.faultory.core.content.LevelDefinition
-import com.faultory.core.i18n.MessageKey
 import com.faultory.core.i18n.Messages
+import com.faultory.core.i18n.UiMessageKey
 
 class CompletionModalRenderer(
     private val level: LevelDefinition,
@@ -12,7 +13,7 @@ class CompletionModalRenderer(
     private val shiftLifecycle: ShiftLifecycleController,
     private val hoverState: HoverState
 ) : ShopFloorLayer {
-    private val bounds get() = CompletionModalLayout.bounds
+    private val bounds get() = CompletionModalLayout.bounds()
 
     private fun buttons() = CompletionModalLayout.buttons(shiftLifecycle.nextLevel != null)
 
@@ -58,7 +59,7 @@ class CompletionModalRenderer(
         var currentY = bounds.y + bounds.height - 34f
 
         font.color = TITLE_TEXT
-        titleLayout.setText(font, Messages.text(if (completedRun.passed) MessageKey.COMPLETION_PASSED else MessageKey.COMPLETION_FAILED))
+        titleLayout.setText(font, Messages.text(if (completedRun.passed) UiMessageKey.COMPLETION_PASSED else UiMessageKey.COMPLETION_FAILED))
         font.draw(batch, titleLayout, modalLeft, currentY)
 
         currentY -= 28f
@@ -66,7 +67,7 @@ class CompletionModalRenderer(
         hintLayout.setText(
             font,
             Messages.format(
-                MessageKey.COMPLETION_DELIVERY,
+                UiMessageKey.COMPLETION_DELIVERY,
                 completedRun.goodProductsDelivered,
                 completedRun.faultyProductsDelivered,
                 completedRun.goodProductsDelivered + completedRun.faultyProductsDelivered
@@ -78,7 +79,7 @@ class CompletionModalRenderer(
         hintLayout.setText(
             font,
             Messages.format(
-                MessageKey.COMPLETION_THRESHOLDS,
+                UiMessageKey.COMPLETION_THRESHOLDS,
                 level.starThresholds.oneStar,
                 level.starThresholds.twoStar,
                 level.starThresholds.threeStar
@@ -88,12 +89,12 @@ class CompletionModalRenderer(
 
         currentY -= 32f
         font.color = ShopFloorPalette.TEXT_HIGHLIGHT_GOLD
-        titleLayout.setText(font, Messages.format(MessageKey.COMPLETION_STARS, starMeterText(completedRun.starsEarned)))
+        titleLayout.setText(font, Messages.format(UiMessageKey.COMPLETION_STARS, starMeterText(completedRun.starsEarned)))
         font.draw(batch, titleLayout, modalLeft, currentY)
 
         currentY -= 38f
         font.color = MIX_TITLE_TEXT
-        titleLayout.setText(font, Messages.text(MessageKey.COMPLETION_MIX))
+        titleLayout.setText(font, Messages.text(UiMessageKey.COMPLETION_MIX))
         font.draw(batch, titleLayout, modalLeft, currentY)
 
         currentY -= 30f
@@ -102,7 +103,7 @@ class CompletionModalRenderer(
             hintLayout.setText(
                 font,
                 Messages.format(
-                    MessageKey.COMPLETION_PRODUCT_LINE,
+                    UiMessageKey.COMPLETION_PRODUCT_LINE,
                     productDisplayName(stats.productId),
                     stats.goodCount,
                     stats.productionDefectCount,
@@ -126,7 +127,7 @@ class CompletionModalRenderer(
     }
 
     private fun productDisplayName(productId: String): String {
-        return Messages.catalog(MessageKey.PRODUCT_DISPLAYNAME, productId)
+        return Messages.catalog(CatalogMessageKey.PRODUCT_DISPLAYNAME, productId)
     }
 
     private fun starMeterText(starsEarned: Int): String {

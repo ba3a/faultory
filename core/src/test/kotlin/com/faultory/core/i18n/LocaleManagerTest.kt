@@ -61,12 +61,12 @@ class LocaleManagerTest {
         })
         LocaleManager.init(translations = translations, initialLocale = SupportedLocale.fallback)
 
-        Messages.catalog(MessageKey.WORKER_DISPLAYNAME, "x")
-        Messages.catalog(MessageKey.WORKER_DISPLAYNAME, "x")
+        Messages.catalog(CatalogMessageKey.WORKER_DISPLAYNAME, "x")
+        Messages.catalog(CatalogMessageKey.WORKER_DISPLAYNAME, "x")
         val readsBefore = reads
 
         LocaleManager.setLocale(Locale.forLanguageTag("ru"))
-        Messages.catalog(MessageKey.WORKER_DISPLAYNAME, "x")
+        Messages.catalog(CatalogMessageKey.WORKER_DISPLAYNAME, "x")
 
         assertTrue(reads > readsBefore, "expected reader to be called again after locale switch")
     }
