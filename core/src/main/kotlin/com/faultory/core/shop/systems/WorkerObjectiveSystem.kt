@@ -329,31 +329,30 @@ internal class WorkerObjectiveSystem(
     }
 
     private fun chooseDeliveryPlan(worker: PlacedShopObject): DeliveryPlan? {
-        val blockedTiles = state.blockedTilesForPath(ignoreWorkerId = worker.id, ignoreCarriedProductId = worker.carriedProductId)
-        var bestPlan: DeliveryPlan? = null
+        val blockedTiles = state.blockedTilesForPath(
+            ignoreWorkerId = worker.id,
+            ignoreCarriedProductId = worker.carriedProductId
+        )
 
+        // Build a map of every reachable stand tile → one adjacent empty belt tile.
+        // A single multi-goal BFS then finds the nearest stand in O(gridTiles) instead of
+        // the previous O(beltTiles × neighbors × gridTiles).
+        val standToBelt = mutableMapOf<TileCoordinate, TileCoordinate>()
         for (beltTile in grid.beltTiles) {
-            if (state.isOccupied(beltTile, ignoreObjectId = worker.id, ignoreProductId = worker.carriedProductId)) {
-                continue
-            }
-
-            val standTiles = grid.orthogonalNeighbors(beltTile)
-                .filter { standTile ->
-                    grid.isBuildable(standTile) &&
-                        (standTile == worker.position || !state.isOccupied(standTile, ignoreObjectId = worker.id, ignoreProductId = worker.carriedProductId))
-                }
-                .sortedWith(compareBy<TileCoordinate> { if (it in grid.beltTiles) 1 else 0 }.thenBy { state.manhattanDistance(it, worker.position) })
-
-            for (standTile in standTiles) {
-                val path = grid.findPath(worker.position, setOf(standTile), blockedTiles) ?: continue
-                val candidate = DeliveryPlan(beltTile = beltTile, path = path)
-                if (bestPlan == null || candidate.path.size < bestPlan.path.size) {
-                    bestPlan = candidate
-                }
+            if (state.isOccupied(beltTile, ignoreObjectId = worker.id, ignoreProductId = worker.carriedProductId)) continue
+            for (standTile in grid.orthogonalNeighbors(beltTile)) {
+                if (!grid.isBuildable(standTile)) continue
+                if (standTile != worker.position &&
+                    state.isOccupied(standTile, ignoreObjectId = worker.id, ignoreProductId = worker.carriedProductId)) continue
+                if (standTile !in standToBelt) standToBelt[standTile] = beltTile
             }
         }
 
-        return bestPlan
+        if (standToBelt.isEmpty()) return null
+        val path = grid.findPath(worker.position, standToBelt.keys.toSet(), blockedTiles) ?: return null
+        val standTile = if (path.isEmpty()) worker.position else path.last()
+        val beltTile = standToBelt[standTile] ?: return null
+        return DeliveryPlan(beltTile = beltTile, path = path)
     }
 
     private fun planWorkerReturnToMachine(
