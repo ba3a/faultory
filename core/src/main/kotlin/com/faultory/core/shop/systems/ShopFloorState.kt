@@ -58,6 +58,7 @@ internal class ShopFloorState(
     private var tileOccupancyDirty: Boolean = true
     private val placedObjectIdByTile: HashMap<TileCoordinate, String> = HashMap()
     private val productIdByTile: HashMap<TileCoordinate, String> = HashMap()
+    private val occupiedTilesByObjectId: HashMap<String, Set<TileCoordinate>> = HashMap()
 
     private val _placedMachines: MutableList<PlacedShopObject> = mutableListOf()
     private val _placedWorkers: MutableList<PlacedShopObject> = mutableListOf()
@@ -68,6 +69,7 @@ internal class ShopFloorState(
     init {
         placedObjectsIndex.addMutationListener { old, new ->
             tileOccupancyDirty = true
+            if (old != null) occupiedTilesByObjectId.remove(old.id)
             updateOperatorWorkerIndex(old, new)
             updateKindIndex(old, new)
         }
@@ -220,12 +222,14 @@ internal class ShopFloorState(
     }
 
     fun occupiedTilesFor(placedObject: PlacedShopObject): Set<TileCoordinate> {
-        return when (placedObject.kind) {
-            PlacedShopObjectKind.WORKER -> setOf(placedObject.position)
-            PlacedShopObjectKind.MACHINE -> {
-                val machineSpec = machineSpecsById[placedObject.catalogId]
-                    ?: return setOf(placedObject.position)
-                machineSpec.occupiedTiles(placedObject.position, placedObject.orientation)
+        return occupiedTilesByObjectId.getOrPut(placedObject.id) {
+            when (placedObject.kind) {
+                PlacedShopObjectKind.WORKER -> setOf(placedObject.position)
+                PlacedShopObjectKind.MACHINE -> {
+                    val machineSpec = machineSpecsById[placedObject.catalogId]
+                        ?: return@getOrPut setOf(placedObject.position)
+                    machineSpec.occupiedTiles(placedObject.position, placedObject.orientation)
+                }
             }
         }
     }
