@@ -59,6 +59,7 @@ internal class ShopFloorState(
     private val placedObjectIdByTile: HashMap<TileCoordinate, String> = HashMap()
     private val productIdByTile: HashMap<TileCoordinate, String> = HashMap()
     private val occupiedTilesByObjectId: HashMap<String, Set<TileCoordinate>> = HashMap()
+    private val slotPositionsByObjectId: HashMap<String, HashMap<MachineSlotType?, List<MachineSlotPosition>>> = HashMap()
 
     private val _placedMachines: MutableList<PlacedShopObject> = mutableListOf()
     private val _placedWorkers: MutableList<PlacedShopObject> = mutableListOf()
@@ -70,6 +71,7 @@ internal class ShopFloorState(
         placedObjectsIndex.addMutationListener { old, new ->
             tileOccupancyDirty = true
             if (old != null) occupiedTilesByObjectId.remove(old.id)
+            if (old != null && old.kind == PlacedShopObjectKind.MACHINE) slotPositionsByObjectId.remove(old.id)
             updateOperatorWorkerIndex(old, new)
             updateKindIndex(old, new)
         }
@@ -250,6 +252,12 @@ internal class ShopFloorState(
         }
 
         val machineSpec = machineSpecsById[placedObject.catalogId] ?: return emptyList()
+        if (placedObjectsIndex.byId(placedObject.id) != null) {
+            val machineCache = slotPositionsByObjectId.getOrPut(placedObject.id) { HashMap() }
+            return machineCache.getOrPut(type) {
+                machineSpec.slotPositions(placedObject.position, placedObject.orientation, type)
+            }
+        }
         return machineSpec.slotPositions(placedObject.position, placedObject.orientation, type)
     }
 
