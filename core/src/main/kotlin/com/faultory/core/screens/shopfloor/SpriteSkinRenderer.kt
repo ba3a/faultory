@@ -26,7 +26,7 @@ class SpriteSkinRenderer(
         val delta = Gdx.graphics.deltaTime.coerceAtLeast(0f)
 
         batch.color = Color.WHITE
-        sortedPlacedObjects().forEach { placedObject ->
+        sortedPlacedObjects().forEach { (placedObject, anchor) ->
             val definition = skinDefinitionFor(placedObject, skinRegistry) ?: return@forEach
             val action = actionFor(placedObject)
             val clip = definition.actions[action] ?: return@forEach
@@ -40,7 +40,6 @@ class SpriteSkinRenderer(
             )
             val regionName = ctx.animationPlayer.regionName(clip, state) ?: return@forEach
             val region = atlas.findRegion(regionName) ?: return@forEach
-            val anchor = geometry.renderPositionFor(placedObject)
             val drawX = anchor.worldX + GameConfig.tileSize / 2f - region.regionWidth / 2f
             val drawY = anchor.worldY
             batch.draw(region, drawX, drawY)
@@ -48,11 +47,13 @@ class SpriteSkinRenderer(
         }
     }
 
-    private fun sortedPlacedObjects(): List<PlacedShopObject> {
-        return shopFloor.placedObjects.sortedWith(
-            compareByDescending<PlacedShopObject> { geometry.renderPositionFor(it).worldY }
-                .thenBy { geometry.renderPositionFor(it).worldX }
-        )
+    private fun sortedPlacedObjects(): List<Pair<PlacedShopObject, RenderPosition>> {
+        return shopFloor.placedObjects
+            .map { it to geometry.renderPositionFor(it) }
+            .sortedWith(
+                compareByDescending<Pair<PlacedShopObject, RenderPosition>> { (_, pos) -> pos.worldY }
+                    .thenBy { (_, pos) -> pos.worldX }
+            )
     }
 
     private fun actionFor(placedObject: PlacedShopObject): String {
