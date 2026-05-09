@@ -75,8 +75,7 @@ class PlacedObjectRenderer(
     private fun drawAssignmentTargetHover(renderer: ShapeRenderer) {
         if (!workerAssignment.hasPendingAssignment) return
 
-        val machine = hoverState.hoveredTile
-            ?.let(shopFloor::objectAt)
+        val machine = hoverState.hoveredObject
             ?.takeIf { it.kind == PlacedShopObjectKind.MACHINE }
             ?: return
 

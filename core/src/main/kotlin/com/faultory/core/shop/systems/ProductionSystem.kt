@@ -176,10 +176,7 @@ internal class ProductionSystem(
     }
 
     fun pruneEmptyRecipeStates() {
-        val activeMachineIds = placedMachines.mapTo(HashSet()) { it.id }
-        mutableMachineRecipeStates.removeAll { recipeState ->
-            recipeState.machineId !in activeMachineIds || recipeState.isEmpty
-        }
+        mutableMachineRecipeStates.removeAll { it.isEmpty }
     }
 
     fun acceptBeltInputs() {

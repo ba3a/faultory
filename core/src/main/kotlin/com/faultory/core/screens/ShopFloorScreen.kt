@@ -64,6 +64,17 @@ class ShopFloorScreen(
     private val geometry = ShopFloorGeometry(shopFloor)
     private val animationPlayer = AnimationPlayer()
     private val atlasProvider: (String) -> TextureAtlas? = game.skinRegistry::atlas
+    private val renderContext = ShopFloorRenderContext(
+        shapeRenderer = game.renderContext.shapeRenderer,
+        spriteBatch = game.renderContext.spriteBatch,
+        font = game.renderContext.uiFont,
+        titleLayout = titleLayout,
+        hintLayout = hintLayout,
+        viewport = viewport,
+        animationPlayer = animationPlayer,
+        atlasProvider = atlasProvider,
+        skinRegistry = game.skinRegistry
+    )
     private val machineDrag = MachineDragController(
         shopFloor = shopFloor,
         pointerState = pointerState,
@@ -158,19 +169,7 @@ class ShopFloorScreen(
         shapeRenderer.projectionMatrix = viewport.camera.combined
         game.renderContext.spriteBatch.projectionMatrix = viewport.camera.combined
 
-        view.render(
-            ShopFloorRenderContext(
-                shapeRenderer = shapeRenderer,
-                spriteBatch = game.renderContext.spriteBatch,
-                font = game.renderContext.uiFont,
-                titleLayout = titleLayout,
-                hintLayout = hintLayout,
-                viewport = viewport,
-                animationPlayer = animationPlayer,
-                atlasProvider = atlasProvider,
-                skinRegistry = game.skinRegistry
-            )
-        )
+        view.render(renderContext)
     }
 
     override fun resize(width: Int, height: Int) {

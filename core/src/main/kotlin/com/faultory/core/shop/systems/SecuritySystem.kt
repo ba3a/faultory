@@ -18,13 +18,13 @@ internal class SecuritySystem(
 ) {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val placedWorkers get() = state.placedWorkers
+    private val placedSecurityWorkers get() = state.placedSecurityWorkers
     private val mutableMachineProductionStates get() = state.mutableMachineProductionStates
     private val machineSpecsById get() = state.machineSpecsById
     private val grid get() = state.grid
 
     fun update(workerProfilesById: Map<String, WorkerProfile>) {
-        val securityWorkers = placedWorkers
-            .filter { it.workerRole == WorkerRole.SECURITY }
+        val securityWorkers = placedSecurityWorkers
         if (securityWorkers.isEmpty()) return
 
         val saboteursById = activeSaboteurs().associateBy { it.id }
@@ -191,7 +191,6 @@ internal class SecuritySystem(
             .asSequence()
             .filter { it.id != excludeId }
             .map { state.findObjectById(it.id) ?: it }
-            .filter { it.workerRole == WorkerRole.SECURITY }
             .filter { it.assignedMachineId == null }
             .filter { it.pursuitTargetWorkerId == null }
             .filter { it.carriedProductId == null }
