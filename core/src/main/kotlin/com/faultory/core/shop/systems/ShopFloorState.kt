@@ -222,14 +222,21 @@ internal class ShopFloorState(
     }
 
     fun occupiedTilesFor(placedObject: PlacedShopObject): Set<TileCoordinate> {
-        return occupiedTilesByObjectId.getOrPut(placedObject.id) {
-            when (placedObject.kind) {
-                PlacedShopObjectKind.WORKER -> setOf(placedObject.position)
-                PlacedShopObjectKind.MACHINE -> {
-                    val machineSpec = machineSpecsById[placedObject.catalogId]
-                        ?: return@getOrPut setOf(placedObject.position)
-                    machineSpec.occupiedTiles(placedObject.position, placedObject.orientation)
-                }
+        if (placedObjectsIndex.byId(placedObject.id) != null) {
+            return occupiedTilesByObjectId.getOrPut(placedObject.id) {
+                computeOccupiedTiles(placedObject)
+            }
+        }
+        return computeOccupiedTiles(placedObject)
+    }
+
+    private fun computeOccupiedTiles(placedObject: PlacedShopObject): Set<TileCoordinate> {
+        return when (placedObject.kind) {
+            PlacedShopObjectKind.WORKER -> setOf(placedObject.position)
+            PlacedShopObjectKind.MACHINE -> {
+                val machineSpec = machineSpecsById[placedObject.catalogId]
+                    ?: return setOf(placedObject.position)
+                machineSpec.occupiedTiles(placedObject.position, placedObject.orientation)
             }
         }
     }
