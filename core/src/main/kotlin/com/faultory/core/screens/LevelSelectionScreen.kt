@@ -114,8 +114,12 @@ class LevelSelectionScreen(
     private fun refreshLockState() {
         missingPrereqsByLevelId.clear()
         val locked = mutableSetOf<String>()
+        val prereqIds = levelCatalog.levels.flatMap { it.requiredLevelIds }.toSet()
+        val starsEarned = prereqIds.associateWith { id ->
+            game.saveRepository.load(id)?.lastCompletedRun?.starsEarned ?: 0
+        }
         for (level in levelCatalog.levels) {
-            val missing = LevelUnlockResolver.missingPrerequisites(level, game.saveRepository)
+            val missing = LevelUnlockResolver.missingPrerequisites(level) { starsEarned[it] ?: 0 }
             if (missing.isNotEmpty()) {
                 locked += level.id
                 missingPrereqsByLevelId[level.id] = missing

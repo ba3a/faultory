@@ -21,30 +21,20 @@ data class WorkerProfile(
         rootWorkerId: String,
         workersById: Map<String, WorkerProfile>
     ): Boolean {
-        if (id == rootWorkerId) {
-            return true
-        }
-
+        if (id == rootWorkerId) return true
+        val queue = ArrayDeque<String>()
+        queue += rootWorkerId
         val visited = mutableSetOf<String>()
-        return isDescendantOf(rootWorkerId, workersById, visited)
-    }
-
-    private fun isDescendantOf(
-        currentWorkerId: String,
-        workersById: Map<String, WorkerProfile>,
-        visited: MutableSet<String>
-    ): Boolean {
-        if (!visited.add(currentWorkerId)) {
-            return false
-        }
-
-        val currentWorker = workersById[currentWorkerId] ?: return false
-        return currentWorker.upgradeTree
-            ?.upgradeIds()
-            ?.any { childWorkerId ->
-                childWorkerId == id || isDescendantOf(childWorkerId, workersById, visited)
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            if (!visited.add(current)) continue
+            val profile = workersById[current] ?: continue
+            for (childId in profile.upgradeTree?.upgradeIds().orEmpty()) {
+                if (childId == id) return true
+                queue += childId
             }
-            ?: false
+        }
+        return false
     }
 }
 

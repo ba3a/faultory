@@ -52,7 +52,8 @@ class BeltSupplyFeeder(
             val flat = flattenStats(schedule.stats, schedule.random)
             val slot = schedule.shiftLengthSeconds / total
             val maxJitter = slot * 0.4f
-            return flat.mapIndexed { index, entry ->
+            val minSpacing = slot * 0.01f
+            val spawns = flat.mapIndexed { index, entry ->
                 val nominal = (index + 0.5f) * slot
                 val jitter = (schedule.random.nextFloat() - 0.5f) * 2f * maxJitter
                 val time = (nominal + jitter).coerceIn(0f, schedule.shiftLengthSeconds)
@@ -62,7 +63,16 @@ class BeltSupplyFeeder(
                     productId = entry.productId,
                     faultReason = entry.faultReason
                 )
-            }.sortedBy { it.timeSeconds }
+            }.sortedBy { it.timeSeconds }.toMutableList()
+            // Guarantee strict ordering so no two entries hit the belt start on the same frame.
+            // The clamp to [0, shiftLengthSeconds] can stack edge items at the same timestamp;
+            // nudge each one just past its predecessor when that happens.
+            for (i in 1 until spawns.size) {
+                if (spawns[i].timeSeconds <= spawns[i - 1].timeSeconds) {
+                    spawns[i] = spawns[i].copy(timeSeconds = spawns[i - 1].timeSeconds + minSpacing)
+                }
+            }
+            return spawns
         }
 
         private fun flattenStats(

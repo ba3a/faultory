@@ -21,6 +21,11 @@ class HudRenderer(
     private val shiftLifecycle: ShiftLifecycleController,
     private val hoverState: HoverState
 ) : ShopFloorLayer {
+    private var cachedSelectedItemText: String = ""
+    private var selectedItemTextDirty: Boolean = true
+    private var lastIsShiftEnded: Boolean = false
+    private var lastAssignmentWorkerId: String? = null
+    private var lastSelectedKey: BankEntryKey? = null
     override fun drawFill(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
         val backButtonBounds = backButtonBounds()
@@ -76,7 +81,7 @@ class HudRenderer(
                 level.starThresholds.oneStar,
                 level.starThresholds.twoStar,
                 level.starThresholds.threeStar,
-                selectedItemText()
+                resolvedSelectedItemText()
             )
         )
         font.draw(batch, hintLayout, 32f, GameConfig.virtualHeight - 76f)
@@ -94,6 +99,24 @@ class HudRenderer(
             languageButtonBounds.x + (languageButtonBounds.width - titleLayout.width) / 2f,
             languageButtonBounds.y + 26f
         )
+    }
+
+    private fun resolvedSelectedItemText(): String {
+        val isShiftEnded = shiftLifecycle.isShiftEnded
+        val assignmentWorkerId = workerAssignment.assignmentPendingWorkerId
+        val selectedKey = bankPanel.selectedKey
+        if (selectedItemTextDirty ||
+            isShiftEnded != lastIsShiftEnded ||
+            assignmentWorkerId != lastAssignmentWorkerId ||
+            selectedKey != lastSelectedKey
+        ) {
+            selectedItemTextDirty = false
+            lastIsShiftEnded = isShiftEnded
+            lastAssignmentWorkerId = assignmentWorkerId
+            lastSelectedKey = selectedKey
+            cachedSelectedItemText = selectedItemText()
+        }
+        return cachedSelectedItemText
     }
 
     private fun selectedItemText(): String {

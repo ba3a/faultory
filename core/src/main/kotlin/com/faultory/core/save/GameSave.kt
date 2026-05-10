@@ -21,7 +21,7 @@ data class GameSave(
     val lastCompletedRun: CompletedRunStats? = null
 ) {
     companion object {
-        const val CURRENT_VERSION = 11
+        const val CURRENT_VERSION = 12
 
         fun forLevel(
             slotId: String,
@@ -34,7 +34,6 @@ data class GameSave(
                 slotId = slotId,
                 createdAtEpochMillis = System.currentTimeMillis(),
                 player = PlayerProgress(
-                    budget = 160,
                     unlockedWorkerIds = unlockedWorkerIds,
                     unlockedMachineIds = unlockedMachineIds
                 ),
@@ -53,7 +52,6 @@ data class GameSave(
 
 @Serializable
 data class PlayerProgress(
-    val budget: Int,
     val unlockedWorkerIds: List<String>,
     val unlockedMachineIds: List<String>
 )

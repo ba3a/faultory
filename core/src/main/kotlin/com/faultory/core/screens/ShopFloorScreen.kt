@@ -127,9 +127,16 @@ class ShopFloorScreen(
 
     override fun show() {
         viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
-        bankPanel.rebuild(level) { levelId ->
-            (game.saveRepository.load(levelId)?.lastCompletedRun?.starsEarned ?: 0) >= 1
+        val requiredLevelIds = (
+            level.availableWorkerIds.mapNotNull { catalogLookup.workerProfilesById[it] }
+                .flatMap { it.requiredCompletedLevelIds } +
+            level.availableMachineIds.mapNotNull { catalogLookup.machineSpecsById[it] }
+                .flatMap { it.requiredCompletedLevelIds }
+        ).toSet()
+        val completedLevelIds = requiredLevelIds.filterTo(mutableSetOf()) { id ->
+            (game.saveRepository.load(id)?.lastCompletedRun?.starsEarned ?: 0) >= 1
         }
+        bankPanel.rebuild(level) { levelId -> levelId in completedLevelIds }
         bankPanel.layout()
         if (shiftLifecycle.finalizeIfNeeded()) {
             input.clearInteractionStateForShiftEnd()
