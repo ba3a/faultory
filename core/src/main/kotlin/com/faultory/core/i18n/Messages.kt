@@ -8,10 +8,6 @@ object Messages {
     private val formatCache = HashMap<Pair<UiMessageKey, Locale>, MessageFormat>()
     private val loggedFormatErrors = HashSet<UiMessageKey>()
 
-    init {
-        LocaleManager.addListener { formatCache.clear() }
-    }
-
     fun text(key: UiMessageKey): String {
         return try {
             LocaleManager.currentBundle.getString(key.path)

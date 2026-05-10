@@ -28,6 +28,7 @@ object LocaleManager {
         this.fallbackBundle = loader.load(SupportedLocale.fallback)
         this.catalogTranslations = translations
         this.persist = persist
+        listeners.clear()
         applyLocale(initialLocale, persistChange = false)
     }
 

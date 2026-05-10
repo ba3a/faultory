@@ -53,6 +53,20 @@ class LocaleManagerTest {
     }
 
     @Test
+    fun `init clears previously registered listeners`() {
+        val fired = mutableListOf<Locale>()
+        LocaleManager.addListener { fired += it }
+
+        LocaleManager.init(
+            translations = CatalogTranslations(resourceReader = { null }),
+            initialLocale = SupportedLocale.fallback,
+        )
+        LocaleManager.setLocale(Locale.forLanguageTag("ru"))
+
+        assertTrue(fired.isEmpty(), "listener registered before init should not fire after re-init")
+    }
+
+    @Test
     fun `setLocale clears catalog translation cache`() {
         var reads = 0
         val translations = CatalogTranslations(resourceReader = { _ ->
