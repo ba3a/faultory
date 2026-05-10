@@ -74,7 +74,7 @@ class BootScreen(
         atlasPaths.forEach { atlasPath ->
             if (assetManager.isLoaded(atlasPath)) return@forEach
             if (!Gdx.files.internal(atlasPath).exists()) {
-                Gdx.app?.log(LOG_TAG, "Atlas '$atlasPath' not found; renderer will fall back to shapes.")
+                Gdx.app?.error(LOG_TAG, "Atlas '$atlasPath' referenced in skin JSON not found on disk; renderer will fall back to shapes.")
                 return@forEach
             }
             assetManager.load(atlasPath, TextureAtlas::class.java)

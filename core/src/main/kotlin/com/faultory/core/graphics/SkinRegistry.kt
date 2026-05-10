@@ -6,9 +6,8 @@ import com.badlogic.gdx.graphics.g2d.TextureAtlas
 import com.faultory.core.assets.AssetPaths
 
 class SkinRegistry(private val assetManager: AssetManager) {
-    private val cachedAtlases = mutableMapOf<String, TextureAtlas>()
+    private val atlasCache = mutableMapOf<String, TextureAtlas?>()
     private val cachedDefinitions = mutableMapOf<String, SkinDefinition?>()
-    private val failedAtlases = mutableSetOf<String>()
 
     fun get(skinId: String): SkinDefinition? {
         if (cachedDefinitions.containsKey(skinId)) {
@@ -26,22 +25,16 @@ class SkinRegistry(private val assetManager: AssetManager) {
     }
 
     fun atlas(atlasPath: String): TextureAtlas? {
-        cachedAtlases[atlasPath]?.let { return it }
-        if (atlasPath in failedAtlases) return null
+        if (atlasCache.containsKey(atlasPath)) return atlasCache[atlasPath]
 
-        return try {
-            if (!assetManager.isLoaded(atlasPath)) {
-                assetManager.load(atlasPath, TextureAtlas::class.java)
-                assetManager.finishLoadingAsset<TextureAtlas>(atlasPath)
-            }
-            assetManager.get(atlasPath, TextureAtlas::class.java).also { atlas ->
-                cachedAtlases[atlasPath] = atlas
-            }
-        } catch (exception: RuntimeException) {
-            Gdx.app?.error(LOG_TAG, "Failed to load atlas '$atlasPath'; sprite rendering will fall back to shapes.", exception)
-            failedAtlases.add(atlasPath)
+        val atlas = if (assetManager.isLoaded(atlasPath)) {
+            assetManager.get(atlasPath, TextureAtlas::class.java)
+        } else {
+            Gdx.app?.error(LOG_TAG, "Atlas '$atlasPath' was not pre-loaded; sprite rendering will fall back to shapes.")
             null
         }
+        atlasCache[atlasPath] = atlas
+        return atlas
     }
 
     private companion object {
