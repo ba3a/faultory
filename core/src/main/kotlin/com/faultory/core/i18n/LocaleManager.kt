@@ -15,6 +15,9 @@ object LocaleManager {
     var currentBundle: ResourceBundle = bundleLoader.load(SupportedLocale.fallback)
         private set
 
+    var fallbackBundle: ResourceBundle = bundleLoader.load(SupportedLocale.fallback)
+        private set
+
     fun init(
         loader: MessageBundleLoader = MessageBundleLoader(),
         translations: CatalogTranslations,
@@ -22,6 +25,7 @@ object LocaleManager {
         persist: ((Locale) -> Unit)? = null
     ) {
         this.bundleLoader = loader
+        this.fallbackBundle = loader.load(SupportedLocale.fallback)
         this.catalogTranslations = translations
         this.persist = persist
         applyLocale(initialLocale, persistChange = false)
