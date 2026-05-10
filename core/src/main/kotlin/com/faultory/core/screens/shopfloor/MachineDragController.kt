@@ -7,7 +7,6 @@ import com.faultory.core.shop.TileCoordinate
 
 class MachineDragController(
     private val shopFloor: ShopFloor,
-    private val pointerState: PointerState,
     private val failureBlink: FailureBlinkController,
     private val shiftLifecycle: ShiftLifecycleController
 ) {
@@ -22,24 +21,24 @@ class MachineDragController(
     val isDragging: Boolean
         get() = dragState != null
 
-    fun tryStart(hoveredTile: TileCoordinate?): Boolean {
+    fun tryStart(hoveredTile: TileCoordinate?, worldX: Float, worldY: Float): Boolean {
         val machine = hoveredTile
             ?.let(shopFloor::objectAt)
             ?.takeIf { it.kind == PlacedShopObjectKind.MACHINE }
             ?: return false
 
-        dragState = DragState(machine.id, pointerState.worldX, pointerState.worldY)
+        dragState = DragState(machine.id, worldX, worldY)
         return true
     }
 
-    fun finish(): Boolean {
+    fun finish(worldX: Float, worldY: Float): Boolean {
         val state = dragState ?: return false
         dragState = null
 
         val machine = shopFloor.findObjectById(state.machineId) ?: return true
         val newOrientation = Orientation.fromDrag(
-            deltaX = pointerState.worldX - state.startWorldX,
-            deltaY = pointerState.worldY - state.startWorldY
+            deltaX = worldX - state.startWorldX,
+            deltaY = worldY - state.startWorldY
         ) ?: return true
         if (newOrientation == machine.orientation) {
             return true

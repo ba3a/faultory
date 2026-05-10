@@ -1,6 +1,5 @@
 package com.faultory.core.screens.shopfloor
 
-import com.faultory.core.FaultoryGame
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.WorkerProfile
@@ -9,7 +8,7 @@ import com.faultory.core.shop.ShopFloor
 import com.faultory.core.systems.ProductionDayDirector
 
 class ShiftLifecycleController(
-    private val game: FaultoryGame,
+    private val host: ShiftLifecycleHost,
     private val level: LevelDefinition,
     val nextLevel: LevelDefinition?,
     private val shopFloor: ShopFloor,
@@ -94,7 +93,7 @@ class ShiftLifecycleController(
                 machineRecipeStates = shopFloor.machineRecipeStates
             )
         )
-        game.saveRepository.save(currentSave)
+        host.saveRepository.save(currentSave)
         dirty = false
     }
 
@@ -106,20 +105,20 @@ class ShiftLifecycleController(
 
     fun replayLevel() {
         currentSave = currentSave.resetForReplay(shopFloor.blueprint.id, level.startingCash)
-        game.saveRepository.save(currentSave)
+        host.saveRepository.save(currentSave)
         dirty = false
         persistOnHide = false
-        game.openLevel(level)
+        host.openLevel(level)
     }
 
     fun openNextLevel() {
         val recommendedLevel = nextLevel ?: return
         persist()
-        game.openLevel(recommendedLevel)
+        host.openLevel(recommendedLevel)
     }
 
     fun returnToLevelSelection() {
         persist()
-        game.openLevelSelection()
+        host.openLevelSelection()
     }
 }

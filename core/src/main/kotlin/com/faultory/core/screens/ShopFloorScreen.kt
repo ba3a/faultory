@@ -51,7 +51,7 @@ class ShopFloorScreen(
     private val titleLayout = GlyphLayout()
     private val hintLayout = GlyphLayout()
     private val shiftLifecycle = ShiftLifecycleController(
-        game = game,
+        host = game,
         level = level,
         nextLevel = nextLevel,
         shopFloor = shopFloor,
@@ -77,7 +77,6 @@ class ShopFloorScreen(
     )
     private val machineDrag = MachineDragController(
         shopFloor = shopFloor,
-        pointerState = pointerState,
         failureBlink = failureBlink,
         shiftLifecycle = shiftLifecycle
     )
@@ -88,7 +87,6 @@ class ShopFloorScreen(
     )
     private val workerAssignment = WorkerAssignmentController(
         shopFloor = shopFloor,
-        pointerState = pointerState,
         catalogLookup = catalogLookup,
         bankPanel = bankPanel,
         failureBlink = failureBlink,

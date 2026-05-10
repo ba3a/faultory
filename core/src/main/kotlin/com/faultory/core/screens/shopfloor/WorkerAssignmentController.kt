@@ -13,7 +13,6 @@ import com.faultory.core.shop.WorkerAssignmentResult
 
 class WorkerAssignmentController(
     private val shopFloor: ShopFloor,
-    private val pointerState: PointerState,
     private val catalogLookup: CatalogLookup,
     private val bankPanel: BankPanel,
     private val failureBlink: FailureBlinkController,
@@ -122,7 +121,7 @@ class WorkerAssignmentController(
         }
     }
 
-    fun openContextMenuForWorker(workerId: String) {
+    fun openContextMenuForWorker(workerId: String, worldX: Float, worldY: Float) {
         val worker = shopFloor.findObjectById(workerId) ?: return
         if (worker.kind != PlacedShopObjectKind.WORKER) return
         val workerProfile = catalogLookup.workerProfilesById[worker.catalogId] ?: return
@@ -140,31 +139,33 @@ class WorkerAssignmentController(
             }
         }
         if (actions.isEmpty()) return
-        contextMenu = buildMenu(workerId, PlacedShopObjectKind.WORKER, actions)
+        contextMenu = buildMenu(workerId, PlacedShopObjectKind.WORKER, actions, worldX, worldY)
         hoveredContextAction = contextMenu?.options?.firstOrNull()?.action
     }
 
-    fun openContextMenuForMachine(machineId: String) {
+    fun openContextMenuForMachine(machineId: String, worldX: Float, worldY: Float) {
         val machine = shopFloor.findObjectById(machineId) ?: return
         if (machine.kind != PlacedShopObjectKind.MACHINE) return
         if (!upgradeFlow.hasUpgradesFor(machineId)) return
         val actions = listOf(ObjectContextAction.UPGRADE)
-        contextMenu = buildMenu(machineId, PlacedShopObjectKind.MACHINE, actions)
+        contextMenu = buildMenu(machineId, PlacedShopObjectKind.MACHINE, actions, worldX, worldY)
         hoveredContextAction = contextMenu?.options?.firstOrNull()?.action
     }
 
     private fun buildMenu(
         objectId: String,
         kind: PlacedShopObjectKind,
-        actions: List<ObjectContextAction>
+        actions: List<ObjectContextAction>,
+        worldX: Float,
+        worldY: Float
     ): ObjectContextMenuState {
         val width = 188f
         val optionHeight = 38f
         val optionGap = 6f
         val padding = 6f
         val height = padding * 2f + actions.size * optionHeight + (actions.size - 1).coerceAtLeast(0) * optionGap
-        val x = pointerState.worldX.coerceIn(12f, GameConfig.virtualWidth - width - 12f)
-        val y = pointerState.worldY.coerceIn(
+        val x = worldX.coerceIn(12f, GameConfig.virtualWidth - width - 12f)
+        val y = worldY.coerceIn(
             GameConfig.bankHeight + 12f,
             GameConfig.virtualHeight - GameConfig.hudHeight - height - 12f
         )

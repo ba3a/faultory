@@ -75,7 +75,7 @@ class ShopFloorInput(
         if (button != Input.Buttons.LEFT) {
             return false
         }
-        return machineDrag.finish()
+        return machineDrag.finish(pointerState.worldX, pointerState.worldY)
     }
 
     fun clearInteractionStateForShiftEnd() {
@@ -91,7 +91,7 @@ class ShopFloorInput(
         if (upgradeFlow.isModalOpen) {
             return upgradeFlow.handleClick(pointerState.worldX, pointerState.worldY)
         }
-        if (canStartMachineDrag() && machineDrag.tryStart(hoverState.hoveredTile)) {
+        if (canStartMachineDrag() && machineDrag.tryStart(hoverState.hoveredTile, pointerState.worldX, pointerState.worldY)) {
             return true
         }
         return handleLeftClick()
@@ -150,8 +150,8 @@ class ShopFloorInput(
         workerAssignment.cancelPendingAssignment()
         machineDrag.cancel()
         when (target.kind) {
-            PlacedShopObjectKind.WORKER -> workerAssignment.openContextMenuForWorker(target.id)
-            PlacedShopObjectKind.MACHINE -> workerAssignment.openContextMenuForMachine(target.id)
+            PlacedShopObjectKind.WORKER -> workerAssignment.openContextMenuForWorker(target.id, pointerState.worldX, pointerState.worldY)
+            PlacedShopObjectKind.MACHINE -> workerAssignment.openContextMenuForMachine(target.id, pointerState.worldX, pointerState.worldY)
         }
         return true
     }

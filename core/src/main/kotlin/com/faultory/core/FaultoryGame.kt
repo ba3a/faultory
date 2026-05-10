@@ -30,16 +30,17 @@ import com.faultory.core.save.PlayerPreferences
 import com.faultory.core.save.PlayerPreferencesRepository
 import com.faultory.core.save.SaveRepository
 import com.faultory.core.screens.BootScreen
+import com.faultory.core.screens.shopfloor.ShiftLifecycleHost
 import com.faultory.core.screens.LevelSelectionScreen
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopBlueprintAssetLoader
 import kotlin.text.Charsets
 
-class FaultoryGame : Game() {
+class FaultoryGame : Game(), ShiftLifecycleHost {
     lateinit var renderContext: RenderContext
         private set
 
-    lateinit var saveRepository: SaveRepository
+    override lateinit var saveRepository: SaveRepository
         private set
 
     lateinit var assetManager: AssetManager
@@ -94,11 +95,11 @@ class FaultoryGame : Game() {
         assetManager.dispose()
     }
 
-    fun openLevelSelection() {
+    override fun openLevelSelection() {
         setScreen(LevelSelectionScreen(this))
     }
 
-    fun openLevel(level: LevelDefinition) {
+    override fun openLevel(level: LevelDefinition) {
         assetManager.load(level.shopAssetPath, ShopBlueprint::class.java)
         setScreen(BootScreen(this, level))
     }
