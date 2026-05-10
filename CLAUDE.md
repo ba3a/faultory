@@ -32,7 +32,7 @@ Package-by-responsibility under `core/src/main/kotlin/com/faultory/core`:
 | Package | Responsibility |
 |---|---|
 | `core.assets` | Asset path constants (`AssetPaths`) |
-| `core.config` | Global runtime constants (`GameConfig`) |
+| `core.config` | Global runtime constants and shared JSON config (`GameConfig`, `FaultoryJson`) |
 | `core.content` | JSON-backed catalog/content models (`@Serializable data class`) and their `AssetManager` loaders (`*AssetLoader`) |
 | `core.shop` | Shop/level layout models (`@Serializable data class`) and `ShopBlueprintAssetLoader` |
 | `core.shop.systems` | Per-responsibility simulation systems extracted from `ShopFloor`: `ShopFloorState` (mutable state + shared helpers), `ConveyorSystem`, `ProductionSystem`, `QaSystem`, `WorkerObjectiveSystem`, `WorkerMovementSystem`, `SecuritySystem`. `ShopFloor` is now a thin facade that wires these together. |

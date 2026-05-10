@@ -7,7 +7,7 @@ import com.badlogic.gdx.assets.loaders.AsynchronousAssetLoader
 import com.badlogic.gdx.assets.loaders.FileHandleResolver
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.utils.Array
-import com.faultory.core.save.FaultoryJson
+import com.faultory.core.config.FaultoryJson
 import kotlinx.serialization.KSerializer
 import kotlin.text.Charsets
 

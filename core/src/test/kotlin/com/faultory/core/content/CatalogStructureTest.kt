@@ -1,6 +1,6 @@
 package com.faultory.core.content
 
-import com.faultory.core.save.FaultoryJson
+import com.faultory.core.config.FaultoryJson
 import com.faultory.core.shop.ShopBlueprint
 import kotlin.test.Test
 import kotlin.test.assertEquals

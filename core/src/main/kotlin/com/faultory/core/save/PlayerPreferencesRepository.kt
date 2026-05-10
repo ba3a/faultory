@@ -2,6 +2,7 @@ package com.faultory.core.save
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.files.FileHandle
+import com.faultory.core.config.FaultoryJson
 import com.faultory.core.config.GameConfig
 import java.nio.file.Paths
 import kotlin.text.Charsets

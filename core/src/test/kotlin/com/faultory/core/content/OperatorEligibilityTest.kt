@@ -1,6 +1,6 @@
 package com.faultory.core.content
 
-import com.faultory.core.save.FaultoryJson
+import com.faultory.core.config.FaultoryJson
 import com.faultory.core.shop.Orientation
 import kotlin.test.Test
 import kotlin.test.assertFalse

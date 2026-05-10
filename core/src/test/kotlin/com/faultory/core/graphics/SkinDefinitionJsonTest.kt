@@ -1,6 +1,6 @@
 package com.faultory.core.graphics
 
-import com.faultory.core.save.FaultoryJson
+import com.faultory.core.config.FaultoryJson
 import com.faultory.core.shop.Orientation
 import kotlin.test.Test
 import kotlin.test.assertEquals

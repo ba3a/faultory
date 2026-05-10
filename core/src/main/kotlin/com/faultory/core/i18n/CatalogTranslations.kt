@@ -1,6 +1,6 @@
 package com.faultory.core.i18n
 
-import com.faultory.core.save.FaultoryJson
+import com.faultory.core.config.FaultoryJson
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull

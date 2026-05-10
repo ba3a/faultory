@@ -2,7 +2,7 @@ package com.faultory.editor.repository
 
 import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.ShopCatalog
-import com.faultory.core.save.FaultoryJson
+import com.faultory.core.config.FaultoryJson
 import com.faultory.core.shop.ShopBlueprint
 import kotlinx.serialization.decodeFromString
 import java.nio.file.Files

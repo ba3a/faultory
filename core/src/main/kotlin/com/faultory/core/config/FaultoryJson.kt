@@ -1,4 +1,4 @@
-package com.faultory.core.save
+package com.faultory.core.config
 
 import kotlinx.serialization.json.Json
 
