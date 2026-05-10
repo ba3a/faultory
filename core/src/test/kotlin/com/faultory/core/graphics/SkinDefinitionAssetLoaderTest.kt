@@ -48,19 +48,16 @@ class SkinDefinitionAssetLoaderTest {
 
             val loader = SkinDefinitionAssetLoader(AbsoluteFileHandleResolver())
             val fileHandle = FileHandle(skinFile.toFile())
+            val absolutePath = skinFile.toAbsolutePath().toString()
 
-            val definition = loader.load(
-                assetManager,
-                skinFile.toAbsolutePath().toString(),
-                fileHandle,
-                null
-            )
+            loader.loadAsync(assetManager, absolutePath, fileHandle, null)
+            val definition = loader.loadSync(assetManager, absolutePath, fileHandle, null)
 
             assertEquals("textures/worker_line_inspector.atlas", definition.atlas)
             assertEquals(listOf("idle_north_000"), definition.actions[SkinActions.IDLE]?.frames?.get(Orientation.NORTH))
             assertEquals(true, definition.actions[SkinActions.IDLE]?.loop)
             assertEquals(false, definition.actions[SkinActions.WALK]?.loop)
-            assertNull(loader.getDependencies(skinFile.toString(), fileHandle, null))
+            assertNull(loader.getDependencies(absolutePath, fileHandle, null))
         } finally {
             assetManager.dispose()
             tempRoot.toFile().deleteRecursively()

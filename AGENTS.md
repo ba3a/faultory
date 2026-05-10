@@ -90,6 +90,10 @@ How new features are added in this repository today:
 
 There are no repositories in the Spring Data sense. The only repository pattern currently present is `SaveRepository` in `core.save`.
 
+- **Extend existing patterns, don't invent parallel ones.** Before writing a new class, search for one that already solves the same problem. If one exists, use the same base class, the same interface, and the same naming convention. Two idioms for the same job is a defect, not a style choice.
+- **Abstract shared behaviour via inheritance or delegation.** When two or more classes contain near-identical method bodies (same algorithm, different type parameter or strategy), extract a common base class or helper. Pass what varies as a constructor argument. `JsonAsynchronousAssetLoader<T>` in `core.content` is the reference example: the `decoded` handoff and JSON decode logic live once in the base; each concrete loader is a two-line subclass that names its type and serializer.
+- **Apply SOLID with a clear priority.** (1) Single Responsibility — each class has exactly one reason to change; split when a class has two. (2) Interface Segregation — callers should not depend on methods they do not use; prefer a narrow interface over a wide one. (3) Dependency Inversion — depend on abstractions received through the constructor, not on concrete singletons constructed inside a class. Open/Closed and Liskov are consequences of getting the above right and need not be applied as separate rules.
+
 ## Rules & Constraints (critical)
 - Do not introduce a REST/API/server layer unless the user explicitly asks for one. This repository has no backend framework.
 - Do not introduce new dependencies without strong justification. If a dependency is required, add it through `gradle/libs.versions.toml` and the relevant module `build.gradle.kts`.
@@ -140,3 +144,4 @@ Performing a safe refactor:
 - Renaming JSON fields or asset file paths casually
 - Editing unrelated packages while implementing a focused change
 - Treating this repository like a layered enterprise backend when it is currently a small LibGDX game scaffold
+- Duplicating logic that already exists in a base class or helper instead of extending it — e.g. re-implementing the `loadAsync`/`loadSync` handoff pattern instead of subclassing `JsonAsynchronousAssetLoader<T>`
