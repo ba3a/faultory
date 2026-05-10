@@ -18,5 +18,6 @@ class ShopFloorRenderContext(
     val viewport: Viewport,
     val animationPlayer: AnimationPlayer,
     val atlasProvider: (String) -> TextureAtlas?,
-    val skinRegistry: SkinRegistry? = null
+    val skinRegistry: SkinRegistry? = null,
+    var delta: Float = 0f
 )

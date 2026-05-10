@@ -124,6 +124,7 @@ class FaultoryGame : Game(), ShiftLifecycleHost {
     private fun createUiFont(): BitmapFont {
         val handle = Gdx.files.internal(AssetPaths.uiFont)
         if (!handle.exists()) {
+            Gdx.app.log("FaultoryGame", "UI font missing at '${AssetPaths.uiFont}', falling back to default ASCII font")
             return BitmapFont()
         }
         val generator = FreeTypeFontGenerator(handle)

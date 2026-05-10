@@ -174,6 +174,7 @@ class ShopFloorScreen(
         shapeRenderer.projectionMatrix = viewport.camera.combined
         game.renderContext.spriteBatch.projectionMatrix = viewport.camera.combined
 
+        renderContext.delta = delta
         view.render(renderContext)
     }
 

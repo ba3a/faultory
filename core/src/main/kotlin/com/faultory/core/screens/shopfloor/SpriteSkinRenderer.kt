@@ -1,6 +1,5 @@
 package com.faultory.core.screens.shopfloor
 
-import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.faultory.core.config.GameConfig
 import com.faultory.core.graphics.MachineActionResolver
@@ -23,7 +22,7 @@ class SpriteSkinRenderer(
         drawnIds.clear()
         val skinRegistry = ctx.skinRegistry ?: return
         val batch = ctx.spriteBatch
-        val delta = Gdx.graphics.deltaTime.coerceAtLeast(0f)
+        val delta = ctx.delta.coerceAtLeast(0f)
 
         batch.color = Color.WHITE
         sortedPlacedObjects().forEach { (placedObject, anchor) ->
