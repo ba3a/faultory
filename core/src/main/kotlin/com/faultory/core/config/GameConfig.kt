@@ -20,6 +20,9 @@ object GameConfig {
     const val securityRoamMinSteps = 3
     const val securityRoamMaxSteps = 10
     const val securityRoamBeltTripChance = 0.12f
+    const val beltEnterDurationSeconds = 0.3f
+    const val beltRideDurationSeconds = 0.4f
+    const val beltExitDurationSeconds = 0.3f
     const val bankSectionPaddingX = 40f
     const val bankSectionPaddingY = 24f
     const val bankCardWidth = 150f

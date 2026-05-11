@@ -3,6 +3,7 @@ package com.faultory.core.shop.systems
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.MachineSlotType
 import com.faultory.core.content.WorkerProfile
+import com.faultory.core.shop.BeltRidePhase
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
@@ -19,7 +20,16 @@ internal class WorkerMovementSystem(
     ) {
         for (index in mutablePlacedObjects.indices) {
             val placedObject = mutablePlacedObjects[index]
-            if (placedObject.kind != PlacedShopObjectKind.WORKER || placedObject.movementPath.isEmpty()) {
+            if (placedObject.kind != PlacedShopObjectKind.WORKER) {
+                continue
+            }
+
+            if (placedObject.beltRidePhase != null) {
+                handleBeltPhase(index, placedObject, deltaSeconds)
+                continue
+            }
+
+            if (placedObject.movementPath.isEmpty()) {
                 continue
             }
 
@@ -29,6 +39,7 @@ internal class WorkerMovementSystem(
             var remainingPath = placedObject.movementPath
             var currentPosition = placedObject.position
             var currentOrientation = placedObject.orientation
+            var enteredBelt = false
 
             while (progress >= 1f && remainingPath.isNotEmpty()) {
                 val nextTile = remainingPath.first()
@@ -41,23 +52,110 @@ internal class WorkerMovementSystem(
                 currentPosition = nextTile
                 remainingPath = remainingPath.drop(1)
                 progress -= 1f
+
+                if (currentPosition in grid.beltTiles && grid.nextBeltTile(currentPosition) != null && remainingPath.isNotEmpty()) {
+                    enteredBelt = true
+                    break
+                }
             }
 
-            if (remainingPath.isEmpty()) {
-                progress = 0f
+            if (enteredBelt) {
+                mutablePlacedObjects[index] = placedObject.copy(
+                    position = currentPosition,
+                    orientation = currentOrientation,
+                    movementPath = remainingPath,
+                    movementProgress = 0f,
+                    beltRidePhase = BeltRidePhase.ENTERING,
+                    beltRideTimer = 0f
+                )
+            } else if (remainingPath.isEmpty()) {
                 currentOrientation = orientationAtAssignedSlot(placedObject.copy(position = currentPosition))
                     ?: orientationAtQaPost(placedObject.copy(position = currentPosition))
                     ?: currentOrientation
+                mutablePlacedObjects[index] = placedObject.copy(
+                    position = currentPosition,
+                    orientation = currentOrientation,
+                    movementPath = remainingPath,
+                    movementProgress = 0f
+                )
             } else {
                 currentOrientation = Orientation.between(currentPosition, remainingPath.first()) ?: currentOrientation
+                mutablePlacedObjects[index] = placedObject.copy(
+                    position = currentPosition,
+                    orientation = currentOrientation,
+                    movementPath = remainingPath,
+                    movementProgress = progress
+                )
+            }
+        }
+    }
+
+    private fun handleBeltPhase(index: Int, worker: PlacedShopObject, deltaSeconds: Float) {
+        when (worker.beltRidePhase) {
+            BeltRidePhase.ENTERING -> {
+                val newTimer = worker.beltRideTimer + deltaSeconds
+                if (newTimer >= GameConfig.beltEnterDurationSeconds) {
+                    mutablePlacedObjects[index] = worker.copy(
+                        beltRidePhase = BeltRidePhase.RIDING,
+                        beltRideTimer = 0f,
+                        movementProgress = 0f
+                    )
+                } else {
+                    mutablePlacedObjects[index] = worker.copy(beltRideTimer = newTimer)
+                }
             }
 
-            mutablePlacedObjects[index] = placedObject.copy(
-                position = currentPosition,
-                orientation = currentOrientation,
-                movementPath = remainingPath,
-                movementProgress = progress
-            )
+            BeltRidePhase.RIDING -> {
+                val exitTile = grid.nextBeltTile(worker.position) ?: return
+                if (state.isOccupied(exitTile, ignoreObjectId = worker.id, ignoreProductId = worker.carriedProductId)) {
+                    return
+                }
+                val newProgress = worker.movementProgress + deltaSeconds / GameConfig.beltRideDurationSeconds
+                if (newProgress >= 1f) {
+                    val newPath = if (worker.movementPath.firstOrNull() == exitTile) {
+                        worker.movementPath.drop(1)
+                    } else {
+                        emptyList()
+                    }
+                    val exitOrientation = Orientation.between(worker.position, exitTile) ?: worker.orientation
+                    val nextPhase = if (exitTile in grid.beltTiles && grid.nextBeltTile(exitTile) != null) {
+                        BeltRidePhase.ENTERING
+                    } else {
+                        BeltRidePhase.EXITING
+                    }
+                    mutablePlacedObjects[index] = worker.copy(
+                        position = exitTile,
+                        orientation = exitOrientation,
+                        movementPath = newPath,
+                        movementProgress = 0f,
+                        beltRidePhase = nextPhase,
+                        beltRideTimer = 0f
+                    )
+                } else {
+                    mutablePlacedObjects[index] = worker.copy(movementProgress = newProgress)
+                }
+            }
+
+            BeltRidePhase.EXITING -> {
+                val newTimer = worker.beltRideTimer + deltaSeconds
+                if (newTimer >= GameConfig.beltExitDurationSeconds) {
+                    val finalOrientation = if (worker.movementPath.isEmpty()) {
+                        orientationAtAssignedSlot(worker) ?: orientationAtQaPost(worker) ?: worker.orientation
+                    } else {
+                        worker.orientation
+                    }
+                    mutablePlacedObjects[index] = worker.copy(
+                        orientation = finalOrientation,
+                        movementProgress = 0f,
+                        beltRidePhase = null,
+                        beltRideTimer = 0f
+                    )
+                } else {
+                    mutablePlacedObjects[index] = worker.copy(beltRideTimer = newTimer)
+                }
+            }
+
+            null -> Unit
         }
     }
 

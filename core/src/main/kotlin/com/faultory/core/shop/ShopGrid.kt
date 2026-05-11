@@ -107,6 +107,46 @@ class ShopGrid(
         return null
     }
 
+    fun findPathBeltAware(
+        start: TileCoordinate,
+        goals: Set<TileCoordinate>,
+        blockedTiles: Set<TileCoordinate>
+    ): List<TileCoordinate>? {
+        if (start in goals) {
+            return emptyList()
+        }
+
+        val queue = ArrayDeque<TileCoordinate>()
+        val previousByTile = mutableMapOf<TileCoordinate, TileCoordinate?>()
+        queue.addLast(start)
+        previousByTile[start] = null
+
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            val neighbors = if (current in beltTiles) {
+                listOfNotNull(nextBeltTile(current))
+            } else {
+                orthogonalNeighbors(current)
+            }
+            for (neighbor in neighbors) {
+                if (neighbor in previousByTile) {
+                    continue
+                }
+                if (neighbor in blockedTiles && neighbor !in goals) {
+                    continue
+                }
+
+                previousByTile[neighbor] = current
+                if (neighbor in goals) {
+                    return reconstructPath(neighbor, previousByTile)
+                }
+                queue.addLast(neighbor)
+            }
+        }
+
+        return null
+    }
+
     private fun tilesForBelt(belt: ConveyorBelt): List<TileCoordinate> {
         val tiles = mutableListOf<TileCoordinate>()
         for (index in 0 until belt.checkpoints.lastIndex) {

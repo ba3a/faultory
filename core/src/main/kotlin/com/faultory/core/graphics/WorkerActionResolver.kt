@@ -1,5 +1,6 @@
 package com.faultory.core.graphics
 
+import com.faultory.core.shop.BeltRidePhase
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
@@ -10,10 +11,15 @@ object WorkerActionResolver {
             return SkinActions.IDLE
         }
 
-        return if (placedObject.movementPath.isNotEmpty() && placedObject.movementProgress < 1f) {
-            SkinActions.WALK
-        } else {
-            SkinActions.IDLE
+        return when (placedObject.beltRidePhase) {
+            BeltRidePhase.ENTERING -> SkinActions.BELT_ENTER
+            BeltRidePhase.RIDING -> SkinActions.BELT_RIDE
+            BeltRidePhase.EXITING -> SkinActions.BELT_EXIT
+            null -> if (placedObject.movementPath.isNotEmpty() && placedObject.movementProgress < 1f) {
+                SkinActions.WALK
+            } else {
+                SkinActions.IDLE
+            }
         }
     }
 

@@ -2,7 +2,6 @@ package com.faultory.core.shop.systems
 
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.MachineSlotType
-import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShipmentEvent
 import com.faultory.core.shop.ShopProductState
@@ -32,7 +31,6 @@ internal class ConveyorSystem(
         for (beltPath in grid.orderedBeltPaths) {
             for (tile in beltPath.asReversed()) {
                 moveProductOnBelt(tile)
-                moveWorkerOnBelt(tile)
             }
         }
     }
@@ -77,25 +75,4 @@ internal class ConveyorSystem(
         }
     }
 
-    private fun moveWorkerOnBelt(tile: TileCoordinate) {
-        val workerIndex = mutablePlacedObjects.indexOfFirst {
-            it.kind == PlacedShopObjectKind.WORKER && it.position == tile
-        }
-        if (workerIndex < 0 || tile !in grid.beltTiles) {
-            return
-        }
-
-        val worker = mutablePlacedObjects[workerIndex]
-        val nextTile = grid.nextBeltTile(tile) ?: return
-        if (state.isOccupied(nextTile, ignoreObjectId = worker.id, ignoreProductId = worker.carriedProductId)) {
-            return
-        }
-
-        mutablePlacedObjects[workerIndex] = worker.copy(
-            position = nextTile,
-            orientation = Orientation.between(worker.position, nextTile) ?: worker.orientation,
-            movementPath = emptyList(),
-            movementProgress = 0f
-        )
-    }
 }

@@ -178,7 +178,7 @@ internal class WorkerObjectiveSystem(
                 )
 
             for (stand in standTiles) {
-                val path = grid.findPath(worker.position, setOf(stand), blockedTiles) ?: continue
+                val path = grid.findPathBeltAware(worker.position, setOf(stand), blockedTiles) ?: continue
                 val isFloor = stand !in grid.beltTiles
                 val better = when {
                     bestPath == null -> true
@@ -349,7 +349,7 @@ internal class WorkerObjectiveSystem(
         }
 
         if (standToBelt.isEmpty()) return null
-        val path = grid.findPath(worker.position, standToBelt.keys.toSet(), blockedTiles) ?: return null
+        val path = grid.findPathBeltAware(worker.position, standToBelt.keys.toSet(), blockedTiles) ?: return null
         val standTile = if (path.isEmpty()) worker.position else path.last()
         val beltTile = standToBelt[standTile] ?: return null
         return DeliveryPlan(beltTile = beltTile, path = path)
@@ -369,7 +369,7 @@ internal class WorkerObjectiveSystem(
             return
         }
 
-        val path = grid.findPath(
+        val path = grid.findPathBeltAware(
             start = worker.position,
             goals = setOf(assignedSlot.accessTile),
             blockedTiles = state.blockedTilesForPath(ignoreWorkerId = worker.id, ignoreCarriedProductId = worker.carriedProductId)
@@ -398,7 +398,7 @@ internal class WorkerObjectiveSystem(
             return
         }
 
-        val path = grid.findPath(
+        val path = grid.findPathBeltAware(
             start = worker.position,
             goals = setOf(qaPostTile),
             blockedTiles = state.blockedTilesForPath(ignoreWorkerId = worker.id, ignoreCarriedProductId = worker.carriedProductId)

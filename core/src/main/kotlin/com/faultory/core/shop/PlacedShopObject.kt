@@ -2,6 +2,7 @@ package com.faultory.core.shop
 
 import com.faultory.core.content.WorkerRole
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
 data class PlacedShopObject(
@@ -18,7 +19,9 @@ data class PlacedShopObject(
     val faultyInventoryCount: Int = 0,
     val movementPath: List<TileCoordinate> = emptyList(),
     val movementProgress: Float = 0f,
-    val pursuitTargetWorkerId: String? = null
+    val pursuitTargetWorkerId: String? = null,
+    @Transient val beltRidePhase: BeltRidePhase? = null,
+    @Transient val beltRideTimer: Float = 0f
 )
 
 @Serializable
