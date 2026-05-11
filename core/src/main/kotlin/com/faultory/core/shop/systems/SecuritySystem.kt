@@ -1,19 +1,19 @@
 package com.faultory.core.shop.systems
 
-import com.faultory.core.config.GameConfig
 import com.faultory.core.content.MachineType
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.content.WorkerRoleProfile
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.plus
 import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.TileCoordinate
+import com.faultory.core.shop.pathfinding.MovementStrategyResolver
 import kotlin.random.Random
 
 internal class SecuritySystem(
     private val state: ShopFloorState,
+    private val movementStrategyResolver: MovementStrategyResolver,
     private val random: Random
 ) {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
@@ -228,7 +228,8 @@ internal class SecuritySystem(
         if (security.position in standTiles) {
             return emptyList()
         }
-        return grid.findPath(
+        return movementStrategyResolver.strategyFor(security).pathFinder.findPath(
+            grid = grid,
             start = security.position,
             goals = standTiles,
             blockedTiles = state.blockedTilesForPath(ignoreWorkerId = security.id)
@@ -236,56 +237,9 @@ internal class SecuritySystem(
     }
 
     private fun planSecurityRoamingPath(security: PlacedShopObject): List<TileCoordinate> {
+        val roamer = movementStrategyResolver.strategyFor(security).roamer ?: return emptyList()
         val blocked = state.blockedTilesForPath(ignoreWorkerId = security.id)
-
-        if (random.nextFloat() < GameConfig.securityRoamBeltTripChance) {
-            val beltTrip = pickBeltRoamingPath(security, blocked)
-            if (beltTrip.isNotEmpty()) {
-                return beltTrip
-            }
-        }
-
-        val orientations = Orientation.entries.toList().shuffled(random)
-        for (orientation in orientations) {
-            val path = straightLinePath(security.position, orientation, blocked)
-            if (path.isNotEmpty()) {
-                return path
-            }
-        }
-        return emptyList()
-    }
-
-    private fun pickBeltRoamingPath(
-        security: PlacedShopObject,
-        blocked: Set<TileCoordinate>
-    ): List<TileCoordinate> {
-        val candidates = grid.beltTiles
-            .filter { tile -> tile != security.position && tile !in blocked }
-            .filter { tile -> state.manhattanDistance(security.position, tile) >= GameConfig.securityRoamMinSteps }
-        if (candidates.isEmpty()) return emptyList()
-        val target = candidates.random(random)
-        return grid.findPath(security.position, setOf(target), blocked) ?: emptyList()
-    }
-
-    private fun straightLinePath(
-        start: TileCoordinate,
-        orientation: Orientation,
-        blocked: Set<TileCoordinate>
-    ): List<TileCoordinate> {
-        val step = orientation.step()
-        val targetLength = random.nextInt(
-            GameConfig.securityRoamMinSteps,
-            GameConfig.securityRoamMaxSteps + 1
-        )
-        val path = mutableListOf<TileCoordinate>()
-        var current = start
-        while (path.size < targetLength) {
-            val next = current + step
-            if (!grid.isBuildable(next) || next in blocked) break
-            path += next
-            current = next
-        }
-        return path
+        return roamer.nextRoam(grid, security.position, blocked, random)
     }
 
     private fun isPathStillValid(worker: PlacedShopObject): Boolean {

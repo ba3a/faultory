@@ -138,6 +138,90 @@ class ShopFloorBeltRideTest {
         assertNull(w.beltRidePhase)
     }
 
+    // Blueprint with a 3-tile belt going EAST: (5,5) → (6,5) → (7,5)
+    private fun longBeltBlueprint() = ShopBlueprint(
+        id = "belt-ride-test-long",
+        displayName = "Belt Ride Test Long",
+        qualityThresholdPercent = 90f,
+        shiftLengthSeconds = 60f,
+        conveyorBelts = listOf(
+            ConveyorBelt(
+                id = "belt-1",
+                checkpoints = listOf(
+                    BeltNode(5f * 40f, 5f * 40f),
+                    BeltNode(7f * 40f, 5f * 40f)
+                )
+            )
+        ),
+        machineSlots = emptyList(),
+        workerSpawnPoints = emptyList()
+    )
+
+    private fun securityProfile() = WorkerProfile(
+        id = "test-security",
+        level = 1,
+        hireCost = 0,
+        walkSpeed = 200f,
+        skin = "security_test",
+        roleProfiles = listOf(
+            WorkerRoleProfile(
+                role = WorkerRole.SECURITY,
+                taskDurationSeconds = 0f,
+                eyesightRadius = 5f
+            )
+        )
+    )
+
+    @Test
+    fun `non-security worker exits after a single belt tile even on a longer belt`() {
+        val profile = workerProfile()
+        val shopFloor = ShopFloor(
+            blueprint = longBeltBlueprint(),
+            machineSpecsById = emptyMap(),
+            initialPlacements = listOf(
+                worker(
+                    position = TileCoordinate(4, 5),
+                    movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5), TileCoordinate(7, 5))
+                )
+            )
+        )
+
+        shopFloor.update(0.25f, mapOf(profile.id to profile))                                // arrive at belt entry
+        shopFloor.update(GameConfig.beltEnterDurationSeconds, mapOf(profile.id to profile)) // ENTERING → RIDING
+        shopFloor.update(GameConfig.beltRideDurationSeconds, mapOf(profile.id to profile))  // RIDING → EXITING
+
+        val w = shopFloor.findObjectById("worker-1")!!
+        assertEquals(TileCoordinate(6, 5), w.position)
+        assertEquals(BeltRidePhase.EXITING, w.beltRidePhase, "non-security worker rides exactly one tile then exits")
+    }
+
+    @Test
+    fun `security worker chains rides into a long belt ride`() {
+        val profile = securityProfile()
+        val shopFloor = ShopFloor(
+            blueprint = longBeltBlueprint(),
+            machineSpecsById = emptyMap(),
+            initialPlacements = listOf(
+                PlacedShopObject(
+                    id = "security-1",
+                    catalogId = profile.id,
+                    kind = PlacedShopObjectKind.WORKER,
+                    position = TileCoordinate(4, 5),
+                    workerRole = WorkerRole.SECURITY,
+                    movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5), TileCoordinate(7, 5))
+                )
+            )
+        )
+
+        shopFloor.update(0.25f, mapOf(profile.id to profile))                                // arrive at belt entry (5,5)
+        shopFloor.update(GameConfig.beltEnterDurationSeconds, mapOf(profile.id to profile)) // ENTERING → RIDING
+        shopFloor.update(GameConfig.beltRideDurationSeconds, mapOf(profile.id to profile))  // RIDING ends at (6,5); chain to ENTERING for next belt tile
+
+        val s = shopFloor.findObjectById("security-1")!!
+        assertEquals(TileCoordinate(6, 5), s.position)
+        assertEquals(BeltRidePhase.ENTERING, s.beltRidePhase, "security keeps riding when the exit tile continues the belt")
+    }
+
     @Test
     fun `RIDING waits while exit tile is occupied`() {
         val profile = workerProfile()

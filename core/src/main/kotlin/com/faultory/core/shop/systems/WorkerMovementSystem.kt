@@ -7,9 +7,11 @@ import com.faultory.core.shop.BeltRidePhase
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
+import com.faultory.core.shop.pathfinding.MovementStrategyResolver
 
 internal class WorkerMovementSystem(
-    private val state: ShopFloorState
+    private val state: ShopFloorState,
+    private val movementStrategyResolver: MovementStrategyResolver
 ) {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val grid get() = state.grid
@@ -118,11 +120,9 @@ internal class WorkerMovementSystem(
                         emptyList()
                     }
                     val exitOrientation = Orientation.between(worker.position, exitTile) ?: worker.orientation
-                    val nextPhase = if (exitTile in grid.beltTiles && grid.nextBeltTile(exitTile) != null) {
-                        BeltRidePhase.ENTERING
-                    } else {
-                        BeltRidePhase.EXITING
-                    }
+                    val nextPhase = movementStrategyResolver.strategyFor(worker)
+                        .beltRidePolicy
+                        .phaseAfterRide(grid, exitTile)
                     mutablePlacedObjects[index] = worker.copy(
                         position = exitTile,
                         orientation = exitOrientation,

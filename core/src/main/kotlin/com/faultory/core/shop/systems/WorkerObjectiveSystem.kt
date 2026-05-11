@@ -10,11 +10,13 @@ import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
+import com.faultory.core.shop.pathfinding.MovementStrategyResolver
 import kotlin.random.Random
 
 internal class WorkerObjectiveSystem(
     private val state: ShopFloorState,
     private val qaSystem: QaSystem,
+    private val movementStrategyResolver: MovementStrategyResolver,
     private val random: Random
 ) {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
@@ -177,8 +179,9 @@ internal class WorkerObjectiveSystem(
                         .thenBy { state.manhattanDistance(it, worker.position) }
                 )
 
+            val pathFinder = movementStrategyResolver.strategyFor(worker).pathFinder
             for (stand in standTiles) {
-                val path = grid.findPathBeltAware(worker.position, setOf(stand), blockedTiles) ?: continue
+                val path = pathFinder.findPath(grid, worker.position, setOf(stand), blockedTiles) ?: continue
                 val isFloor = stand !in grid.beltTiles
                 val better = when {
                     bestPath == null -> true
@@ -349,7 +352,8 @@ internal class WorkerObjectiveSystem(
         }
 
         if (standToBelt.isEmpty()) return null
-        val path = grid.findPathBeltAware(worker.position, standToBelt.keys.toSet(), blockedTiles) ?: return null
+        val pathFinder = movementStrategyResolver.strategyFor(worker).pathFinder
+        val path = pathFinder.findPath(grid, worker.position, standToBelt.keys.toSet(), blockedTiles) ?: return null
         val standTile = if (path.isEmpty()) worker.position else path.last()
         val beltTile = standToBelt[standTile] ?: return null
         return DeliveryPlan(beltTile = beltTile, path = path)
@@ -369,7 +373,8 @@ internal class WorkerObjectiveSystem(
             return
         }
 
-        val path = grid.findPathBeltAware(
+        val path = movementStrategyResolver.strategyFor(worker).pathFinder.findPath(
+            grid = grid,
             start = worker.position,
             goals = setOf(assignedSlot.accessTile),
             blockedTiles = state.blockedTilesForPath(ignoreWorkerId = worker.id, ignoreCarriedProductId = worker.carriedProductId)
@@ -398,7 +403,8 @@ internal class WorkerObjectiveSystem(
             return
         }
 
-        val path = grid.findPathBeltAware(
+        val path = movementStrategyResolver.strategyFor(worker).pathFinder.findPath(
+            grid = grid,
             start = worker.position,
             goals = setOf(qaPostTile),
             blockedTiles = state.blockedTilesForPath(ignoreWorkerId = worker.id, ignoreCarriedProductId = worker.carriedProductId)

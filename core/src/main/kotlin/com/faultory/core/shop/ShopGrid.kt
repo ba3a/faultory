@@ -1,7 +1,6 @@
 package com.faultory.core.shop
 
 import com.faultory.core.config.GameConfig
-import java.util.ArrayDeque
 import kotlin.math.floor
 import kotlinx.serialization.Serializable
 
@@ -72,81 +71,6 @@ class ShopGrid(
             tile.y >= maxBuildableY
     }
 
-    fun findPath(
-        start: TileCoordinate,
-        goals: Set<TileCoordinate>,
-        blockedTiles: Set<TileCoordinate>
-    ): List<TileCoordinate>? {
-        if (start in goals) {
-            return emptyList()
-        }
-
-        val queue = ArrayDeque<TileCoordinate>()
-        val previousByTile = mutableMapOf<TileCoordinate, TileCoordinate?>()
-        queue.addLast(start)
-        previousByTile[start] = null
-
-        while (queue.isNotEmpty()) {
-            val current = queue.removeFirst()
-            for (neighbor in orthogonalNeighbors(current)) {
-                if (neighbor in previousByTile) {
-                    continue
-                }
-                if (neighbor in blockedTiles && neighbor !in goals) {
-                    continue
-                }
-
-                previousByTile[neighbor] = current
-                if (neighbor in goals) {
-                    return reconstructPath(neighbor, previousByTile)
-                }
-                queue.addLast(neighbor)
-            }
-        }
-
-        return null
-    }
-
-    fun findPathBeltAware(
-        start: TileCoordinate,
-        goals: Set<TileCoordinate>,
-        blockedTiles: Set<TileCoordinate>
-    ): List<TileCoordinate>? {
-        if (start in goals) {
-            return emptyList()
-        }
-
-        val queue = ArrayDeque<TileCoordinate>()
-        val previousByTile = mutableMapOf<TileCoordinate, TileCoordinate?>()
-        queue.addLast(start)
-        previousByTile[start] = null
-
-        while (queue.isNotEmpty()) {
-            val current = queue.removeFirst()
-            val neighbors = if (current in beltTiles) {
-                listOfNotNull(nextBeltTile(current))
-            } else {
-                orthogonalNeighbors(current)
-            }
-            for (neighbor in neighbors) {
-                if (neighbor in previousByTile) {
-                    continue
-                }
-                if (neighbor in blockedTiles && neighbor !in goals) {
-                    continue
-                }
-
-                previousByTile[neighbor] = current
-                if (neighbor in goals) {
-                    return reconstructPath(neighbor, previousByTile)
-                }
-                queue.addLast(neighbor)
-            }
-        }
-
-        return null
-    }
-
     private fun tilesForBelt(belt: ConveyorBelt): List<TileCoordinate> {
         val tiles = mutableListOf<TileCoordinate>()
         for (index in 0 until belt.checkpoints.lastIndex) {
@@ -191,19 +115,6 @@ class ShopGrid(
         )
     }
 
-    private fun reconstructPath(
-        end: TileCoordinate,
-        previousByTile: Map<TileCoordinate, TileCoordinate?>
-    ): List<TileCoordinate> {
-        val reversedPath = mutableListOf<TileCoordinate>()
-        var current: TileCoordinate? = end
-        while (current != null) {
-            reversedPath += current
-            current = previousByTile[current]
-        }
-        reversedPath.reverse()
-        return reversedPath.drop(1)
-    }
 }
 
 @Serializable

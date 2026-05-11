@@ -1,6 +1,8 @@
 package com.faultory.core.shop
 
 import com.faultory.core.content.*
+import com.faultory.core.shop.pathfinding.DefaultMovementStrategyResolver
+import com.faultory.core.shop.pathfinding.MovementStrategyResolver
 import com.faultory.core.shop.systems.*
 import com.faultory.core.systems.BeltSupplyFeeder
 import kotlin.random.Random
@@ -16,6 +18,7 @@ class ShopFloor(
     private val productDefinitionsById: Map<String, ProductDefinition> = emptyMap(),
     initialCash: Int = 0,
     private val beltSupplyFeeder: BeltSupplyFeeder? = null,
+    private val movementStrategyResolver: MovementStrategyResolver = DefaultMovementStrategyResolver,
     random: Random = Random.Default
 ) {
 
@@ -33,11 +36,11 @@ class ShopFloor(
         initialCash = initialCash
     )
 
-    private val securitySystem: SecuritySystem = SecuritySystem(state, random)
-    private val workerMovementSystem: WorkerMovementSystem = WorkerMovementSystem(state)
+    private val securitySystem: SecuritySystem = SecuritySystem(state, movementStrategyResolver, random)
+    private val workerMovementSystem: WorkerMovementSystem = WorkerMovementSystem(state, movementStrategyResolver)
     private val conveyorSystem: ConveyorSystem = ConveyorSystem(state)
     private val qaSystem: QaSystem = QaSystem(state, random)
-    private val workerObjectiveSystem: WorkerObjectiveSystem = WorkerObjectiveSystem(state, qaSystem, random)
+    private val workerObjectiveSystem: WorkerObjectiveSystem = WorkerObjectiveSystem(state, qaSystem, movementStrategyResolver, random)
     private val productionSystem: ProductionSystem = ProductionSystem(state, random)
 
     val cash: Int
@@ -317,7 +320,8 @@ class ShopFloor(
             return WorkerAssignmentResult.Failure(WorkerAssignmentFailureReason.NO_FREE_NEIGHBOR_TILE)
         }
 
-        val path = grid.findPath(
+        val path = movementStrategyResolver.strategyFor(worker).pathFinder.findPath(
+            grid = grid,
             start = worker.position,
             goals = slotPositions.map { it.accessTile }.toSet(),
             blockedTiles = blockedTilesForPath(ignoreWorkerId = worker.id)
@@ -372,7 +376,8 @@ class ShopFloor(
             return WorkerAssignmentResult.Failure(WorkerAssignmentFailureReason.NO_QA_POST)
         }
 
-        val path = grid.findPath(
+        val path = movementStrategyResolver.strategyFor(worker).pathFinder.findPath(
+            grid = grid,
             start = worker.position,
             goals = candidatesByPost.keys,
             blockedTiles = blockedTilesForPath(ignoreWorkerId = worker.id)
