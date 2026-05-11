@@ -35,6 +35,7 @@ import com.faultory.core.screens.shopfloor.UpgradeFlowController
 import com.faultory.core.screens.shopfloor.UpgradeModalRenderer
 import com.faultory.core.screens.shopfloor.WorkerAssignmentController
 import com.faultory.core.save.GameSave
+import com.faultory.core.encounters.ShiftStartedEvent
 import com.faultory.core.shop.ShopFloor
 
 class ShopFloorScreen(
@@ -56,7 +57,8 @@ class ShopFloorScreen(
         nextLevel = nextLevel,
         shopFloor = shopFloor,
         workerProfilesById = catalogLookup.workerProfilesById,
-        initialSave = saveSnapshot
+        initialSave = saveSnapshot,
+        eventBus = game.eventBus
     )
     private val bankPanel = BankPanel(catalogLookup)
     private val failureBlink = FailureBlinkController()
@@ -127,21 +129,19 @@ class ShopFloorScreen(
 
     override fun show() {
         viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
-        val requiredLevelIds = (
-            level.availableWorkerIds.mapNotNull { catalogLookup.workerProfilesById[it] }
-                .flatMap { it.requiredCompletedLevelIds } +
-            level.availableMachineIds.mapNotNull { catalogLookup.machineSpecsById[it] }
-                .flatMap { it.requiredCompletedLevelIds }
-        ).toSet()
-        val completedLevelIds = requiredLevelIds.filterTo(mutableSetOf()) { id ->
-            (game.saveRepository.load(id)?.lastCompletedRun?.starsEarned ?: 0) >= 1
-        }
-        bankPanel.rebuild(level) { levelId -> levelId in completedLevelIds }
+        val ctx = game.buildEvaluationContext(
+            levelId = level.id,
+            placedObjects = shopFloor.placedObjects
+        )
+        bankPanel.rebuild(level, ctx)
         bankPanel.layout()
+        game.updateEncounterPlacedObjects(shopFloor.placedObjects)
+        upgradeFlow.evaluationContext = ctx
         if (shiftLifecycle.finalizeIfNeeded()) {
             input.clearInteractionStateForShiftEnd()
         }
         Gdx.input.inputProcessor = input
+        game.eventBus.publish(ShiftStartedEvent(levelId = level.id))
     }
 
     override fun hide() {

@@ -11,6 +11,9 @@ import com.faultory.core.content.ShopCatalog
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.content.WorkerRoleProfile
+import com.faultory.core.encounters.ConditionLibrary
+import com.faultory.core.encounters.EvaluationContext
+import com.faultory.core.save.EncounterProgress
 import com.faultory.core.save.GameSave
 import com.faultory.core.save.SaveRepository
 import com.faultory.core.shop.PlacedShopObjectKind
@@ -95,7 +98,7 @@ class PlacementControllerTest {
     @Test
     fun `attemptPlacement returns false when cash is insufficient`() {
         val floor = shopFloor(cash = 0)
-        val bankPanel = BankPanel(catalogLookup).also { it.rebuild(level); it.toggleSelect(BankEntryKey(PlacedShopObjectKind.MACHINE, "machine-a")) }
+        val bankPanel = BankPanel(catalogLookup).also { it.rebuild(level, plainCtx()); it.toggleSelect(BankEntryKey(PlacedShopObjectKind.MACHINE, "machine-a")) }
         val controller = PlacementController(floor, catalogLookup, bankPanel, stubLifecycle(floor))
 
         assertFalse(controller.attemptPlacement(TileCoordinate(5, 5)))
@@ -104,7 +107,7 @@ class PlacementControllerTest {
     @Test
     fun `attemptPlacement places object and deducts cost when cash is sufficient`() {
         val floor = shopFloor(cash = 500)
-        val bankPanel = BankPanel(catalogLookup).also { it.rebuild(level); it.toggleSelect(BankEntryKey(PlacedShopObjectKind.MACHINE, "machine-a")) }
+        val bankPanel = BankPanel(catalogLookup).also { it.rebuild(level, plainCtx()); it.toggleSelect(BankEntryKey(PlacedShopObjectKind.MACHINE, "machine-a")) }
         val controller = PlacementController(floor, catalogLookup, bankPanel, stubLifecycle(floor))
 
         val placed = controller.attemptPlacement(TileCoordinate(5, 5))
@@ -118,7 +121,7 @@ class PlacementControllerTest {
     @Test
     fun `attemptPlacement clears bank selection on success`() {
         val floor = shopFloor(cash = 500)
-        val bankPanel = BankPanel(catalogLookup).also { it.rebuild(level); it.toggleSelect(BankEntryKey(PlacedShopObjectKind.MACHINE, "machine-a")) }
+        val bankPanel = BankPanel(catalogLookup).also { it.rebuild(level, plainCtx()); it.toggleSelect(BankEntryKey(PlacedShopObjectKind.MACHINE, "machine-a")) }
         val controller = PlacementController(floor, catalogLookup, bankPanel, stubLifecycle(floor))
 
         controller.attemptPlacement(TileCoordinate(5, 5))
@@ -138,7 +141,7 @@ class PlacementControllerTest {
     @Test
     fun `previewPlacementObject returns a placed object with the selected catalogId`() {
         val floor = shopFloor()
-        val bankPanel = BankPanel(catalogLookup).also { it.rebuild(level); it.toggleSelect(BankEntryKey(PlacedShopObjectKind.WORKER, "worker-a")) }
+        val bankPanel = BankPanel(catalogLookup).also { it.rebuild(level, plainCtx()); it.toggleSelect(BankEntryKey(PlacedShopObjectKind.WORKER, "worker-a")) }
         val controller = PlacementController(floor, catalogLookup, bankPanel, stubLifecycle(floor))
 
         val preview = controller.previewPlacementObject(TileCoordinate(3, 3))
@@ -172,7 +175,7 @@ class PlacementControllerTest {
         )
         val qaCatalog = CatalogLookup(ShopCatalog(workers = emptyList(), machines = listOf(qaSpec), products = emptyList()))
         val bankPanel = BankPanel(qaCatalog).also {
-            it.rebuild(qaLevel)
+            it.rebuild(qaLevel, plainCtx())
             it.toggleSelect(BankEntryKey(PlacedShopObjectKind.MACHINE, "machine-qa"))
         }
         val controller = PlacementController(qaFloor, qaCatalog, bankPanel, stubLifecycle(qaFloor))
@@ -183,6 +186,16 @@ class PlacementControllerTest {
         assertEquals("machine-qa", preview.catalogId)
     }
 }
+
+private fun plainCtx(): EvaluationContext = EvaluationContext(
+    saveRepository = object : SaveRepository {
+        override fun hasSlot(slotId: String) = false
+        override fun load(slotId: String): GameSave? = null
+        override fun save(save: GameSave) {}
+    },
+    encounterProgress = EncounterProgress(),
+    conditionLibrary = ConditionLibrary()
+)
 
 private class StubShiftLifecycleHost : ShiftLifecycleHost {
     override val saveRepository: SaveRepository = object : SaveRepository {

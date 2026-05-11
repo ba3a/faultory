@@ -42,7 +42,8 @@
           "faultyProductStrategy": "HAND_TO_PRODUCER",
           "acceptedProductIds": ["ceramic-mug", "glass-jar", "tea-kettle"]
         }
-      ]
+      ],
+      "unlockCondition": { "type": "level.completed", "levelId": "tutorial-shop", "minStars": 1 }
     },
     {
       "id": "line-inspector-rover",

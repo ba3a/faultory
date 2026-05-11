@@ -2,6 +2,7 @@ package com.faultory.core.screens.shopfloor
 
 import com.badlogic.gdx.math.Rectangle
 import com.faultory.core.config.GameConfig
+import com.faultory.core.encounters.EvaluationContext
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
@@ -11,6 +12,8 @@ class UpgradeFlowController(
     private val catalogLookup: CatalogLookup,
     private val shiftLifecycle: ShiftLifecycleController
 ) {
+    var evaluationContext: EvaluationContext? = null
+
     var modal: UpgradeModalState? = null
         private set
     var hoveredOptionIndex: Int? = null
@@ -73,11 +76,13 @@ class UpgradeFlowController(
     }
 
     private fun upgradeOptionsFor(obj: PlacedShopObject): List<UpgradeOption> {
+        val ctx = evaluationContext
         return when (obj.kind) {
             PlacedShopObjectKind.WORKER -> {
                 val profile = catalogLookup.workerProfilesById[obj.catalogId] ?: return emptyList()
                 profile.upgradeTree?.upgradeIds().orEmpty().mapNotNull { upgradeId ->
                     val upgraded = catalogLookup.workerProfilesById[upgradeId] ?: return@mapNotNull null
+                    if (ctx != null && !upgraded.unlockCondition.evaluate(ctx)) return@mapNotNull null
                     UpgradeOption(
                         targetCatalogId = upgraded.id,
                         kind = PlacedShopObjectKind.WORKER,
@@ -90,6 +95,7 @@ class UpgradeFlowController(
                 val spec = catalogLookup.machineSpecsById[obj.catalogId] ?: return emptyList()
                 spec.upgradeTree?.upgradeIds().orEmpty().mapNotNull { upgradeId ->
                     val upgraded = catalogLookup.machineSpecsById[upgradeId] ?: return@mapNotNull null
+                    if (ctx != null && !upgraded.unlockCondition.evaluate(ctx)) return@mapNotNull null
                     UpgradeOption(
                         targetCatalogId = upgraded.id,
                         kind = PlacedShopObjectKind.MACHINE,

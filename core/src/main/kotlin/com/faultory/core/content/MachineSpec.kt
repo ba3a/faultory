@@ -1,5 +1,6 @@
 package com.faultory.core.content
 
+import com.faultory.core.encounters.Condition
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.TileCoordinate
 import com.faultory.core.shop.plus
@@ -18,7 +19,7 @@ data class MachineSpec(
     val minimumOperatorWorkerIds: List<String> = emptyList(),
     val installCost: Int,
     val operationDurationSeconds: Float,
-    val requiredCompletedLevelIds: List<String> = emptyList(),
+    val unlockCondition: Condition = Condition.Always,
     val upgradeTree: BinaryUpgradeTree? = null,
     val qaProfile: QaMachineProfile? = null,
     val recipe: MachineRecipe? = null

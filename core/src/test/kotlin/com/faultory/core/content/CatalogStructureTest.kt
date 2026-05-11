@@ -1,9 +1,11 @@
 package com.faultory.core.content
 
 import com.faultory.core.config.FaultoryJson
+import com.faultory.core.encounters.Condition
 import com.faultory.core.shop.ShopBlueprint
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.decodeFromString
@@ -27,6 +29,7 @@ class CatalogStructureTest {
         assertEquals(1, producerMachine.shape.size)
         assertEquals(MachineSlotType.OPERATOR, producerMachine.slots.single().type)
         assertEquals(0.18f, producerRecipe.defectChance)
+        assertIs<Condition.Always>(producerMachine.unlockCondition)
 
         val qaMachine = assertNotNull(catalog.machines.firstOrNull { it.id == "camera-gate" })
         assertEquals(1, qaMachine.level)
@@ -53,10 +56,15 @@ class CatalogStructureTest {
         assertEquals(1.5f, workerQaProfile.inspectionDurationSeconds)
         assertEquals(0.84f, workerQaProfile.detectionAccuracy)
         assertEquals(FaultyProductStrategy.HAND_TO_PRODUCER, workerQaProfile.faultyProductStrategy)
+        assertIs<Condition.Always>(worker.unlockCondition)
+
+        val lockedWorker = assertNotNull(catalog.workers.firstOrNull { it.id == "line-inspector-lead" })
+        val lockedWorkerCondition = assertIs<Condition.LevelCompleted>(lockedWorker.unlockCondition)
+        assertEquals("tutorial-shop", lockedWorkerCondition.levelId)
     }
 
     @Test
-    fun `level catalog exposes bank inventories`() {
+    fun `level catalog exposes bank inventories and unlock conditions`() {
         val rawJson = assetText("content", "levels.json")
         val levelCatalog = FaultoryJson.instance.decodeFromString<LevelCatalog>(rawJson)
 
@@ -67,10 +75,12 @@ class CatalogStructureTest {
         assertEquals("rush-order-shop", tutorialLevel.recommendedNextLevelId)
         assertTrue(tutorialLevel.availableWorkerIds.contains("line-inspector"))
         assertTrue(tutorialLevel.availableMachineIds.contains("bench-assembler"))
-        assertTrue(tutorialLevel.requiredLevelIds.isEmpty())
+        assertIs<Condition.Always>(tutorialLevel.unlockCondition)
 
         val rushLevel = assertNotNull(levelCatalog.levels.firstOrNull { it.id == "rush-order-shop" })
-        assertEquals(listOf("tutorial-shop"), rushLevel.requiredLevelIds)
+        val rushCondition = assertIs<Condition.LevelCompleted>(rushLevel.unlockCondition)
+        assertEquals("tutorial-shop", rushCondition.levelId)
+        assertEquals(1, rushCondition.minStars)
     }
 
     @Test

@@ -1,11 +1,8 @@
 package com.faultory.core.content
 
-object LevelUnlockResolver {
-    fun isUnlocked(level: LevelDefinition, starsEarnedFor: (String) -> Int): Boolean {
-        return missingPrerequisites(level, starsEarnedFor).isEmpty()
-    }
+import com.faultory.core.encounters.EvaluationContext
 
-    fun missingPrerequisites(level: LevelDefinition, starsEarnedFor: (String) -> Int): List<String> {
-        return level.requiredLevelIds.filter { prereqId -> starsEarnedFor(prereqId) < 1 }
-    }
+object LevelUnlockResolver {
+    fun isUnlocked(level: LevelDefinition, ctx: EvaluationContext): Boolean =
+        level.unlockCondition.evaluate(ctx)
 }

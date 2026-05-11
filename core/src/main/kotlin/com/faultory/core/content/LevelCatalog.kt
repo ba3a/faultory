@@ -1,5 +1,6 @@
 package com.faultory.core.content
 
+import com.faultory.core.encounters.Condition
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -13,7 +14,7 @@ data class LevelDefinition(
     val shopAssetPath: String,
     val starThresholds: LevelStarThresholds,
     val recommendedNextLevelId: String? = null,
-    val requiredLevelIds: List<String> = emptyList(),
+    val unlockCondition: Condition = Condition.Always,
     val supplyingLevelIds: List<String> = emptyList(),
     val availableWorkerIds: List<String>,
     val availableMachineIds: List<String>,

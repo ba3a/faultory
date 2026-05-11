@@ -15,6 +15,13 @@ import com.faultory.core.content.LevelCatalogAssetLoader
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.ShopCatalog
 import com.faultory.core.content.ShopCatalogAssetLoader
+import com.faultory.core.encounters.ConditionLibrary
+import com.faultory.core.encounters.ConditionLibraryAssetLoader
+import com.faultory.core.encounters.EncounterCatalog
+import com.faultory.core.encounters.EncounterCatalogAssetLoader
+import com.faultory.core.encounters.EncounterEngine
+import com.faultory.core.encounters.EvaluationContext
+import com.faultory.core.encounters.EventBus
 import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.graphics.SkinDefinitionAssetLoader
 import com.faultory.core.graphics.SkinReferences
@@ -23,7 +30,9 @@ import com.faultory.core.i18n.CatalogTranslations
 import com.faultory.core.i18n.LocaleManager
 import com.faultory.core.i18n.SupportedLocale
 import com.faultory.core.render.RenderContext
+import com.faultory.core.save.EncounterProgressRepository
 import com.faultory.core.save.GameSave
+import com.faultory.core.save.LocalEncounterProgressRepository
 import com.faultory.core.save.LocalPlayerPreferencesRepository
 import com.faultory.core.save.LocalSaveRepository
 import com.faultory.core.save.PlayerPreferences
@@ -32,8 +41,10 @@ import com.faultory.core.save.SaveRepository
 import com.faultory.core.screens.BootScreen
 import com.faultory.core.screens.shopfloor.ShiftLifecycleHost
 import com.faultory.core.screens.LevelSelectionScreen
+import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopBlueprintAssetLoader
+import com.faultory.core.tutorial.TutorialCoordinator
 import kotlin.text.Charsets
 
 class FaultoryGame : Game(), ShiftLifecycleHost {
@@ -52,6 +63,12 @@ class FaultoryGame : Game(), ShiftLifecycleHost {
     lateinit var preferencesRepository: PlayerPreferencesRepository
         private set
 
+    val eventBus: EventBus = EventBus()
+
+    private lateinit var encounterProgressRepository: EncounterProgressRepository
+    private var encounterEngine: EncounterEngine? = null
+    private val tutorialCoordinator = TutorialCoordinator()
+
     override fun create() {
         renderContext = RenderContext(
             spriteBatch = SpriteBatch(),
@@ -59,6 +76,7 @@ class FaultoryGame : Game(), ShiftLifecycleHost {
             shapeRenderer = ShapeRenderer()
         )
         saveRepository = LocalSaveRepository()
+        encounterProgressRepository = LocalEncounterProgressRepository()
         preferencesRepository = LocalPlayerPreferencesRepository()
         val preferences = preferencesRepository.load()
         val translations = CatalogTranslations(resourceReader = { path ->
@@ -79,8 +97,12 @@ class FaultoryGame : Game(), ShiftLifecycleHost {
             setLoader(LevelCatalog::class.java, LevelCatalogAssetLoader(fileHandleResolver))
             setLoader(ShopBlueprint::class.java, ShopBlueprintAssetLoader(fileHandleResolver))
             setLoader(SkinDefinition::class.java, SkinDefinitionAssetLoader(fileHandleResolver))
+            setLoader(ConditionLibrary::class.java, ConditionLibraryAssetLoader(fileHandleResolver))
+            setLoader(EncounterCatalog::class.java, EncounterCatalogAssetLoader(fileHandleResolver))
             load(AssetPaths.levelCatalog, LevelCatalog::class.java)
             load(AssetPaths.shopCatalog, ShopCatalog::class.java)
+            load(AssetPaths.conditionLibrary, ConditionLibrary::class.java)
+            load(AssetPaths.encounterCatalog, EncounterCatalog::class.java)
             finishLoadingAsset<ShopCatalog>(AssetPaths.shopCatalog)
             enqueueSkinDefinitions(fileHandleResolver)
         }
@@ -96,10 +118,16 @@ class FaultoryGame : Game(), ShiftLifecycleHost {
     }
 
     override fun openLevelSelection() {
+        ensureEncounterEngineReady()
+        encounterEngine?.currentLevelId = null
+        encounterEngine?.currentPlacedObjects = null
         setScreen(LevelSelectionScreen(this))
     }
 
     override fun openLevel(level: LevelDefinition) {
+        ensureEncounterEngineReady()
+        encounterEngine?.currentLevelId = level.id
+        encounterEngine?.currentPlacedObjects = null
         assetManager.load(level.shopAssetPath, ShopBlueprint::class.java)
         setScreen(BootScreen(this, level))
     }
@@ -119,6 +147,40 @@ class FaultoryGame : Game(), ShiftLifecycleHost {
                 unlockedMachineIds = unlockedMachineIds,
                 startingCash = startingCash
             ).also(saveRepository::save)
+    }
+
+    fun buildEvaluationContext(
+        levelId: String? = null,
+        placedObjects: List<PlacedShopObject>? = null
+    ): EvaluationContext {
+        val library = if (assetManager.isLoaded(AssetPaths.conditionLibrary))
+            assetManager.get(AssetPaths.conditionLibrary, ConditionLibrary::class.java)
+        else ConditionLibrary()
+        return EvaluationContext(
+            saveRepository = saveRepository,
+            encounterProgress = encounterEngine?.progress ?: encounterProgressRepository.load(),
+            conditionLibrary = library,
+            currentLevelId = levelId,
+            placedObjects = placedObjects
+        )
+    }
+
+    fun updateEncounterPlacedObjects(placedObjects: List<PlacedShopObject>?) {
+        encounterEngine?.currentPlacedObjects = placedObjects
+    }
+
+    private fun ensureEncounterEngineReady() {
+        if (encounterEngine != null) return
+        if (!assetManager.isLoaded(AssetPaths.encounterCatalog)) return
+        if (!assetManager.isLoaded(AssetPaths.conditionLibrary)) return
+        encounterEngine = EncounterEngine(
+            encounterCatalog = assetManager.get(AssetPaths.encounterCatalog, EncounterCatalog::class.java),
+            conditionLibrary = assetManager.get(AssetPaths.conditionLibrary, ConditionLibrary::class.java),
+            progressRepository = encounterProgressRepository,
+            saveRepository = saveRepository,
+            eventBus = eventBus,
+            customHandlers = tutorialCoordinator.handlers
+        )
     }
 
     private fun createUiFont(): BitmapFont {

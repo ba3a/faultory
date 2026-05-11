@@ -106,7 +106,8 @@ class BootScreen(
             initialMachineRecipeStates = save.activeShift.machineRecipeStates,
             productDefinitionsById = shopCatalog.products.associateBy { it.id },
             initialCash = save.activeShift.cash,
-            beltSupplyFeeder = beltSupplyFeeder
+            beltSupplyFeeder = beltSupplyFeeder,
+            eventBus = game.eventBus
         )
 
         game.setScreen(ShopFloorScreen(game, level, nextLevel, shopFloor, save, shopCatalog))

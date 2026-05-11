@@ -1,6 +1,8 @@
 package com.faultory.core.shop
 
 import com.faultory.core.content.*
+import com.faultory.core.encounters.EventBus
+import com.faultory.core.encounters.ObjectPlacedEvent
 import com.faultory.core.shop.pathfinding.DefaultMovementStrategyResolver
 import com.faultory.core.shop.pathfinding.MovementStrategyResolver
 import com.faultory.core.shop.systems.*
@@ -19,7 +21,8 @@ class ShopFloor(
     initialCash: Int = 0,
     private val beltSupplyFeeder: BeltSupplyFeeder? = null,
     private val movementStrategyResolver: MovementStrategyResolver = DefaultMovementStrategyResolver,
-    random: Random = Random.Default
+    random: Random = Random.Default,
+    private val eventBus: EventBus? = null
 ) {
 
     val grid = ShopGrid(blueprint)
@@ -244,6 +247,7 @@ class ShopFloor(
         }
 
         mutablePlacedObjects += placedObject
+        eventBus?.publish(ObjectPlacedEvent(kind = placedObject.kind, catalogId = placedObject.catalogId))
         return true
     }
 

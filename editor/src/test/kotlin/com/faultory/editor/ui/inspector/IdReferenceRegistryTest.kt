@@ -51,14 +51,6 @@ class IdReferenceRegistryTest {
     }
 
     @Test
-    fun `LevelDefinition requiredLevelIds resolves to LEVEL`() {
-        assertEquals(
-            CatalogType.LEVEL,
-            IdReferenceRegistry.lookup(listOf(levelDefinitionName), "requiredLevelIds"),
-        )
-    }
-
-    @Test
     fun `BinaryUpgradeTree under WorkerProfile resolves to WORKER`() {
         val chain = listOf(workerProfileName, upgradeTreeName)
         assertEquals(CatalogType.WORKER, IdReferenceRegistry.lookup(chain, "leftUpgradeId"))

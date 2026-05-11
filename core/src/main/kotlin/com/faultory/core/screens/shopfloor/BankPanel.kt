@@ -3,6 +3,7 @@ package com.faultory.core.screens.shopfloor
 import com.badlogic.gdx.math.Rectangle
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelDefinition
+import com.faultory.core.encounters.EvaluationContext
 import com.faultory.core.shop.PlacedShopObjectKind
 
 class BankPanel(private val catalogLookup: CatalogLookup) {
@@ -14,21 +15,18 @@ class BankPanel(private val catalogLookup: CatalogLookup) {
     var hoveredKey: BankEntryKey? = null
         private set
 
-    fun rebuild(
-        level: LevelDefinition,
-        isLevelCompleted: (String) -> Boolean = { false }
-    ) {
+    fun rebuild(level: LevelDefinition, ctx: EvaluationContext) {
         mutableEntries.clear()
         for (workerId in level.availableWorkerIds) {
             val worker = catalogLookup.workerProfilesById[workerId] ?: continue
-            if (worker.requiredCompletedLevelIds.any { !isLevelCompleted(it) }) continue
+            if (!worker.unlockCondition.evaluate(ctx)) continue
             mutableEntries += BankEntry(
                 key = BankEntryKey(PlacedShopObjectKind.WORKER, worker.id)
             )
         }
         for (machineId in level.availableMachineIds) {
             val machine = catalogLookup.machineSpecsById[machineId] ?: continue
-            if (machine.requiredCompletedLevelIds.any { !isLevelCompleted(it) }) continue
+            if (!machine.unlockCondition.evaluate(ctx)) continue
             mutableEntries += BankEntry(
                 key = BankEntryKey(PlacedShopObjectKind.MACHINE, machine.id)
             )

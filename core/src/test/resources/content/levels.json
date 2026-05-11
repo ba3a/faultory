@@ -9,7 +9,6 @@
         "threeStar": 9
       },
       "recommendedNextLevelId": "rush-order-shop",
-      "requiredLevelIds": [],
       "availableWorkerIds": ["line-inspector"],
       "availableMachineIds": ["bench-assembler"],
       "startingCash": 320
@@ -22,7 +21,7 @@
         "twoStar": 8,
         "threeStar": 12
       },
-      "requiredLevelIds": ["tutorial-shop"],
+      "unlockCondition": { "type": "level.completed", "levelId": "tutorial-shop", "minStars": 1 },
       "availableWorkerIds": ["line-inspector"],
       "availableMachineIds": ["bench-assembler"],
       "startingCash": 380

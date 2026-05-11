@@ -207,30 +207,14 @@ class IdRenamer(
 
     private fun renameLevelRefsInLevel(level: LevelDefinition, oldId: String, newId: String): LevelDefinition {
         val recommended = if (level.recommendedNextLevelId == oldId) newId else level.recommendedNextLevelId
-        val required = level.requiredLevelIds.map { if (it == oldId) newId else it }
         val supplying = level.supplyingLevelIds.map { if (it == oldId) newId else it }
-        return if (recommended == level.recommendedNextLevelId &&
-            required == level.requiredLevelIds &&
-            supplying == level.supplyingLevelIds
-        ) level
-        else level.copy(
-            recommendedNextLevelId = recommended,
-            requiredLevelIds = required,
-            supplyingLevelIds = supplying,
-        )
+        return if (recommended == level.recommendedNextLevelId && supplying == level.supplyingLevelIds) level
+        else level.copy(recommendedNextLevelId = recommended, supplyingLevelIds = supplying)
     }
 
-    private fun renameLevelRefsInWorker(worker: WorkerProfile, oldId: String, newId: String): WorkerProfile {
-        val ids = worker.requiredCompletedLevelIds.map { if (it == oldId) newId else it }
-        return if (ids == worker.requiredCompletedLevelIds) worker
-        else worker.copy(requiredCompletedLevelIds = ids)
-    }
+    private fun renameLevelRefsInWorker(worker: WorkerProfile, oldId: String, newId: String): WorkerProfile = worker
 
-    private fun renameLevelRefsInMachine(machine: MachineSpec, oldId: String, newId: String): MachineSpec {
-        val ids = machine.requiredCompletedLevelIds.map { if (it == oldId) newId else it }
-        return if (ids == machine.requiredCompletedLevelIds) machine
-        else machine.copy(requiredCompletedLevelIds = ids)
-    }
+    private fun renameLevelRefsInMachine(machine: MachineSpec, oldId: String, newId: String): MachineSpec = machine
 
     private fun rewriteTree(tree: BinaryUpgradeTree, oldId: String, newId: String): BinaryUpgradeTree {
         val left = if (tree.leftUpgradeId == oldId) newId else tree.leftUpgradeId

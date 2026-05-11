@@ -9,7 +9,6 @@
         "threeStar": 9
       },
       "recommendedNextLevelId": "rush-order-shop",
-      "requiredLevelIds": [],
       "supplyingLevelIds": [],
       "availableWorkerIds": [
         "target-intern",
@@ -31,9 +30,7 @@
         "threeStar": 12
       },
       "recommendedNextLevelId": null,
-      "requiredLevelIds": [
-        "tutorial-shop"
-      ],
+      "unlockCondition": { "type": "level.completed", "levelId": "tutorial-shop", "minStars": 1 },
       "supplyingLevelIds": [
         "tutorial-shop"
       ],

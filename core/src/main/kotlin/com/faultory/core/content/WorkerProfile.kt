@@ -1,5 +1,6 @@
 package com.faultory.core.content
 
+import com.faultory.core.encounters.Condition
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -10,7 +11,7 @@ data class WorkerProfile(
     val walkSpeed: Float,
     val skin: String,
     val roleProfiles: List<WorkerRoleProfile>,
-    val requiredCompletedLevelIds: List<String> = emptyList(),
+    val unlockCondition: Condition = Condition.Always,
     val upgradeTree: BinaryUpgradeTree? = null
 ) {
     fun profileFor(role: WorkerRole): WorkerRoleProfile? {

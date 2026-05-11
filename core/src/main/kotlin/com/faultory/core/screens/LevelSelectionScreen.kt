@@ -34,7 +34,6 @@ class LevelSelectionScreen(
     private val languageButtonBounds = Rectangle(GameConfig.virtualWidth - 132f, GameConfig.virtualHeight - 80f, 96f, 40f)
     private lateinit var levelCatalog: LevelCatalog
     private var lockedLevelIds: Set<String> = emptySet()
-    private val missingPrereqsByLevelId = mutableMapOf<String, List<String>>()
     private var selectedIndex = 0
     private var lockedMessageTimer = 0f
 
@@ -112,20 +111,11 @@ class LevelSelectionScreen(
     }
 
     private fun refreshLockState() {
-        missingPrereqsByLevelId.clear()
-        val locked = mutableSetOf<String>()
-        val prereqIds = levelCatalog.levels.flatMap { it.requiredLevelIds }.toSet()
-        val starsEarned = prereqIds.associateWith { id ->
-            game.saveRepository.load(id)?.lastCompletedRun?.starsEarned ?: 0
-        }
-        for (level in levelCatalog.levels) {
-            val missing = LevelUnlockResolver.missingPrerequisites(level) { starsEarned[it] ?: 0 }
-            if (missing.isNotEmpty()) {
-                locked += level.id
-                missingPrereqsByLevelId[level.id] = missing
-            }
-        }
-        lockedLevelIds = locked
+        val ctx = game.buildEvaluationContext(levelId = null)
+        lockedLevelIds = levelCatalog.levels
+            .filter { !LevelUnlockResolver.isUnlocked(it, ctx) }
+            .map { it.id }
+            .toSet()
     }
 
     override fun hide() {
@@ -248,8 +238,8 @@ class LevelSelectionScreen(
                 else -> CARD_FOOTER_TEXT
             }
             val footerText = if (locked) {
-                val missing = missingPrereqsByLevelId[level.id].orEmpty()
-                Messages.format(UiMessageKey.LEVEL_SELECT_LOCKED_REQUIRES, missing.joinToString(", "))
+                val hint = Messages.catalog(CatalogMessageKey.LEVEL_LOCKED_HINT, level.id)
+                if (hint == level.id) Messages.text(UiMessageKey.LEVEL_SELECT_LOCKED_HINT) else hint
             } else {
                 Messages.text(UiMessageKey.LEVEL_SELECT_OPEN)
             }
@@ -272,8 +262,9 @@ class LevelSelectionScreen(
     private fun lockedSelectionMessage(): String? {
         if (selectedIndex !in levelCatalog.levels.indices) return null
         val level = levelCatalog.levels[selectedIndex]
-        val missing = missingPrereqsByLevelId[level.id] ?: return null
-        return Messages.format(UiMessageKey.LEVEL_SELECT_LOCKED_HINT, missing.joinToString(", "))
+        if (level.id !in lockedLevelIds) return null
+        val hint = Messages.catalog(CatalogMessageKey.LEVEL_LOCKED_HINT, level.id)
+        return if (hint == level.id) Messages.text(UiMessageKey.LEVEL_SELECT_LOCKED_HINT) else hint
     }
 
     private fun layoutCards(levels: List<LevelDefinition>) {

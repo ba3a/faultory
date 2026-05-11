@@ -164,30 +164,14 @@ class IdDeleter(
 
     private fun stripLevelFromLevel(level: LevelDefinition, id: String): LevelDefinition {
         val recommended = if (level.recommendedNextLevelId == id) null else level.recommendedNextLevelId
-        val required = level.requiredLevelIds.filterNot { it == id }
         val supplying = level.supplyingLevelIds.filterNot { it == id }
-        return if (recommended == level.recommendedNextLevelId &&
-            required == level.requiredLevelIds &&
-            supplying == level.supplyingLevelIds
-        ) level
-        else level.copy(
-            recommendedNextLevelId = recommended,
-            requiredLevelIds = required,
-            supplyingLevelIds = supplying,
-        )
+        return if (recommended == level.recommendedNextLevelId && supplying == level.supplyingLevelIds) level
+        else level.copy(recommendedNextLevelId = recommended, supplyingLevelIds = supplying)
     }
 
-    private fun stripLevelFromWorker(worker: WorkerProfile, id: String): WorkerProfile {
-        val ids = worker.requiredCompletedLevelIds.filterNot { it == id }
-        return if (ids == worker.requiredCompletedLevelIds) worker
-        else worker.copy(requiredCompletedLevelIds = ids)
-    }
+    private fun stripLevelFromWorker(worker: WorkerProfile, id: String): WorkerProfile = worker
 
-    private fun stripLevelFromMachine(machine: MachineSpec, id: String): MachineSpec {
-        val ids = machine.requiredCompletedLevelIds.filterNot { it == id }
-        return if (ids == machine.requiredCompletedLevelIds) machine
-        else machine.copy(requiredCompletedLevelIds = ids)
-    }
+    private fun stripLevelFromMachine(machine: MachineSpec, id: String): MachineSpec = machine
 
     private fun stripFromTree(tree: BinaryUpgradeTree, id: String): BinaryUpgradeTree {
         val left = if (tree.leftUpgradeId == id) null else tree.leftUpgradeId
