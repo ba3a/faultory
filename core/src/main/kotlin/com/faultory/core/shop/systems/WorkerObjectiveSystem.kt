@@ -34,6 +34,9 @@ internal class WorkerObjectiveSystem(
             if (worker.kind != PlacedShopObjectKind.WORKER) {
                 continue
             }
+            if (worker.unitPhase != null) {
+                continue
+            }
 
             if (worker.carriedProductId != null) {
                 val carriedProduct = state.productById(worker.carriedProductId) ?: continue

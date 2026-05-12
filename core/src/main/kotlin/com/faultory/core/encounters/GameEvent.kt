@@ -1,6 +1,7 @@
 package com.faultory.core.encounters
 
 import com.faultory.core.shop.PlacedShopObjectKind
+import com.faultory.core.shop.TileCoordinate
 
 sealed interface GameEvent
 
@@ -22,3 +23,24 @@ data class ObjectPlacedEvent(
 ) : GameEvent
 
 data class ShiftStartedEvent(val levelId: String) : GameEvent
+
+data class CleanerSpawnedEvent(val objectId: String, val levelId: String) : GameEvent
+
+data class CleanerTookProductEvent(
+    val cleanerObjectId: String,
+    val productInstanceId: String,
+    val levelId: String
+) : GameEvent
+
+data class CleanerHandedProductEvent(
+    val cleanerObjectId: String,
+    val workerObjectId: String,
+    val productInstanceId: String,
+    val levelId: String
+) : GameEvent
+
+data class UnitFellEvent(
+    val objectId: String,
+    val tile: TileCoordinate,
+    val levelId: String
+) : GameEvent

@@ -22,6 +22,7 @@ object ShopFloorPalette {
     private val WORKER_FILL_PRODUCER_OPERATOR = Color(0.86f, 0.56f, 0.30f, 1f)
     private val WORKER_FILL_QA = Color(0.22f, 0.69f, 0.82f, 1f)
     private val WORKER_FILL_SECURITY = Color(0.42f, 0.30f, 0.55f, 1f)
+    private val WORKER_FILL_CLEANER = Color(0.35f, 0.78f, 0.62f, 1f)
     private val WORKER_FILL_NULL = Color(0.66f, 0.69f, 0.73f, 1f)
 
     val HIGHLIGHT_GOLD: Color = Color(0.99f, 0.90f, 0.62f, 1f)
@@ -54,6 +55,7 @@ object ShopFloorPalette {
             WorkerRole.PRODUCER_OPERATOR -> WORKER_FILL_PRODUCER_OPERATOR
             WorkerRole.QA -> WORKER_FILL_QA
             WorkerRole.SECURITY -> WORKER_FILL_SECURITY
+            WorkerRole.CLEANER -> WORKER_FILL_CLEANER
             null -> WORKER_FILL_NULL
         }
     }

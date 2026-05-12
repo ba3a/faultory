@@ -22,7 +22,9 @@ class ShopFloor(
     private val beltSupplyFeeder: BeltSupplyFeeder? = null,
     private val movementStrategyResolver: MovementStrategyResolver = DefaultMovementStrategyResolver,
     random: Random = Random.Default,
-    private val eventBus: EventBus? = null
+    private val eventBus: EventBus? = null,
+    private val cleanerSpawnGate: CleanerSpawnGate? = null,
+    private val levelIdProvider: () -> String? = { null }
 ) {
 
     val grid = ShopGrid(blueprint)
@@ -39,12 +41,32 @@ class ShopFloor(
         initialCash = initialCash
     )
 
+    private val wetTileSystem: WetTileSystem = WetTileSystem(state)
+    private val unitPhaseSystem: UnitPhaseSystem = UnitPhaseSystem(state, random)
     private val securitySystem: SecuritySystem = SecuritySystem(state, movementStrategyResolver, random)
-    private val workerMovementSystem: WorkerMovementSystem = WorkerMovementSystem(state, movementStrategyResolver)
+    private val workerMovementSystem: WorkerMovementSystem = WorkerMovementSystem(
+        state = state,
+        movementStrategyResolver = movementStrategyResolver,
+        wetTileSystem = wetTileSystem,
+        random = random,
+        eventBus = eventBus,
+        levelIdProvider = levelIdProvider
+    )
     private val conveyorSystem: ConveyorSystem = ConveyorSystem(state)
     private val qaSystem: QaSystem = QaSystem(state, random)
     private val workerObjectiveSystem: WorkerObjectiveSystem = WorkerObjectiveSystem(state, qaSystem, movementStrategyResolver, random)
     private val productionSystem: ProductionSystem = ProductionSystem(state, random)
+    private val cleanerSpawnSystem: CleanerSpawnSystem? = cleanerSpawnGate?.let {
+        CleanerSpawnSystem(state, random, eventBus, it)
+    }
+    private val cleanerSystem: CleanerSystem = CleanerSystem(
+        state = state,
+        movementStrategyResolver = movementStrategyResolver,
+        wetTileSystem = wetTileSystem,
+        random = random,
+        eventBus = eventBus,
+        levelIdProvider = levelIdProvider
+    )
 
     val cash: Int
         get() = state.cash
@@ -87,6 +109,9 @@ class ShopFloor(
         deltaSeconds: Float,
         workerProfilesById: Map<String, WorkerProfile>
     ) {
+        cleanerSpawnSystem?.trySpawnAtShiftStart(workerProfilesById)
+        unitPhaseSystem.update(deltaSeconds)
+        wetTileSystem.update(deltaSeconds)
         beltSupplyFeeder?.update(deltaSeconds, ::trySpawnSuppliedProduct)
         workerMovementSystem.update(deltaSeconds, workerProfilesById)
         productionSystem.acceptBeltInputs()
@@ -96,8 +121,16 @@ class ShopFloor(
         securitySystem.update(workerProfilesById)
         conveyorSystem.update(deltaSeconds)
         workerObjectiveSystem.update()
+        cleanerSystem.update(deltaSeconds, workerProfilesById)
         productionSystem.pruneEmptyRecipeStates()
     }
+
+    fun resetShiftLifecycle() {
+        state.cleanerSpawnedThisShift = false
+    }
+
+    val wetTiles: Map<TileCoordinate, Float>
+        get() = state.mutableWetTiles.toMap()
 
     private fun trySpawnSuppliedProduct(
         beltStartTile: TileCoordinate,

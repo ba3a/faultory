@@ -92,4 +92,10 @@ sealed interface Condition {
     data class Not(val operand: Condition) : Condition {
         override fun evaluate(ctx: EvaluationContext) = !operand.evaluate(ctx)
     }
+
+    @Serializable @SerialName("random")
+    data class Random(val probability: Float) : Condition {
+        override fun evaluate(ctx: EvaluationContext): Boolean =
+            ctx.random.nextFloat() < probability
+    }
 }

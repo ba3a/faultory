@@ -53,6 +53,9 @@ internal class ShopFloorState(
 
     val pendingShipmentEvents: MutableList<ShipmentEvent> = mutableListOf()
 
+    val mutableWetTiles: MutableMap<TileCoordinate, Float> = HashMap()
+    var cleanerSpawnedThisShift: Boolean = false
+
     private val operatorWorkerByMachineId: HashMap<String, PlacedShopObject> = HashMap()
     private val productByBeltTile: HashMap<TileCoordinate, ShopProduct> = HashMap()
 

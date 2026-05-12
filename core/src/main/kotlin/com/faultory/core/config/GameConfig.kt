@@ -46,4 +46,17 @@ object GameConfig {
     const val upgradeModalHorizontalPadding = 32f
     const val upgradeModalVerticalPadding = 32f
     const val upgradeModalTitleSpace = 64f
+
+    const val cleanerWetTileBaseSeconds = 6f
+    const val cleanerWetTileJitterSeconds = 2f
+    const val cleanerSlipBaseChance = 0.25f
+    const val cleanerSlipJitterChance = 0.1f
+    const val unitFallSeconds = 0.4f
+    const val unitLyingBaseSeconds = 1.4f
+    const val unitLyingJitterSeconds = 0.6f
+    const val unitStandingSeconds = 0.4f
+    const val cleanerDestroyProductSeconds = 1.0f
+    const val cleanerRoamMinSteps = 1
+    const val cleanerRoamMaxSteps = 4
+    const val cleanerWalkSpeedFallback = 96f
 }

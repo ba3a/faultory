@@ -12,12 +12,14 @@ import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.ShopCatalog
+import com.faultory.core.encounters.ConditionLibrary
 import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.graphics.SkinReferences
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.ShopGrid
 import com.faultory.core.shop.TileCoordinate
+import com.faultory.core.shop.systems.CleanerConditionSpawnGate
 import com.faultory.core.systems.BeltSupplyFeeder
 import com.faultory.core.systems.BeltSupplySchedule
 import kotlin.random.Random
@@ -96,6 +98,15 @@ class BootScreen(
             startingCash = level.startingCash
         )
         val beltSupplyFeeder = buildBeltSupplyFeeder(level, shopBlueprint, save.activeShift.elapsedSeconds)
+        val conditionLibrary = if (game.assetManager.isLoaded(AssetPaths.conditionLibrary)) {
+            game.assetManager.get(AssetPaths.conditionLibrary, ConditionLibrary::class.java)
+        } else ConditionLibrary()
+        val cleanerSpawnGate = CleanerConditionSpawnGate(
+            saveRepository = game.saveRepository,
+            conditionLibrary = conditionLibrary,
+            random = Random.Default,
+            currentLevelIdProvider = { level.id }
+        )
         val shopFloor = ShopFloor(
             blueprint = shopBlueprint,
             machineSpecsById = shopCatalog.machines.associateBy { it.id },
@@ -107,7 +118,9 @@ class BootScreen(
             productDefinitionsById = shopCatalog.products.associateBy { it.id },
             initialCash = save.activeShift.cash,
             beltSupplyFeeder = beltSupplyFeeder,
-            eventBus = game.eventBus
+            eventBus = game.eventBus,
+            cleanerSpawnGate = cleanerSpawnGate,
+            levelIdProvider = { level.id }
         )
 
         game.setScreen(ShopFloorScreen(game, level, nextLevel, shopFloor, save, shopCatalog))

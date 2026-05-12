@@ -3,15 +3,23 @@ package com.faultory.core.shop.systems
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.MachineSlotType
 import com.faultory.core.content.WorkerProfile
+import com.faultory.core.content.WorkerRole
+import com.faultory.core.encounters.EventBus
+import com.faultory.core.encounters.UnitFellEvent
 import com.faultory.core.shop.BeltRidePhase
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.pathfinding.MovementStrategyResolver
+import kotlin.random.Random
 
 internal class WorkerMovementSystem(
     private val state: ShopFloorState,
-    private val movementStrategyResolver: MovementStrategyResolver
+    private val movementStrategyResolver: MovementStrategyResolver,
+    private val wetTileSystem: WetTileSystem,
+    private val random: Random,
+    private val eventBus: EventBus? = null,
+    private val levelIdProvider: () -> String? = { null }
 ) {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val grid get() = state.grid
@@ -23,6 +31,9 @@ internal class WorkerMovementSystem(
         for (index in mutablePlacedObjects.indices) {
             val placedObject = mutablePlacedObjects[index]
             if (placedObject.kind != PlacedShopObjectKind.WORKER) {
+                continue
+            }
+            if (placedObject.unitPhase != null) {
                 continue
             }
 
@@ -42,6 +53,7 @@ internal class WorkerMovementSystem(
             var currentPosition = placedObject.position
             var currentOrientation = placedObject.orientation
             var enteredBelt = false
+            var slipped = false
 
             while (progress >= 1f && remainingPath.isNotEmpty()) {
                 val nextTile = remainingPath.first()
@@ -55,10 +67,35 @@ internal class WorkerMovementSystem(
                 remainingPath = remainingPath.drop(1)
                 progress -= 1f
 
+                if (placedObject.workerRole != WorkerRole.CLEANER && wetTileSystem.isWet(currentPosition)) {
+                    if (random.nextFloat() < jitteredSlipChance()) {
+                        slipped = true
+                        break
+                    }
+                }
+
                 if (currentPosition in grid.beltTiles && grid.nextBeltTile(currentPosition) != null && remainingPath.isNotEmpty()) {
                     enteredBelt = true
                     break
                 }
+            }
+
+            if (slipped) {
+                val fallen = UnitPhaseSystem.startFalling(
+                    placedObject.copy(
+                        position = currentPosition,
+                        orientation = currentOrientation
+                    )
+                )
+                mutablePlacedObjects[index] = fallen
+                eventBus?.publish(
+                    UnitFellEvent(
+                        objectId = placedObject.id,
+                        tile = currentPosition,
+                        levelId = levelIdProvider() ?: ""
+                    )
+                )
+                continue
             }
 
             if (enteredBelt) {
@@ -157,6 +194,15 @@ internal class WorkerMovementSystem(
 
             null -> Unit
         }
+    }
+
+    private fun jitteredSlipChance(): Float {
+        val jitter = if (GameConfig.cleanerSlipJitterChance > 0f) {
+            (random.nextFloat() * 2f - 1f) * GameConfig.cleanerSlipJitterChance
+        } else {
+            0f
+        }
+        return (GameConfig.cleanerSlipBaseChance + jitter).coerceIn(0f, 1f)
     }
 
     private fun orientationAtAssignedSlot(worker: PlacedShopObject): Orientation? {

@@ -36,4 +36,22 @@ object MovementStrategies {
             beltRidePolicy = BeltRidePolicy.ChainLongRide
         )
     }
+
+    /**
+     * Cleaner: belt-avoiding shortest path, short straight-line roams so 90° turns happen
+     * frequently between segments. Cleaner never rides belts; the ride policy is unused.
+     */
+    val Cleaner: MovementStrategy = run {
+        val avoidBeltFinder = ShortestPathFinder(BeltTraversal.Avoid)
+        MovementStrategy(
+            pathFinder = avoidBeltFinder,
+            roamer = StraightLineRoamer(
+                pathFinder = avoidBeltFinder,
+                minSteps = GameConfig.cleanerRoamMinSteps,
+                maxSteps = GameConfig.cleanerRoamMaxSteps,
+                beltTripChance = 0f
+            ),
+            beltRidePolicy = BeltRidePolicy.OneTileRideExit
+        )
+    }
 }

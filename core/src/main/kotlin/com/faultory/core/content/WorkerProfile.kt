@@ -50,12 +50,14 @@ data class WorkerRoleProfile(
     val falsePositiveChance: Float = 0f,
     val faultyProductStrategy: FaultyProductStrategy? = null,
     val acceptedProductIds: List<String> = emptyList(),
-    val eyesightRadius: Float? = null
+    val eyesightRadius: Float? = null,
+    val spawnChance: Float? = null
 )
 
 @Serializable
 enum class WorkerRole {
     PRODUCER_OPERATOR,
     QA,
-    SECURITY
+    SECURITY,
+    CLEANER
 }

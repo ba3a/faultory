@@ -235,8 +235,21 @@ internal class QaSystem(
         val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
         if (productIndex < 0) return false
 
-        mutableActiveProducts.removeAt(productIndex)
-        state.clearWorkerHold(inspectorId)
+        val inspectorIndex = mutablePlacedObjects.indexOfFirst {
+            it.id == inspectorId && it.kind == PlacedShopObjectKind.WORKER
+        }
+        if (inspectorIndex < 0) {
+            // Machine inspector — destroy instantly.
+            mutableActiveProducts.removeAt(productIndex)
+            return true
+        }
+
+        val inspector = mutablePlacedObjects[inspectorIndex]
+        if (inspector.unitPhase == com.faultory.core.shop.UnitPhase.DESTROYING_PRODUCT) {
+            // Phase already running for this product — nothing to start.
+            return false
+        }
+        mutablePlacedObjects[inspectorIndex] = UnitPhaseSystem.startDestroyProduct(inspector)
         return true
     }
 

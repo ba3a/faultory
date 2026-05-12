@@ -33,6 +33,16 @@ class GridBackgroundRenderer(private val shopFloor: ShopFloor) : ShopFloorLayer 
                 GameConfig.tileSize
             )
         }
+
+        renderer.color = WET_TILE
+        for (wetTile in shopFloor.wetTiles.keys) {
+            renderer.rect(
+                shopFloor.grid.worldXFor(wetTile),
+                shopFloor.grid.worldYFor(wetTile),
+                GameConfig.tileSize,
+                GameConfig.tileSize
+            )
+        }
     }
 
     override fun drawLine(ctx: ShopFloorRenderContext) {
@@ -70,5 +80,6 @@ class GridBackgroundRenderer(private val shopFloor: ShopFloor) : ShopFloorLayer 
         private val BELT_FILL = Color(0.20f, 0.33f, 0.42f, 1f)
         private val GRID_LINE = Color(0.18f, 0.22f, 0.26f, 1f)
         private val BELT_OUTLINE = Color(0.37f, 0.54f, 0.67f, 1f)
+        private val WET_TILE = Color(0.30f, 0.65f, 0.85f, 0.55f)
     }
 }

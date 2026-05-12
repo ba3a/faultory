@@ -91,6 +91,7 @@ class WorkerRoleProfilesEditor(
             WorkerRole.PRODUCER_OPERATOR -> 1.5
             WorkerRole.QA -> 1.5
             WorkerRole.SECURITY -> 0.0
+            WorkerRole.CLEANER -> 0.0
         }
     }
 }

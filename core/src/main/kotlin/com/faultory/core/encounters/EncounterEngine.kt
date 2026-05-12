@@ -4,6 +4,7 @@ import com.faultory.core.save.EncounterProgress
 import com.faultory.core.save.EncounterProgressRepository
 import com.faultory.core.save.SaveRepository
 import com.faultory.core.shop.PlacedShopObject
+import kotlin.random.Random
 
 class EncounterEngine(
     private val encounterCatalog: EncounterCatalog,
@@ -11,7 +12,8 @@ class EncounterEngine(
     private val progressRepository: EncounterProgressRepository,
     private val saveRepository: SaveRepository,
     eventBus: EventBus,
-    private val customHandlers: Map<String, () -> Unit> = emptyMap()
+    private val customHandlers: Map<String, () -> Unit> = emptyMap(),
+    private val random: Random = Random.Default
 ) {
     var progress: EncounterProgress = progressRepository.load()
         private set
@@ -27,12 +29,23 @@ class EncounterEngine(
     }
 
     private fun onEvent(event: GameEvent) {
-        if (event is ProductShippedEvent) {
-            progress = updateCounters(event, progress)
+        when (event) {
+            is ProductShippedEvent -> progress = updateCounters(event, progress)
+            is CleanerSpawnedEvent -> progress = bumpScopedCounter("cleaner.spawned", event.levelId)
+            is CleanerHandedProductEvent -> progress = bumpScopedCounter("cleaner.products.handed", event.levelId)
+            is UnitFellEvent -> progress = bumpScopedCounter("units.fallen", event.levelId)
+            else -> Unit
         }
         val ctx = buildCtx()
         evaluateEncounters(ctx)
         progressRepository.save(progress)
+    }
+
+    private fun bumpScopedCounter(prefix: String, levelId: String): EncounterProgress {
+        var result = progress
+        result = result.withCounter("$prefix.__all__", 1L)
+        result = result.withCounter("$prefix.$levelId", 1L)
+        return result
     }
 
     private fun buildCtx() = EvaluationContext(
@@ -40,7 +53,8 @@ class EncounterEngine(
         encounterProgress = progress,
         conditionLibrary = conditionLibrary,
         currentLevelId = currentLevelId,
-        placedObjects = currentPlacedObjects
+        placedObjects = currentPlacedObjects,
+        random = random
     )
 
     private fun updateCounters(event: ProductShippedEvent, p: EncounterProgress): EncounterProgress {

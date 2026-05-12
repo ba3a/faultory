@@ -22,6 +22,7 @@ object DefaultMovementStrategyResolver : MovementStrategyResolver {
     override fun strategyFor(worker: PlacedShopObject): MovementStrategy =
         when (worker.workerRole) {
             WorkerRole.SECURITY -> MovementStrategies.Security
+            WorkerRole.CLEANER -> MovementStrategies.Cleaner
             else -> MovementStrategies.Worker
         }
 }

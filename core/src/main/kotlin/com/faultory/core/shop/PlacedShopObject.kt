@@ -21,11 +21,21 @@ data class PlacedShopObject(
     val movementProgress: Float = 0f,
     val pursuitTargetWorkerId: String? = null,
     @Transient val beltRidePhase: BeltRidePhase? = null,
-    @Transient val beltRideTimer: Float = 0f
+    @Transient val beltRideTimer: Float = 0f,
+    @Transient val unitPhase: UnitPhase? = null,
+    @Transient val unitPhaseTimer: Float = 0f,
+    @Transient val unitPhaseDurationSeconds: Float = 0f
 )
 
 @Serializable
 enum class PlacedShopObjectKind {
     WORKER,
     MACHINE
+}
+
+enum class UnitPhase {
+    FALLING,
+    LYING,
+    STANDING,
+    DESTROYING_PRODUCT
 }

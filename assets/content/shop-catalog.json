@@ -281,6 +281,30 @@
       ],
       "unlockCondition": { "type": "level.completed", "levelId": "tutorial-shop", "minStars": 1 },
       "upgradeTree": null
+    },
+    {
+      "id": "cleaner-basic",
+      "level": 1,
+      "hireCost": 0,
+      "walkSpeed": 96.0,
+      "skin": "worker_shop_guard",
+      "roleProfiles": [
+        {
+          "role": "CLEANER",
+          "taskDurationSeconds": 0.0,
+          "defectChance": null,
+          "sabotageChance": 0.0,
+          "inspectionDurationSeconds": null,
+          "detectionAccuracy": null,
+          "falsePositiveChance": 0.0,
+          "faultyProductStrategy": null,
+          "acceptedProductIds": [],
+          "eyesightRadius": null,
+          "spawnChance": 0.5
+        }
+      ],
+      "unlockCondition": { "type": "never" },
+      "upgradeTree": null
     }
   ],
   "machines": [
