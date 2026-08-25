@@ -3,6 +3,8 @@ package com.faultory.core.shop
 import com.faultory.core.content.*
 import com.faultory.core.encounters.EventBus
 import com.faultory.core.encounters.ObjectPlacedEvent
+import com.faultory.core.graphics.InteractionCatalog
+import com.faultory.core.graphics.InteractionDefinition
 import com.faultory.core.shop.pathfinding.DefaultMovementStrategyResolver
 import com.faultory.core.shop.pathfinding.MovementStrategyResolver
 import com.faultory.core.shop.systems.*
@@ -24,7 +26,8 @@ class ShopFloor(
     random: Random = Random.Default,
     private val eventBus: EventBus? = null,
     private val cleanerSpawnGate: CleanerSpawnGate? = null,
-    private val levelIdProvider: () -> String? = { null }
+    private val levelIdProvider: () -> String? = { null },
+    private val interactionCatalogProvider: () -> InteractionCatalog? = { null }
 ) {
 
     val grid = ShopGrid(blueprint)
@@ -60,10 +63,12 @@ class ShopFloor(
     private val cleanerSpawnSystem: CleanerSpawnSystem? = cleanerSpawnGate?.let {
         CleanerSpawnSystem(state, random, eventBus, it)
     }
+    private val interactionSystem: InteractionSystem = InteractionSystem(state, interactionCatalogProvider)
     private val cleanerSystem: CleanerSystem = CleanerSystem(
         state = state,
         movementStrategyResolver = movementStrategyResolver,
         wetTileSystem = wetTileSystem,
+        interactionSystem = interactionSystem,
         random = random,
         eventBus = eventBus,
         levelIdProvider = levelIdProvider
@@ -71,6 +76,10 @@ class ShopFloor(
 
     val cash: Int
         get() = state.cash
+
+    /** Null until the catalog asset is resident, or when the id is unauthored; callers degrade. */
+    fun interactionDefinitionFor(definitionId: String): InteractionDefinition? =
+        interactionCatalogProvider()?.find(definitionId)
 
     private val mutablePlacedObjects: MutableList<PlacedShopObject>
         get() = state.mutablePlacedObjects
@@ -112,6 +121,7 @@ class ShopFloor(
     ) {
         cleanerSpawnSystem?.trySpawnAtShiftStart(workerProfilesById)
         unitPhaseSystem.update(deltaSeconds)
+        interactionSystem.update(deltaSeconds)
         wetTileSystem.update(deltaSeconds)
         beltSupplyFeeder?.update(deltaSeconds, ::trySpawnSuppliedProduct)
         workerMovementSystem.update(deltaSeconds, workerProfilesById)

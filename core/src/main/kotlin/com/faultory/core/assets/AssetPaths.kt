@@ -5,6 +5,7 @@ object AssetPaths {
     const val shopCatalog = "content/shop-catalog.json"
     const val encounterCatalog = "content/encounters.json"
     const val conditionLibrary = "content/conditions.json"
+    const val interactionCatalog = "content/interactions.json"
     const val skinsDir = "skins/"
     const val defaultBeltSkin = "belt_default"
     const val uiFont = "fonts/ui.ttf"

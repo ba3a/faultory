@@ -156,16 +156,34 @@ class ShopFloorCleanerTest {
             levelIdProvider = { "tutorial-shop" }
         )
 
-        shopFloor.update(0.05f, mapOf(
+        val profiles = mapOf(
             cleanerProfile.id to cleanerProfile,
             recipientProfile.id to recipientProfile
-        ))
+        )
+        shopFloor.update(0.05f, profiles)
+
+        // The exchange now runs over a clip rather than completing inside one frame, so both
+        // workers can play their half of it. The product is still with the cleaner at this point.
+        val cleanerAtStart = assertNotNull(shopFloor.findObjectById("cleaner-1"))
+        val recipientAtStart = assertNotNull(shopFloor.findObjectById("worker-1"))
+        assertEquals("product-1", cleanerAtStart.carriedProductId)
+        assertNull(recipientAtStart.carriedProductId)
+        assertNotNull(cleanerAtStart.interaction)
+        assertEquals("cleaner-1", assertNotNull(recipientAtStart.interaction).partnerObjectId)
+        assertTrue(events.captured.any { it is CleanerHandedProductEvent })
+
+        repeat(20) { shopFloor.update(0.05f, profiles) }
 
         val cleanerAfter = assertNotNull(shopFloor.findObjectById("cleaner-1"))
         val recipientAfter = assertNotNull(shopFloor.findObjectById("worker-1"))
         assertNull(cleanerAfter.carriedProductId)
         assertEquals("product-1", recipientAfter.carriedProductId)
-        assertTrue(events.captured.any { it is CleanerHandedProductEvent })
+        assertNull(cleanerAfter.interaction)
+        assertNull(recipientAfter.interaction)
+
+        val product = assertNotNull(shopFloor.activeProducts.firstOrNull { it.id == "product-1" })
+        assertEquals("worker-1", product.holderObjectId)
+        assertEquals(ShopProductState.CARRIED, product.state)
     }
 
     @Test

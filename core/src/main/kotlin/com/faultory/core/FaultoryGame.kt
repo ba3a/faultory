@@ -23,6 +23,8 @@ import com.faultory.core.encounters.EncounterEngine
 import com.faultory.core.encounters.EvaluationContext
 import com.faultory.core.encounters.EventBus
 import com.faultory.core.graphics.SkinDefinition
+import com.faultory.core.graphics.InteractionCatalog
+import com.faultory.core.graphics.InteractionCatalogAssetLoader
 import com.faultory.core.graphics.SkinDefinitionAssetLoader
 import com.faultory.core.graphics.SkinReferences
 import com.faultory.core.graphics.SkinRegistry
@@ -99,10 +101,12 @@ class FaultoryGame : Game(), ShiftLifecycleHost {
             setLoader(SkinDefinition::class.java, SkinDefinitionAssetLoader(fileHandleResolver))
             setLoader(ConditionLibrary::class.java, ConditionLibraryAssetLoader(fileHandleResolver))
             setLoader(EncounterCatalog::class.java, EncounterCatalogAssetLoader(fileHandleResolver))
+            setLoader(InteractionCatalog::class.java, InteractionCatalogAssetLoader(fileHandleResolver))
             load(AssetPaths.levelCatalog, LevelCatalog::class.java)
             load(AssetPaths.shopCatalog, ShopCatalog::class.java)
             load(AssetPaths.conditionLibrary, ConditionLibrary::class.java)
             load(AssetPaths.encounterCatalog, EncounterCatalog::class.java)
+            load(AssetPaths.interactionCatalog, InteractionCatalog::class.java)
             finishLoadingAsset<ShopCatalog>(AssetPaths.shopCatalog)
             enqueueSkinDefinitions(fileHandleResolver)
         }
@@ -168,6 +172,17 @@ class FaultoryGame : Game(), ShiftLifecycleHost {
     fun updateEncounterPlacedObjects(placedObjects: List<PlacedShopObject>?) {
         encounterEngine?.currentPlacedObjects = placedObjects
     }
+
+    /**
+     * Read through a provider rather than captured once: the catalog is queued at boot and a shop
+     * floor may be built before it lands, in which case interactions use their fallback duration.
+     */
+    fun interactionCatalog(): InteractionCatalog? =
+        if (assetManager.isLoaded(AssetPaths.interactionCatalog)) {
+            assetManager.get(AssetPaths.interactionCatalog, InteractionCatalog::class.java)
+        } else {
+            null
+        }
 
     private fun ensureEncounterEngineReady() {
         if (encounterEngine != null) return

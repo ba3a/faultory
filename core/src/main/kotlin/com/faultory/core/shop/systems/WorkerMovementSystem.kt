@@ -33,7 +33,7 @@ internal class WorkerMovementSystem(
             if (placedObject.kind != PlacedShopObjectKind.WORKER) {
                 continue
             }
-            if (placedObject.unitPhase != null) {
+            if (placedObject.isBusy) {
                 continue
             }
 

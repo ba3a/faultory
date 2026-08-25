@@ -6,6 +6,7 @@ import com.faultory.core.content.WorkerRole
 import com.faultory.core.encounters.CleanerHandedProductEvent
 import com.faultory.core.encounters.CleanerTookProductEvent
 import com.faultory.core.encounters.EventBus
+import com.faultory.core.graphics.InteractionIds
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
@@ -18,6 +19,7 @@ internal class CleanerSystem(
     private val state: ShopFloorState,
     private val movementStrategyResolver: MovementStrategyResolver,
     private val wetTileSystem: WetTileSystem,
+    private val interactionSystem: InteractionSystem,
     private val random: Random,
     private val eventBus: EventBus? = null,
     private val levelIdProvider: () -> String? = { null }
@@ -44,7 +46,7 @@ internal class CleanerSystem(
 
             emitWetTrailIfMoved(current)
 
-            if (current.unitPhase != null) continue
+            if (current.isBusy) continue
 
             if (current.carriedProductId == null) {
                 if (tryPickUpAdjacentProduct(freshIndex, current)) continue
@@ -124,35 +126,25 @@ internal class CleanerSystem(
             other.kind == PlacedShopObjectKind.WORKER &&
                 other.id != cleaner.id &&
                 other.workerRole != WorkerRole.CLEANER &&
-                other.unitPhase == null &&
+                !other.isBusy &&
                 other.carriedProductId == null &&
                 other.position in neighborTiles
         } ?: return false
 
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
-        if (productIndex < 0) return false
-        val product = mutableActiveProducts[productIndex]
-        val recipientIndex = mutablePlacedObjects.indexOfFirst { it.id == recipient.id }
-        if (recipientIndex < 0) return false
+        if (mutableActiveProducts.none { it.id == productId }) return false
 
-        mutableActiveProducts[productIndex] = product.copy(
-            state = ShopProductState.CARRIED,
-            tile = null,
-            carrierWorkerId = recipient.id,
-            holderObjectId = recipient.id
-        )
-        mutablePlacedObjects[recipientIndex] = recipient.copy(
-            carriedProductId = productId,
-            movementPath = emptyList(),
-            movementProgress = 0f
-        )
-        val orientation = Orientation.between(cleaner.position, recipient.position) ?: cleaner.orientation
-        mutablePlacedObjects[cleanerIndex] = cleaner.copy(
-            carriedProductId = null,
-            movementPath = emptyList(),
-            movementProgress = 0f,
-            orientation = orientation
-        )
+        // The product does not change hands here any more - InteractionSystem moves it partway
+        // through the give/take clip, so both workers get to play their half of the exchange.
+        if (!interactionSystem.begin(
+                definitionId = InteractionIds.HAND_OFF,
+                initiatorId = cleaner.id,
+                recipientId = recipient.id,
+                payloadProductId = productId
+            )
+        ) {
+            return false
+        }
+
         eventBus?.publish(
             CleanerHandedProductEvent(
                 cleanerObjectId = cleaner.id,

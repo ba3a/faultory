@@ -88,6 +88,74 @@ object SkinMetadataValidator {
                     )
                 }
             }
+
+            issues += validateSockets(actionName, clip, orientation, frames.size)
+            issues += validateParts(actionName, clip, orientation, frames.size, regionSet)
+        }
+
+        return issues
+    }
+
+    /**
+     * Per-frame points are index-aligned with the orientation's own frames, so a list of the wrong
+     * length silently falls back to the orientation default partway through the clip.
+     */
+    private fun validateSockets(
+        actionName: String,
+        clip: ActionClip,
+        orientation: Orientation,
+        frameCount: Int,
+    ): List<ValidationIssue> = clip.sockets.mapNotNull { (socketName, socket) ->
+        val perFrame = socket.byFrame[orientation] ?: return@mapNotNull null
+        if (perFrame.size == frameCount) return@mapNotNull null
+        ValidationIssue(
+            Severity.WARNING,
+            "Action '$actionName' socket '$socketName' $orientation has ${perFrame.size} " +
+                "point(s) for $frameCount frame(s)",
+            fieldName = "actions.$actionName.sockets.$socketName.byFrame.$orientation",
+        )
+    }
+
+    private fun validateParts(
+        actionName: String,
+        clip: ActionClip,
+        orientation: Orientation,
+        frameCount: Int,
+        regionSet: Set<String>,
+    ): List<ValidationIssue> {
+        val issues = mutableListOf<ValidationIssue>()
+
+        for ((partName, part) in clip.parts) {
+            val fieldPath = "actions.$actionName.parts.$partName.frames.$orientation"
+            val partFrames = part.frames[orientation]
+
+            if (partFrames.isNullOrEmpty()) {
+                // Not an error: splitting a pose is opt-in per orientation, and a back-turned north
+                // view usually needs no cutouts at all.
+                continue
+            }
+
+            // A single frame against an animated body is ordinary authoring - the resolver clamps.
+            // Any other mismatch means the part stops tracking the body partway through.
+            if (partFrames.size != frameCount && partFrames.size != 1) {
+                issues += ValidationIssue(
+                    Severity.WARNING,
+                    "Action '$actionName' part '$partName' $orientation has ${partFrames.size} " +
+                        "frame(s) against a body of $frameCount",
+                    fieldName = fieldPath,
+                )
+            }
+
+            partFrames.forEachIndexed { index, regionName ->
+                if (regionName !in regionSet) {
+                    issues += ValidationIssue(
+                        Severity.WARNING,
+                        "Action '$actionName' part '$partName' $orientation frame[$index] " +
+                            "'$regionName' is missing from atlas",
+                        fieldName = "$fieldPath[$index]",
+                    )
+                }
+            }
         }
 
         return issues

@@ -38,4 +38,50 @@ class SkinDefinitionJsonTest {
 
         assertEquals(definition, decoded)
     }
+
+    @Test
+    fun `a skin authored before sockets existed still decodes`() {
+        // Every socket and part field defaults, so shipped assets/skins JSON needs no migration.
+        val legacy = """
+            {
+              "atlas": "textures/worker_line_inspector.atlas",
+              "actions": {
+                "idle": { "frames": { "SOUTH": ["idle_south_000"] } }
+              }
+            }
+        """.trimIndent()
+
+        val decoded = FaultoryJson.instance.decodeFromString<SkinDefinition>(legacy)
+
+        assertEquals(emptyMap(), decoded.sockets)
+        assertEquals(emptyMap(), decoded.actions.getValue(SkinActions.IDLE).sockets)
+        assertEquals(emptyMap(), decoded.actions.getValue(SkinActions.IDLE).parts)
+    }
+
+    @Test
+    fun `sockets and parts round-trip through FaultoryJson`() {
+        val definition = SkinDefinition(
+            atlas = "textures/worker_line_inspector.atlas",
+            actions = mapOf(
+                ProductActions.CARRIED to ActionClip(
+                    frames = mapOf(Orientation.EAST to listOf("carry_east_body_000")),
+                    sockets = mapOf(
+                        SocketNames.HANDS to SocketClip(
+                            byOrientation = mapOf(Orientation.EAST to SocketPoint(18f, 20f, depth = 1f)),
+                            byFrame = mapOf(Orientation.EAST to listOf(SocketPoint(18f, 21f, depth = 1f)))
+                        )
+                    ),
+                    parts = mapOf(
+                        "far_arm" to SpritePart(depth = -1f, frames = mapOf(Orientation.EAST to listOf("carry_east_fararm_000"))),
+                        "near_arm" to SpritePart(depth = 2f, frames = mapOf(Orientation.EAST to listOf("carry_east_neararm_000")))
+                    )
+                )
+            ),
+            sockets = mapOf(SocketNames.GRIP to SocketPoint(8f, 4f))
+        )
+
+        val encoded = FaultoryJson.instance.encodeToString(definition)
+
+        assertEquals(definition, FaultoryJson.instance.decodeFromString<SkinDefinition>(encoded))
+    }
 }

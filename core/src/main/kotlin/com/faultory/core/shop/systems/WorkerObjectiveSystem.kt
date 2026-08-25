@@ -34,7 +34,7 @@ internal class WorkerObjectiveSystem(
             if (worker.kind != PlacedShopObjectKind.WORKER) {
                 continue
             }
-            if (worker.unitPhase != null) {
+            if (worker.isBusy) {
                 continue
             }
 

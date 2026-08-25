@@ -17,13 +17,13 @@ import com.faultory.core.screens.shopfloor.BeltSpriteRenderer
 import com.faultory.core.screens.shopfloor.BankPanelRenderer
 import com.faultory.core.screens.shopfloor.CatalogLookup
 import com.faultory.core.screens.shopfloor.CompletionModalRenderer
+import com.faultory.core.screens.shopfloor.EntitySpriteLayer
 import com.faultory.core.screens.shopfloor.FailureBlinkController
 import com.faultory.core.screens.shopfloor.GridBackgroundRenderer
 import com.faultory.core.screens.shopfloor.HoverState
 import com.faultory.core.screens.shopfloor.HudRenderer
 import com.faultory.core.screens.shopfloor.MachineDragController
 import com.faultory.core.screens.shopfloor.PlacedObjectRenderer
-import com.faultory.core.screens.shopfloor.ProductSpriteRenderer
 import com.faultory.core.screens.shopfloor.PlacementController
 import com.faultory.core.screens.shopfloor.PlacementPreviewRenderer
 import com.faultory.core.screens.shopfloor.PointerState
@@ -32,7 +32,6 @@ import com.faultory.core.screens.shopfloor.ShopFloorGeometry
 import com.faultory.core.screens.shopfloor.ShopFloorInput
 import com.faultory.core.screens.shopfloor.ShopFloorRenderContext
 import com.faultory.core.screens.shopfloor.ShopFloorView
-import com.faultory.core.screens.shopfloor.SpriteSkinRenderer
 import com.faultory.core.screens.shopfloor.ObjectContextMenuRenderer
 import com.faultory.core.screens.shopfloor.UpgradeFlowController
 import com.faultory.core.screens.shopfloor.UpgradeModalRenderer
@@ -114,8 +113,7 @@ class ShopFloorScreen(
             GridBackgroundRenderer(shopFloor, spriteDrawnBeltTiles),
             BeltSpriteRenderer(shopFloor, spriteDrawnBeltTiles),
             PlacementPreviewRenderer(shopFloor, geometry, placement, hoverState),
-            SpriteSkinRenderer(shopFloor, catalogLookup, geometry, spriteDrawnIds),
-            ProductSpriteRenderer(shopFloor, catalogLookup, geometry, spriteDrawnProductIds),
+            EntitySpriteLayer(shopFloor, catalogLookup, geometry, spriteDrawnIds, spriteDrawnProductIds),
             PlacedObjectRenderer(
                 shopFloor,
                 catalogLookup,

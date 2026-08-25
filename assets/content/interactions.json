@@ -1,0 +1,11 @@
+{
+  "interactions": [
+    {
+      "id": "hand_off",
+      "initiatorAction": "hand_off_give",
+      "recipientAction": "hand_off_take",
+      "durationSeconds": 0.6,
+      "payloadTransferAt": 0.5
+    }
+  ]
+}

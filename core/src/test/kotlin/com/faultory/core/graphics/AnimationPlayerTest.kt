@@ -111,6 +111,24 @@ class AnimationPlayerTest {
         assertEquals(0.25f, turned.elapsed)
     }
 
+    @Test
+    fun `frameIndexFor loops and clamps the same way region name does`() {
+        val player = AnimationPlayer()
+        val looping = clip(loop = true)
+        val clamped = clip(loop = false)
+
+        assertEquals(0, player.frameIndexFor(looping, Orientation.NORTH, elapsed = 0.3f))
+        assertEquals(1, player.frameIndexFor(looping, Orientation.NORTH, elapsed = 0.4f))
+        assertEquals(2, player.frameIndexFor(clamped, Orientation.NORTH, elapsed = 1.2f))
+    }
+
+    @Test
+    fun `frameIndexFor returns null when no frames exist for the orientation`() {
+        val player = AnimationPlayer()
+
+        assertNull(player.frameIndexFor(clip(loop = true), Orientation.EAST, elapsed = 0f))
+    }
+
     private fun clip(loop: Boolean): ActionClip {
         return ActionClip(
             frames = mapOf(

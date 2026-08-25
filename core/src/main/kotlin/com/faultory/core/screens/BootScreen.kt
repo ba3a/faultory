@@ -154,7 +154,8 @@ class BootScreen(
             beltSupplyFeeder = beltSupplyFeeder,
             eventBus = game.eventBus,
             cleanerSpawnGate = cleanerSpawnGate,
-            levelIdProvider = { level.id }
+            levelIdProvider = { level.id },
+            interactionCatalogProvider = game::interactionCatalog
         )
 
         game.setScreen(ShopFloorScreen(game, level, nextLevel, shopFloor, save, shopCatalog))

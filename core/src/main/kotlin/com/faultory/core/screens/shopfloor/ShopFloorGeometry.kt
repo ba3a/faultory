@@ -29,19 +29,17 @@ class ShopFloorGeometry(private val shopFloor: ShopFloor) {
     fun renderPositionFor(product: ShopProduct): RenderPosition? {
         return when (product.state) {
             ShopProductState.CARRIED -> {
-                val holder = (product.holderObjectId ?: product.carrierWorkerId)
-                    ?.let(shopFloor::findObjectById)
-                    ?: return null
+                val holder = holderFor(product) ?: return null
+                val anchor = holderAnchorFor(holder)
                 when (holder.kind) {
-                    PlacedShopObjectKind.WORKER -> {
-                        val holderPosition = renderPositionFor(holder)
-                        RenderPosition(
-                            worldX = holderPosition.worldX + 8f,
-                            worldY = holderPosition.worldY + 8f
-                        )
-                    }
+                    // Sprite rendering places this on the holder's `hands` socket instead; the nudge
+                    // is only so the shape fallback does not draw the product squarely on the body.
+                    PlacedShopObjectKind.WORKER -> RenderPosition(
+                        worldX = anchor.worldX + CARRIED_SHAPE_OFFSET,
+                        worldY = anchor.worldY + CARRIED_SHAPE_OFFSET
+                    )
 
-                    PlacedShopObjectKind.MACHINE -> machineCenterFor(holder)
+                    PlacedShopObjectKind.MACHINE -> anchor
                 }
             }
 
@@ -53,6 +51,18 @@ class ShopFloorGeometry(private val shopFloor: ShopFloor) {
                 )
             }
         }
+    }
+
+    fun holderFor(product: ShopProduct): PlacedShopObject? =
+        (product.holderObjectId ?: product.carrierWorkerId)?.let(shopFloor::findObjectById)
+
+    /**
+     * The tile-space origin anything a holder carries is measured from, before its socket is applied.
+     * A worker's tracks their interpolated walk; a machine's is the centre of its footprint.
+     */
+    fun holderAnchorFor(holder: PlacedShopObject): RenderPosition = when (holder.kind) {
+        PlacedShopObjectKind.WORKER -> renderPositionFor(holder)
+        PlacedShopObjectKind.MACHINE -> machineCenterFor(holder)
     }
 
     /** The tile-sized box centred on a machine's footprint, where anything it holds is drawn. */
@@ -109,6 +119,8 @@ class ShopFloorGeometry(private val shopFloor: ShopFloor) {
         return OrientationMarker(centerX, centerY, tipX, tipY)
     }
 }
+
+private const val CARRIED_SHAPE_OFFSET = 8f
 
 data class RenderPosition(
     val worldX: Float,

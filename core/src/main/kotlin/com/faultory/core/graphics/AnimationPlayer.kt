@@ -52,7 +52,19 @@ class AnimationPlayer {
 
     fun regionName(clip: ActionClip, orientation: Orientation, elapsed: Float): String? {
         val frames = clip.frames[orientation].orEmpty()
-        if (frames.isEmpty()) {
+        val frameIndex = frameIndexFor(clip, orientation, elapsed) ?: return null
+        return frames[frameIndex]
+    }
+
+    /**
+     * The index into [clip]'s frames for [orientation] at [elapsed], or null when none are authored.
+     *
+     * Sockets and parts resolve against this same index, so an attachment can never drift onto a
+     * frame other than the one being drawn.
+     */
+    fun frameIndexFor(clip: ActionClip, orientation: Orientation, elapsed: Float): Int? {
+        val frameCount = clip.frames[orientation].orEmpty().size
+        if (frameCount == 0) {
             return null
         }
 
@@ -60,11 +72,10 @@ class AnimationPlayer {
             ?.takeIf { it > 0f }
             ?: GameConfig.defaultFrameDurationSeconds
         val frameIndex = floor(elapsed.coerceAtLeast(0f) / frameDuration).toInt().coerceAtLeast(0)
-        val resolvedIndex = if (clip.loop) {
-            frameIndex % frames.size
+        return if (clip.loop) {
+            frameIndex % frameCount
         } else {
-            frameIndex.coerceAtMost(frames.lastIndex)
+            frameIndex.coerceAtMost(frameCount - 1)
         }
-        return frames[resolvedIndex]
     }
 }
