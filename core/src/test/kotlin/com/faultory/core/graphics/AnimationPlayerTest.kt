@@ -72,6 +72,45 @@ class AnimationPlayerTest {
         assertNull(region)
     }
 
+    @Test
+    fun `a clip with its own frame duration overrides the default`() {
+        val player = AnimationPlayer()
+        val slow = ActionClip(
+            frames = mapOf(Orientation.NORTH to listOf("north_0", "north_1", "north_2")),
+            frameDurationSeconds = 0.4f
+        )
+
+        assertEquals("north_0", player.regionName(slow, Orientation.NORTH, elapsed = 0.3f))
+        assertEquals("north_1", player.regionName(slow, Orientation.NORTH, elapsed = 0.5f))
+    }
+
+    @Test
+    fun `endFrame drops clocks that were not advanced`() {
+        val player = AnimationPlayer()
+        player.advance("product-1", SkinActions.IDLE, Orientation.NORTH, 0.25f)
+        player.advance("product-2", SkinActions.IDLE, Orientation.NORTH, 0.25f)
+        player.endFrame()
+
+        player.advance("product-2", SkinActions.IDLE, Orientation.NORTH, 0.25f)
+        player.endFrame()
+
+        val revived = player.advance("product-1", SkinActions.IDLE, Orientation.NORTH, 0.25f)
+        val survivor = player.advance("product-2", SkinActions.IDLE, Orientation.NORTH, 0.25f)
+
+        assertEquals(0f, revived.elapsed)
+        assertEquals(0.5f, survivor.elapsed)
+    }
+
+    @Test
+    fun `the clock keeps running when only the resolved orientation changes`() {
+        val player = AnimationPlayer()
+        player.advance("worker-1", SkinActions.WALK, Orientation.NORTH, 0.25f)
+
+        val turned = player.advance("worker-1", SkinActions.WALK, Orientation.EAST, 0.25f)
+
+        assertEquals(0.25f, turned.elapsed)
+    }
+
     private fun clip(loop: Boolean): ActionClip {
         return ActionClip(
             frames = mapOf(
