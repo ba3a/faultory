@@ -17,7 +17,8 @@ data class ShopBlueprint(
 @Serializable
 data class ConveyorBelt(
     val id: String,
-    val checkpoints: List<BeltNode>
+    val checkpoints: List<BeltNode>,
+    val skin: String? = null
 )
 
 @Serializable

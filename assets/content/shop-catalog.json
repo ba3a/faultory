@@ -652,15 +652,18 @@
   "products": [
     {
       "id": "ceramic-mug",
-      "saleValue": 22
+      "saleValue": 22,
+      "skin": "product_ceramic_mug"
     },
     {
       "id": "glass-jar",
-      "saleValue": 18
+      "saleValue": 18,
+      "skin": "product_glass_jar"
     },
     {
       "id": "tea-kettle",
-      "saleValue": 35
+      "saleValue": 35,
+      "skin": "product_tea_kettle"
     }
   ]
 }

@@ -6,6 +6,7 @@ object AssetPaths {
     const val encounterCatalog = "content/encounters.json"
     const val conditionLibrary = "content/conditions.json"
     const val skinsDir = "skins/"
+    const val defaultBeltSkin = "belt_default"
     const val uiFont = "fonts/ui.ttf"
 
     fun skinPath(id: String): String = "${skinsDir}$id.json"

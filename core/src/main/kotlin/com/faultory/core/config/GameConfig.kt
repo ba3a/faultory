@@ -14,6 +14,7 @@ object GameConfig {
     const val machineOutputQueueCap = 3
     const val machineDragMinimumMagnitudePx = 18f
     const val failureBlinkSeconds = 0.6f
+    const val defaultFrameDurationSeconds = 0.1f
     const val targetFps = 60
     const val saveDirectoryName = "saves"
     const val autosaveIntervalSeconds = 5f

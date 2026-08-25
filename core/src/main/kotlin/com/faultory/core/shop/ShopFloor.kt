@@ -28,6 +28,7 @@ class ShopFloor(
 ) {
 
     val grid = ShopGrid(blueprint)
+    val beltTopology = BeltTopology(blueprint, grid)
 
     private val state: ShopFloorState = ShopFloorState(
         grid = grid,

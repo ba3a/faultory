@@ -53,6 +53,34 @@ DesktopLauncher → FaultoryGame.create()
 
 Naming patterns: data models are nouns (`ShopCatalog`, `ShiftSnapshot`); `AssetManager` loaders are named `<Type>AssetLoader`; singleton config holders use `object` (`GameConfig`, `AssetPaths`, `FaultoryJson`).
 
+## Sprite rendering
+
+Workers, machines, products and belt tiles are all drawn the same way: a skin id resolves to a
+`SkinDefinition` (`assets/skins/<id>.json`), an `*ActionResolver` maps entity state to an action
+name and an orientation, and `SkinFrameResolver` picks the clip to draw.
+
+`SkinFrameResolver` degrades in a fixed order, so partially authored art still renders: requested
+action facing the requested way, then facing `SOUTH`, then the nearest authored orientation by
+turning order (clockwise neighbour, counter-clockwise neighbour, opposite); then those same three
+steps again for `idle`. Only when nothing resolves does the entity fall through to the
+`ShapeRenderer` primitives in `PlacedObjectRenderer` / `GridBackgroundRenderer`. Set
+`DebugFlags.forceShapeRendering` (F9 on the shop floor, or `-Dfaultory.debug.shapes=true`) to force
+that fallback everywhere.
+
+Action names are constants, never string literals at the call site: `SkinActions` (workers and
+machines), `ProductActions`, `BeltActions`. Products additionally support `fault_defect` /
+`fault_sabotage` overlay masks drawn over the base frame; without mask art the base sprite is
+tinted instead. Belt tiles have no catalog entry — `BeltTopology` derives flow direction and tile
+shape from `ShopGrid.orderedBeltPaths`, and the skin is `ConveyorBelt.skin` or
+`AssetPaths.defaultBeltSkin`.
+
+Sprite layers resolve what they will draw in `ShopFloorLayer.prepare`, which runs before every draw
+pass; that is what lets the shape layers suppress themselves for sprite-backed entities in the same
+frame. Do not resolve sprites in `drawSprite`.
+
+Raw art lives in `raw-art/<skinId>/<action>_<orientation-lowercase>/NNN.png` and is baked with the
+editor's Tools -> "Bake atlas..." dialog, which works for any skin id.
+
 ## Adding New Features
 
 1. Add/extend domain model in `core.content`, `core.shop`, `core.systems`, or `core.save`.

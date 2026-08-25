@@ -3,8 +3,12 @@ package com.faultory.core.screens.shopfloor
 import com.badlogic.gdx.graphics.Color
 import com.faultory.core.config.GameConfig
 import com.faultory.core.shop.ShopFloor
+import com.faultory.core.shop.TileCoordinate
 
-class GridBackgroundRenderer(private val shopFloor: ShopFloor) : ShopFloorLayer {
+class GridBackgroundRenderer(
+    private val shopFloor: ShopFloor,
+    private val spriteDrawnBeltTiles: Set<TileCoordinate> = emptySet()
+) : ShopFloorLayer {
     override fun drawFill(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
         renderer.color = BACKGROUND
@@ -26,6 +30,7 @@ class GridBackgroundRenderer(private val shopFloor: ShopFloor) : ShopFloorLayer 
 
         renderer.color = BELT_FILL
         for (beltTile in shopFloor.grid.beltTiles) {
+            if (beltTile in spriteDrawnBeltTiles) continue
             renderer.rect(
                 shopFloor.grid.worldXFor(beltTile),
                 shopFloor.grid.worldYFor(beltTile),
@@ -63,6 +68,7 @@ class GridBackgroundRenderer(private val shopFloor: ShopFloor) : ShopFloorLayer 
 
         renderer.color = BELT_OUTLINE
         for (beltTile in shopFloor.grid.beltTiles) {
+            if (beltTile in spriteDrawnBeltTiles) continue
             renderer.rect(
                 shopFloor.grid.worldXFor(beltTile),
                 shopFloor.grid.worldYFor(beltTile),

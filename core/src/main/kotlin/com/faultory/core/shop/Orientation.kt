@@ -28,6 +28,14 @@ enum class Orientation {
         return entries[(ordinal + 2) % entries.size]
     }
 
+    fun turnClockwise(): Orientation {
+        return entries[(ordinal + 1) % entries.size]
+    }
+
+    fun turnCounterClockwise(): Orientation {
+        return entries[(ordinal + entries.size - 1) % entries.size]
+    }
+
     fun step(): TileCoordinate {
         return when (this) {
             NORTH -> TileCoordinate(0, 1)

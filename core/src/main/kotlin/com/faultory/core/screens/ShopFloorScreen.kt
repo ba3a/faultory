@@ -9,9 +9,11 @@ import com.badlogic.gdx.utils.viewport.FitViewport
 import com.faultory.core.FaultoryGame
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelDefinition
-import com.faultory.core.graphics.AnimationPlayer
+import com.faultory.core.graphics.ProductOrientationMemory
+import com.faultory.core.graphics.SkinFrameLookup
 import com.faultory.core.content.ShopCatalog
 import com.faultory.core.screens.shopfloor.BankPanel
+import com.faultory.core.screens.shopfloor.BeltSpriteRenderer
 import com.faultory.core.screens.shopfloor.BankPanelRenderer
 import com.faultory.core.screens.shopfloor.CatalogLookup
 import com.faultory.core.screens.shopfloor.CompletionModalRenderer
@@ -21,6 +23,7 @@ import com.faultory.core.screens.shopfloor.HoverState
 import com.faultory.core.screens.shopfloor.HudRenderer
 import com.faultory.core.screens.shopfloor.MachineDragController
 import com.faultory.core.screens.shopfloor.PlacedObjectRenderer
+import com.faultory.core.screens.shopfloor.ProductSpriteRenderer
 import com.faultory.core.screens.shopfloor.PlacementController
 import com.faultory.core.screens.shopfloor.PlacementPreviewRenderer
 import com.faultory.core.screens.shopfloor.PointerState
@@ -37,6 +40,7 @@ import com.faultory.core.screens.shopfloor.WorkerAssignmentController
 import com.faultory.core.save.GameSave
 import com.faultory.core.encounters.ShiftStartedEvent
 import com.faultory.core.shop.ShopFloor
+import com.faultory.core.shop.TileCoordinate
 
 class ShopFloorScreen(
     private val game: FaultoryGame,
@@ -64,8 +68,9 @@ class ShopFloorScreen(
     private val failureBlink = FailureBlinkController()
     private val hoverState = HoverState()
     private val geometry = ShopFloorGeometry(shopFloor)
-    private val animationPlayer = AnimationPlayer()
     private val atlasProvider: (String) -> TextureAtlas? = game.skinRegistry::atlas
+    private val frameLookup = SkinFrameLookup(atlasProvider)
+    private val productOrientations = ProductOrientationMemory()
     private val renderContext = ShopFloorRenderContext(
         shapeRenderer = game.renderContext.shapeRenderer,
         spriteBatch = game.renderContext.spriteBatch,
@@ -73,9 +78,9 @@ class ShopFloorScreen(
         titleLayout = titleLayout,
         hintLayout = hintLayout,
         viewport = viewport,
-        animationPlayer = animationPlayer,
-        atlasProvider = atlasProvider,
-        skinRegistry = game.skinRegistry
+        frameLookup = frameLookup,
+        skinRegistry = game.skinRegistry,
+        productOrientations = productOrientations
     )
     private val machineDrag = MachineDragController(
         shopFloor = shopFloor,
@@ -102,12 +107,25 @@ class ShopFloorScreen(
         shiftLifecycle = shiftLifecycle
     )
     private val spriteDrawnIds = mutableSetOf<String>()
+    private val spriteDrawnProductIds = mutableSetOf<String>()
+    private val spriteDrawnBeltTiles = mutableSetOf<TileCoordinate>()
     private val view = ShopFloorView(
         listOf(
-            GridBackgroundRenderer(shopFloor),
+            GridBackgroundRenderer(shopFloor, spriteDrawnBeltTiles),
+            BeltSpriteRenderer(shopFloor, spriteDrawnBeltTiles),
             PlacementPreviewRenderer(shopFloor, geometry, placement, hoverState),
             SpriteSkinRenderer(shopFloor, catalogLookup, geometry, spriteDrawnIds),
-            PlacedObjectRenderer(shopFloor, catalogLookup, geometry, workerAssignment, failureBlink, hoverState, spriteDrawnIds),
+            ProductSpriteRenderer(shopFloor, catalogLookup, geometry, spriteDrawnProductIds),
+            PlacedObjectRenderer(
+                shopFloor,
+                catalogLookup,
+                geometry,
+                workerAssignment,
+                failureBlink,
+                hoverState,
+                spriteDrawnIds,
+                spriteDrawnProductIds
+            ),
             HudRenderer(level, shopFloor, catalogLookup, bankPanel, workerAssignment, shiftLifecycle, hoverState),
             BankPanelRenderer(bankPanel),
             ObjectContextMenuRenderer(workerAssignment),
@@ -176,6 +194,8 @@ class ShopFloorScreen(
 
         renderContext.delta = delta
         view.render(renderContext)
+        frameLookup.endFrame()
+        productOrientations.retain(shopFloor.activeProducts.mapTo(mutableSetOf()) { it.id })
     }
 
     override fun resize(width: Int, height: Int) {

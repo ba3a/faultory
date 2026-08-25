@@ -2,6 +2,7 @@ package com.faultory.core.screens.shopfloor
 
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputAdapter
+import com.faultory.core.config.DebugFlags
 import com.faultory.core.i18n.LocaleManager
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
@@ -18,6 +19,11 @@ class ShopFloorInput(
     private val upgradeFlow: UpgradeFlowController
 ) : InputAdapter() {
     override fun keyDown(keycode: Int): Boolean {
+        // Ahead of the shift-ended guard so the debug view stays reachable on the summary screen.
+        if (keycode == Input.Keys.F9) {
+            DebugFlags.forceShapeRendering = !DebugFlags.forceShapeRendering
+            return true
+        }
         if (shiftLifecycle.isShiftEnded) {
             return false
         }

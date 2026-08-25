@@ -4,6 +4,10 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 
 class ShopFloorView(private val layers: List<ShopFloorLayer>) {
     fun render(ctx: ShopFloorRenderContext) {
+        for (layer in layers) {
+            layer.prepare(ctx)
+        }
+
         ctx.shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
         for (layer in layers) {
             layer.drawFill(ctx)

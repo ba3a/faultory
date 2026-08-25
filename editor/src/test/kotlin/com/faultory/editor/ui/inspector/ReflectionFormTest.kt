@@ -21,6 +21,7 @@ class ReflectionFormTest {
         val product = ProductDefinition(
             id = "gear",
             saleValue = 12,
+            skin = "product_gear",
         )
 
         val editors = ReflectionForm.editorsFor(product)
@@ -29,6 +30,7 @@ class ReflectionFormTest {
             listOf(
                 StringEditor("id", "gear"),
                 IntEditor("saleValue", 12),
+                StringEditor("skin", "product_gear"),
             ),
             editors,
         )

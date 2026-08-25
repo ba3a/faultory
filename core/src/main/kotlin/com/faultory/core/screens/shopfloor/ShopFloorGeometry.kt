@@ -41,15 +41,7 @@ class ShopFloorGeometry(private val shopFloor: ShopFloor) {
                         )
                     }
 
-                    PlacedShopObjectKind.MACHINE -> {
-                        val occupiedTiles = shopFloor.occupiedTilesFor(holder)
-                        val centerX = occupiedTiles.map { tile -> shopFloor.grid.worldXFor(tile) + GameConfig.tileSize / 2f }.average().toFloat()
-                        val centerY = occupiedTiles.map { tile -> shopFloor.grid.worldYFor(tile) + GameConfig.tileSize / 2f }.average().toFloat()
-                        RenderPosition(
-                            worldX = centerX - GameConfig.tileSize / 2f,
-                            worldY = centerY - GameConfig.tileSize / 2f
-                        )
-                    }
+                    PlacedShopObjectKind.MACHINE -> machineCenterFor(holder)
                 }
             }
 
@@ -61,6 +53,17 @@ class ShopFloorGeometry(private val shopFloor: ShopFloor) {
                 )
             }
         }
+    }
+
+    /** The tile-sized box centred on a machine's footprint, where anything it holds is drawn. */
+    fun machineCenterFor(machine: PlacedShopObject): RenderPosition {
+        val occupiedTiles = shopFloor.occupiedTilesFor(machine)
+        val centerX = occupiedTiles.map { tile -> shopFloor.grid.worldXFor(tile) + GameConfig.tileSize / 2f }.average().toFloat()
+        val centerY = occupiedTiles.map { tile -> shopFloor.grid.worldYFor(tile) + GameConfig.tileSize / 2f }.average().toFloat()
+        return RenderPosition(
+            worldX = centerX - GameConfig.tileSize / 2f,
+            worldY = centerY - GameConfig.tileSize / 2f
+        )
     }
 
     fun orientationMarkerFor(placedObject: PlacedShopObject): OrientationMarker {

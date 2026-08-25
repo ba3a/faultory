@@ -5,6 +5,7 @@ import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.MachineType
 import com.faultory.core.content.Manuality
 import com.faultory.core.content.WorkerRole
+import com.faultory.core.shop.ProductFaultReason
 
 object ShopFloorPalette {
     private val MACHINE_FILL_NULL = Color(0.29f, 0.31f, 0.34f, 1f)
@@ -24,6 +25,10 @@ object ShopFloorPalette {
     private val WORKER_FILL_SECURITY = Color(0.42f, 0.30f, 0.55f, 1f)
     private val WORKER_FILL_CLEANER = Color(0.35f, 0.78f, 0.62f, 1f)
     private val WORKER_FILL_NULL = Color(0.66f, 0.69f, 0.73f, 1f)
+
+    private val PRODUCT_OK = Color(0.86f, 0.89f, 0.74f, 1f)
+    private val PRODUCT_SABOTAGED = Color(0.90f, 0.24f, 0.28f, 1f)
+    private val PRODUCT_DEFECTIVE = Color(0.83f, 0.46f, 0.20f, 1f)
 
     val HIGHLIGHT_GOLD: Color = Color(0.99f, 0.90f, 0.62f, 1f)
     val TEXT_HIGHLIGHT_GOLD: Color = Color(1f, 0.94f, 0.71f, 1f)
@@ -59,4 +64,14 @@ object ShopFloorPalette {
             null -> WORKER_FILL_NULL
         }
     }
+
+    fun productFill(faultReason: ProductFaultReason?): Color = when (faultReason) {
+        ProductFaultReason.SABOTAGE -> PRODUCT_SABOTAGED
+        ProductFaultReason.PRODUCTION_DEFECT -> PRODUCT_DEFECTIVE
+        null -> PRODUCT_OK
+    }
+
+    /** Tint applied to a product sprite when its skin has no fault mask. Null when sound. */
+    fun productFaultTint(faultReason: ProductFaultReason?): Color? =
+        faultReason?.let(::productFill)
 }

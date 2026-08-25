@@ -30,7 +30,7 @@ class BootScreen(
 ) : ScreenAdapter() {
     private val viewport = FitViewport(GameConfig.virtualWidth, GameConfig.virtualHeight)
     private var transitioned = false
-    private var atlasesEnqueued = false
+    private var phase = BootPhase.SKIN_DEFINITIONS
 
     override fun show() {
         viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
@@ -47,10 +47,22 @@ class BootScreen(
         drawProgress(game.assetManager.progress)
 
         if (done && !transitioned) {
-            if (!atlasesEnqueued) {
-                enqueueAtlases()
-                atlasesEnqueued = true
-                return
+            // Skin JSON names the atlas it needs, and a blueprint names the belt skins it needs,
+            // so each is discovered one loading pass after the asset that referenced it.
+            when (phase) {
+                BootPhase.SKIN_DEFINITIONS -> {
+                    enqueueBeltSkinDefinitions()
+                    phase = BootPhase.ATLASES
+                    return
+                }
+
+                BootPhase.ATLASES -> {
+                    enqueueAtlases()
+                    phase = BootPhase.TRANSITION
+                    return
+                }
+
+                BootPhase.TRANSITION -> Unit
             }
             transitioned = true
             if (level == null) {
@@ -61,11 +73,26 @@ class BootScreen(
         }
     }
 
+    private fun enqueueBeltSkinDefinitions() {
+        val assetManager = game.assetManager
+        val blueprint = levelBlueprint() ?: return
+        SkinReferences.referencedBeltSkinIds(blueprint).forEach { skinId ->
+            val path = AssetPaths.skinPath(skinId)
+            if (assetManager.isLoaded(path)) return@forEach
+            if (!Gdx.files.internal(path).exists()) return@forEach
+            assetManager.load(path, SkinDefinition::class.java)
+        }
+    }
+
+    private fun levelBlueprint(): ShopBlueprint? {
+        val assetPath = level?.shopAssetPath ?: return null
+        if (!game.assetManager.isLoaded(assetPath)) return null
+        return game.assetManager.get(assetPath, ShopBlueprint::class.java)
+    }
+
     private fun enqueueAtlases() {
         val assetManager = game.assetManager
-        if (!assetManager.isLoaded(AssetPaths.shopCatalog)) return
-        val catalog = assetManager.get(AssetPaths.shopCatalog, ShopCatalog::class.java)
-        val atlasPaths = SkinReferences.referencedAtlasPaths(catalog) { skinId ->
+        val definitionLookup = { skinId: String ->
             val path = AssetPaths.skinPath(skinId)
             if (assetManager.isLoaded(path)) {
                 assetManager.get(path, SkinDefinition::class.java)
@@ -73,6 +100,13 @@ class BootScreen(
                 null
             }
         }
+        val atlasPaths = buildList {
+            if (assetManager.isLoaded(AssetPaths.shopCatalog)) {
+                val catalog = assetManager.get(AssetPaths.shopCatalog, ShopCatalog::class.java)
+                addAll(SkinReferences.referencedAtlasPaths(catalog, definitionLookup))
+            }
+            levelBlueprint()?.let { addAll(SkinReferences.referencedAtlasPaths(it, definitionLookup)) }
+        }.distinct()
         atlasPaths.forEach { atlasPath ->
             if (assetManager.isLoaded(atlasPath)) return@forEach
             if (!Gdx.files.internal(atlasPath).exists()) {
@@ -186,5 +220,11 @@ class BootScreen(
 
     private companion object {
         const val LOG_TAG = "BootScreen"
+    }
+
+    private enum class BootPhase {
+        SKIN_DEFINITIONS,
+        ATLASES,
+        TRANSITION
     }
 }

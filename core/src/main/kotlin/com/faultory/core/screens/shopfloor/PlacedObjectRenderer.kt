@@ -6,7 +6,6 @@ import com.faultory.core.config.GameConfig
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
-import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
@@ -18,7 +17,8 @@ class PlacedObjectRenderer(
     private val workerAssignment: WorkerAssignmentController,
     private val failureBlink: FailureBlinkController,
     private val hoverState: HoverState,
-    private val spriteDrawnIds: Set<String> = emptySet()
+    private val spriteDrawnIds: Set<String> = emptySet(),
+    private val spriteDrawnProductIds: Set<String> = emptySet()
 ) : ShopFloorLayer {
     override fun drawFill(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
@@ -27,6 +27,7 @@ class PlacedObjectRenderer(
             drawPlacedObjectFill(renderer, placedObject)
         }
         for (product in shopFloor.activeProducts) {
+            if (product.id in spriteDrawnProductIds) continue
             drawProductFill(renderer, product)
         }
     }
@@ -40,6 +41,7 @@ class PlacedObjectRenderer(
             drawRecipeIndicators(renderer, placedObject)
         }
         for (product in shopFloor.activeProducts) {
+            if (product.id in spriteDrawnProductIds) continue
             drawProductOutline(renderer, product)
         }
         drawAssignmentTargetHover(renderer)
@@ -148,11 +150,7 @@ class PlacedObjectRenderer(
 
     private fun drawProductFill(renderer: ShapeRenderer, product: ShopProduct) {
         val renderPosition = geometry.renderPositionFor(product) ?: return
-        renderer.color = when (product.faultReason) {
-            ProductFaultReason.SABOTAGE -> PRODUCT_SABOTAGED
-            ProductFaultReason.PRODUCTION_DEFECT -> PRODUCT_DEFECTIVE
-            null -> PRODUCT_OK
-        }
+        renderer.color = ShopFloorPalette.productFill(product.faultReason)
         renderer.rect(
             renderPosition.worldX + 12f,
             renderPosition.worldY + 12f,
@@ -210,9 +208,6 @@ class PlacedObjectRenderer(
         private val RECIPE_OUTPUT_QUEUE = Color(0.96f, 0.82f, 0.34f, 1f)
         private val ASSIGNMENT_HOVER = Color(0.98f, 0.88f, 0.61f, 1f)
         private val WORKER_OUTLINE = Color(0.89f, 0.95f, 0.98f, 1f)
-        private val PRODUCT_SABOTAGED = Color(0.90f, 0.24f, 0.28f, 1f)
-        private val PRODUCT_DEFECTIVE = Color(0.83f, 0.46f, 0.20f, 1f)
-        private val PRODUCT_OK = Color(0.86f, 0.89f, 0.74f, 1f)
         private val PRODUCT_OUTLINE_ON_BELT = Color(0.97f, 0.97f, 0.86f, 1f)
         private val PRODUCT_OUTLINE_ON_FLOOR = Color(0.91f, 0.94f, 0.97f, 1f)
         private val ORIENTATION_MARKER_WORKER = Color(0.97f, 0.98f, 0.99f, 1f)

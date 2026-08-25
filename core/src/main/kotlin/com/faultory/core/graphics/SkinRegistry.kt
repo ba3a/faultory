@@ -6,33 +6,34 @@ import com.badlogic.gdx.graphics.g2d.TextureAtlas
 import com.faultory.core.assets.AssetPaths
 
 class SkinRegistry(private val assetManager: AssetManager) {
-    private val atlasCache = mutableMapOf<String, TextureAtlas?>()
-    private val cachedDefinitions = mutableMapOf<String, SkinDefinition?>()
+    private val atlasCache = mutableMapOf<String, TextureAtlas>()
+    private val cachedDefinitions = mutableMapOf<String, SkinDefinition>()
+    private val reportedMissingAtlasPaths = mutableSetOf<String>()
 
+    // Misses are deliberately not cached: belt skins are enqueued per level, so an asset absent
+    // during one boot can be resident during the next.
     fun get(skinId: String): SkinDefinition? {
-        if (cachedDefinitions.containsKey(skinId)) {
-            return cachedDefinitions[skinId]
-        }
+        cachedDefinitions[skinId]?.let { return it }
 
         val assetPath = AssetPaths.skinPath(skinId)
-        val definition = if (assetManager.isLoaded(assetPath)) {
-            assetManager.get(assetPath, SkinDefinition::class.java)
-        } else {
-            null
+        if (!assetManager.isLoaded(assetPath)) {
+            return null
         }
+        val definition = assetManager.get(assetPath, SkinDefinition::class.java)
         cachedDefinitions[skinId] = definition
         return definition
     }
 
     fun atlas(atlasPath: String): TextureAtlas? {
-        if (atlasCache.containsKey(atlasPath)) return atlasCache[atlasPath]
+        atlasCache[atlasPath]?.let { return it }
 
-        val atlas = if (assetManager.isLoaded(atlasPath)) {
-            assetManager.get(atlasPath, TextureAtlas::class.java)
-        } else {
-            Gdx.app?.error(LOG_TAG, "Atlas '$atlasPath' was not pre-loaded; sprite rendering will fall back to shapes.")
-            null
+        if (!assetManager.isLoaded(atlasPath)) {
+            if (reportedMissingAtlasPaths.add(atlasPath)) {
+                Gdx.app?.error(LOG_TAG, "Atlas '$atlasPath' was not pre-loaded; sprite rendering will fall back to shapes.")
+            }
+            return null
         }
+        val atlas = assetManager.get(atlasPath, TextureAtlas::class.java)
         atlasCache[atlasPath] = atlas
         return atlas
     }
