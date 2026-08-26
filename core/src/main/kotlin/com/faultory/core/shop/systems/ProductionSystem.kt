@@ -8,6 +8,15 @@ import com.faultory.core.content.MachineType
 import com.faultory.core.content.Manuality
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
+import com.faultory.core.encounters.MachineInputLoadedEvent
+import com.faultory.core.encounters.MachineInputSource
+import com.faultory.core.encounters.ProductHandedOverEvent
+import com.faultory.core.encounters.ProductPlacedOnBeltEvent
+import com.faultory.core.encounters.ProductPlacedOnFloorEvent
+import com.faultory.core.encounters.ProductionCompletedEvent
+import com.faultory.core.encounters.ProductionStartedEvent
+import com.faultory.core.encounters.SabotageCommittedEvent
+import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.shop.MachineProductionState
 import com.faultory.core.shop.MachineRecipeState
 import com.faultory.core.shop.PlacedShopObject
@@ -22,7 +31,8 @@ import kotlin.random.Random
 
 internal class ProductionSystem(
     private val state: ShopFloorState,
-    private val random: Random
+    private val random: Random,
+    private val events: ShopFloorEvents = ShopFloorEvents()
 ) {
     private val grid get() = state.grid
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
@@ -71,17 +81,41 @@ internal class ProductionSystem(
                     accumulatedInputFault = null
                 )
             )
-            mutableMachineProductionStates += MachineProductionState(
+            val rolledFault = rollFaultReason(machine, machineSpec, recipe, workerProfilesById)
+            val startedState = MachineProductionState(
                 machineId = machine.id,
                 productInstanceId = state.createProductId(),
                 productId = recipe.outputProductId,
-                faultReason = worstFault(
-                    inputFault,
-                    rollFaultReason(machine, machineSpec, recipe, workerProfilesById)
-                ),
+                faultReason = worstFault(inputFault, rolledFault),
                 progressSeconds = 0f,
                 isComplete = false
             )
+            mutableMachineProductionStates += startedState
+            events.publish {
+                ProductionStartedEvent(
+                    machineId = machine.id,
+                    productInstanceId = startedState.productInstanceId,
+                    productId = startedState.productId,
+                    faultReason = startedState.faultReason,
+                    levelId = it
+                )
+            }
+            // Only a fault rolled here is an act of sabotage; one inherited from a spoiled input
+            // was already reported when it happened upstream.
+            if (rolledFault == ProductFaultReason.SABOTAGE) {
+                val saboteurId = state.operatorWorkerForMachine(machine.id)?.id
+                if (saboteurId != null) {
+                    events.publish {
+                        SabotageCommittedEvent(
+                            machineId = machine.id,
+                            objectId = saboteurId,
+                            productInstanceId = startedState.productInstanceId,
+                            productId = startedState.productId,
+                            levelId = it
+                        )
+                    }
+                }
+            }
             return
         }
 
@@ -111,6 +145,15 @@ internal class ProductionSystem(
             )
             replaceRecipeState(recipeState.copy(outputQueue = recipeState.outputQueue + queued))
             mutableMachineProductionStates.removeAt(productionIndex)
+            events.publish {
+                ProductionCompletedEvent(
+                    machineId = machine.id,
+                    productInstanceId = completedState.productInstanceId,
+                    productId = completedState.productId,
+                    faultReason = completedState.faultReason,
+                    levelId = it
+                )
+            }
             return
         }
 
@@ -212,6 +255,15 @@ internal class ProductionSystem(
                 if (productIndex >= 0) {
                     mutableActiveProducts.removeAt(productIndex)
                 }
+                events.publish {
+                    MachineInputLoadedEvent(
+                        machineId = machine.id,
+                        productInstanceId = product.id,
+                        productId = product.productId,
+                        source = MachineInputSource.BELT,
+                        levelId = it
+                    )
+                }
             }
         }
     }
@@ -255,6 +307,15 @@ internal class ProductionSystem(
             state = ShopProductState.ON_BELT,
             tile = accessTile
         )
+        events.publish {
+            ProductPlacedOnBeltEvent(
+                productInstanceId = head.productInstanceId,
+                productId = head.productId,
+                tile = accessTile,
+                byObjectId = machine.id,
+                levelId = it
+            )
+        }
         return true
     }
 
@@ -283,6 +344,17 @@ internal class ProductionSystem(
             movementPath = emptyList(),
             movementProgress = 0f
         )
+        events.publish {
+            ProductHandedOverEvent(
+                objectId = machine.id,
+                giverRole = null,
+                recipientObjectId = worker.id,
+                recipientRole = worker.workerRole,
+                productInstanceId = head.productInstanceId,
+                productId = head.productId,
+                levelId = it
+            )
+        }
         return true
     }
 
@@ -293,14 +365,34 @@ internal class ProductionSystem(
         val outputTile = preferredAutomaticOutputTile(machine) ?: return false
         if (state.isOccupied(outputTile)) return false
 
+        val ontoBelt = outputTile in grid.beltTiles
         mutableActiveProducts += ShopProduct(
             id = head.productInstanceId,
             productId = head.productId,
             sourceMachineId = machine.id,
             faultReason = head.faultReason,
-            state = if (outputTile in grid.beltTiles) ShopProductState.ON_BELT else ShopProductState.ON_FLOOR,
+            state = if (ontoBelt) ShopProductState.ON_BELT else ShopProductState.ON_FLOOR,
             tile = outputTile
         )
+        events.publish {
+            if (ontoBelt) {
+                ProductPlacedOnBeltEvent(
+                    productInstanceId = head.productInstanceId,
+                    productId = head.productId,
+                    tile = outputTile,
+                    byObjectId = machine.id,
+                    levelId = it
+                )
+            } else {
+                ProductPlacedOnFloorEvent(
+                    productInstanceId = head.productInstanceId,
+                    productId = head.productId,
+                    tile = outputTile,
+                    byObjectId = machine.id,
+                    levelId = it
+                )
+            }
+        }
         return true
     }
 

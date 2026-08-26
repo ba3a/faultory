@@ -4,12 +4,16 @@ import com.faultory.core.config.GameConfig
 import com.faultory.core.content.MachineSlotType
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
-import com.faultory.core.encounters.EventBus
+import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.encounters.UnitFellEvent
+import com.faultory.core.encounters.WorkerBoardedBeltEvent
+import com.faultory.core.encounters.WorkerLeftBeltEvent
+import com.faultory.core.encounters.WorkerPathBlockedEvent
 import com.faultory.core.shop.BeltRidePhase
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
+import com.faultory.core.shop.TileCoordinate
 import com.faultory.core.shop.pathfinding.MovementStrategyResolver
 import kotlin.random.Random
 
@@ -18,8 +22,7 @@ internal class WorkerMovementSystem(
     private val movementStrategyResolver: MovementStrategyResolver,
     private val wetTileSystem: WetTileSystem,
     private val random: Random,
-    private val eventBus: EventBus? = null,
-    private val levelIdProvider: () -> String? = { null }
+    private val events: ShopFloorEvents = ShopFloorEvents()
 ) {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val grid get() = state.grid
@@ -54,12 +57,14 @@ internal class WorkerMovementSystem(
             var currentOrientation = placedObject.orientation
             var enteredBelt = false
             var slipped = false
+            var blockedAt: TileCoordinate? = null
 
             while (progress >= 1f && remainingPath.isNotEmpty()) {
                 val nextTile = remainingPath.first()
                 if (state.isOccupied(nextTile, ignoreObjectId = placedObject.id, ignoreProductId = placedObject.carriedProductId)) {
                     remainingPath = emptyList()
                     progress = 0f
+                    blockedAt = nextTile
                     break
                 }
                 currentOrientation = Orientation.between(currentPosition, nextTile) ?: currentOrientation
@@ -88,14 +93,17 @@ internal class WorkerMovementSystem(
                     )
                 )
                 mutablePlacedObjects[index] = fallen
-                eventBus?.publish(
-                    UnitFellEvent(
-                        objectId = placedObject.id,
-                        tile = currentPosition,
-                        levelId = levelIdProvider() ?: ""
-                    )
-                )
+                events.publish {
+                    UnitFellEvent(objectId = placedObject.id, tile = currentPosition, levelId = it)
+                }
                 continue
+            }
+
+            if (blockedAt != null) {
+                val blockedTile = blockedAt
+                events.publish {
+                    WorkerPathBlockedEvent(objectId = placedObject.id, tile = blockedTile, levelId = it)
+                }
             }
 
             if (enteredBelt) {
@@ -107,6 +115,9 @@ internal class WorkerMovementSystem(
                     beltRidePhase = BeltRidePhase.ENTERING,
                     beltRideTimer = 0f
                 )
+                events.publish {
+                    WorkerBoardedBeltEvent(objectId = placedObject.id, tile = currentPosition, levelId = it)
+                }
             } else if (remainingPath.isEmpty()) {
                 currentOrientation = orientationAtAssignedSlot(placedObject.copy(position = currentPosition))
                     ?: orientationAtQaPost(placedObject.copy(position = currentPosition))
@@ -187,6 +198,9 @@ internal class WorkerMovementSystem(
                         beltRidePhase = null,
                         beltRideTimer = 0f
                     )
+                    events.publish {
+                        WorkerLeftBeltEvent(objectId = worker.id, tile = worker.position, levelId = it)
+                    }
                 } else {
                     mutablePlacedObjects[index] = worker.copy(beltRideTimer = newTimer)
                 }

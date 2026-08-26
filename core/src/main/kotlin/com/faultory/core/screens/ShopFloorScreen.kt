@@ -38,6 +38,7 @@ import com.faultory.core.screens.shopfloor.UpgradeModalRenderer
 import com.faultory.core.screens.shopfloor.WorkerAssignmentController
 import com.faultory.core.save.GameSave
 import com.faultory.core.encounters.ShiftStartedEvent
+import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.TileCoordinate
 
@@ -54,6 +55,7 @@ class ShopFloorScreen(
     private val catalogLookup = CatalogLookup(shopCatalog)
     private val titleLayout = GlyphLayout()
     private val hintLayout = GlyphLayout()
+    private val events = ShopFloorEvents(game.eventBus) { level.id }
     private val shiftLifecycle = ShiftLifecycleController(
         host = game,
         level = level,
@@ -61,7 +63,7 @@ class ShopFloorScreen(
         shopFloor = shopFloor,
         workerProfilesById = catalogLookup.workerProfilesById,
         initialSave = saveSnapshot,
-        eventBus = game.eventBus
+        events = events
     )
     private val bankPanel = BankPanel(catalogLookup)
     private val failureBlink = FailureBlinkController()
@@ -157,7 +159,7 @@ class ShopFloorScreen(
             input.clearInteractionStateForShiftEnd()
         }
         Gdx.input.inputProcessor = input
-        game.eventBus.publish(ShiftStartedEvent(levelId = level.id))
+        events.publish { ShiftStartedEvent(levelId = it) }
     }
 
     override fun hide() {

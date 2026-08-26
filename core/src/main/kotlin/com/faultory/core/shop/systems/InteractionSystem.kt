@@ -1,5 +1,10 @@
 package com.faultory.core.shop.systems
 
+import com.faultory.core.encounters.InteractionAbandonedEvent
+import com.faultory.core.encounters.InteractionCompletedEvent
+import com.faultory.core.encounters.InteractionStartedEvent
+import com.faultory.core.encounters.ProductHandedOverEvent
+import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.graphics.InteractionCatalog
 import com.faultory.core.shop.ActiveInteraction
 import com.faultory.core.shop.InteractionRole
@@ -21,7 +26,8 @@ import com.faultory.core.shop.ShopProductState
  */
 internal class InteractionSystem(
     private val state: ShopFloorState,
-    private val catalogProvider: () -> InteractionCatalog?
+    private val catalogProvider: () -> InteractionCatalog?,
+    private val events: ShopFloorEvents = ShopFloorEvents()
 ) {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val mutableActiveProducts get() = state.mutableActiveProducts
@@ -39,6 +45,14 @@ internal class InteractionSystem(
             // destroyed - the survivor would otherwise hold a payload nobody can take.
             if (state.findObjectById(interaction.partnerObjectId) == null) {
                 mutablePlacedObjects[index] = placed.copy(interaction = null)
+                events.publish {
+                    InteractionAbandonedEvent(
+                        definitionId = interaction.definitionId,
+                        objectId = placed.id,
+                        partnerObjectId = interaction.partnerObjectId,
+                        levelId = it
+                    )
+                }
                 continue
             }
 
@@ -68,6 +82,19 @@ internal class InteractionSystem(
         } else {
             mutablePlacedObjects[index].copy(interaction = ticked.copy(payloadTransferred = transferred))
         }
+
+        // Both sides tick their own clock, so - as with the transfer above - only the giver
+        // reports, and the interaction is one event rather than two.
+        if (ticked.isComplete && ticked.role == InteractionRole.INITIATOR) {
+            events.publish {
+                InteractionCompletedEvent(
+                    definitionId = ticked.definitionId,
+                    objectId = placed.id,
+                    partnerObjectId = ticked.partnerObjectId,
+                    levelId = it
+                )
+            }
+        }
     }
 
     private fun transferPayload(giver: PlacedShopObject, interaction: ActiveInteraction) {
@@ -91,8 +118,26 @@ internal class InteractionSystem(
             )
         }
 
-        mutablePlacedObjects[takerIndex] = mutablePlacedObjects[takerIndex].copy(carriedProductId = productId)
+        val taker = mutablePlacedObjects[takerIndex]
+        mutablePlacedObjects[takerIndex] = taker.copy(carriedProductId = productId)
         mutablePlacedObjects[giverIndex] = mutablePlacedObjects[giverIndex].copy(carriedProductId = null)
+
+        // Reported here rather than where the interaction was requested: this is the frame the
+        // product actually changes hands, partway through the clip.
+        if (productIndex >= 0) {
+            val handed = mutableActiveProducts[productIndex]
+            events.publish {
+                ProductHandedOverEvent(
+                    objectId = giver.id,
+                    giverRole = giver.workerRole,
+                    recipientObjectId = taker.id,
+                    recipientRole = taker.workerRole,
+                    productInstanceId = handed.id,
+                    productId = handed.productId,
+                    levelId = it
+                )
+            }
+        }
     }
 
     /**
@@ -149,6 +194,15 @@ internal class InteractionSystem(
                 transferSeconds = transfer
             )
         )
+        events.publish {
+            InteractionStartedEvent(
+                definitionId = definitionId,
+                objectId = initiatorId,
+                partnerObjectId = recipientId,
+                payloadProductId = payloadProductId,
+                levelId = it
+            )
+        }
         return true
     }
 

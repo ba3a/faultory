@@ -4,11 +4,13 @@ import com.faultory.core.config.GameConfig
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.content.WorkerRoleProfile
-import com.faultory.core.encounters.CleanerHandedProductEvent
 import com.faultory.core.encounters.CleanerSpawnedEvent
-import com.faultory.core.encounters.CleanerTookProductEvent
 import com.faultory.core.encounters.EventBus
 import com.faultory.core.encounters.GameEvent
+import com.faultory.core.encounters.InteractionStartedEvent
+import com.faultory.core.encounters.ProductHandedOverEvent
+import com.faultory.core.encounters.ProductPickedUpEvent
+import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.encounters.UnitFellEvent
 import com.faultory.core.shop.systems.StaticCleanerSpawnGate
 import kotlin.random.Random
@@ -28,9 +30,8 @@ class ShopFloorCleanerTest {
             blueprint = simpleBlueprint(),
             machineSpecsById = emptyMap(),
             random = Random(seed = 7L),
-            eventBus = events.bus,
+            events = events.shopFloorEvents,
             cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = true, levelId = "tutorial-shop"),
-            levelIdProvider = { "tutorial-shop" }
         )
 
         shopFloor.update(0.05f, mapOf(cleanerProfile.id to cleanerProfile))
@@ -54,7 +55,6 @@ class ShopFloorCleanerTest {
             machineSpecsById = emptyMap(),
             random = Random(seed = 7L),
             cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false, levelId = "tutorial-shop"),
-            levelIdProvider = { "tutorial-shop" }
         )
 
         shopFloor.update(0.05f, mapOf(cleanerProfile.id to cleanerProfile))
@@ -74,9 +74,8 @@ class ShopFloorCleanerTest {
                 cleaner(id = "cleaner-1", catalogId = cleanerProfile.id, position = cleanerStart)
             ),
             random = Random(seed = 11L),
-            eventBus = events.bus,
+            events = events.shopFloorEvents,
             cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false),
-            levelIdProvider = { "tutorial-shop" }
         )
 
         // Cleaner immediately wets its own tile on its first tick.
@@ -89,7 +88,7 @@ class ShopFloorCleanerTest {
     }
 
     @Test
-    fun `cleaner picks up adjacent floor product and fires CleanerTookProductEvent`() {
+    fun `cleaner picks up adjacent floor product and fires ProductPickedUpEvent`() {
         val cleanerProfile = cleanerProfile(spawnChance = 1f)
         val events = CapturingBus()
         val cleanerStart = TileCoordinate(10, 8)
@@ -109,16 +108,15 @@ class ShopFloorCleanerTest {
             ),
             initialProducts = listOf(product),
             random = Random(seed = 99L),
-            eventBus = events.bus,
+            events = events.shopFloorEvents,
             cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false),
-            levelIdProvider = { "tutorial-shop" }
         )
 
         shopFloor.update(0.05f, mapOf(cleanerProfile.id to cleanerProfile))
 
         val cleanerAfter = assertNotNull(shopFloor.findObjectById("cleaner-1"))
         assertEquals("product-1", cleanerAfter.carriedProductId)
-        assertTrue(events.captured.any { it is CleanerTookProductEvent })
+        assertTrue(events.captured.any { it is ProductPickedUpEvent })
     }
 
     @Test
@@ -151,9 +149,8 @@ class ShopFloorCleanerTest {
             ),
             initialProducts = listOf(carriedProduct),
             random = Random(seed = 5L),
-            eventBus = events.bus,
+            events = events.shopFloorEvents,
             cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false),
-            levelIdProvider = { "tutorial-shop" }
         )
 
         val profiles = mapOf(
@@ -170,9 +167,17 @@ class ShopFloorCleanerTest {
         assertNull(recipientAtStart.carriedProductId)
         assertNotNull(cleanerAtStart.interaction)
         assertEquals("cleaner-1", assertNotNull(recipientAtStart.interaction).partnerObjectId)
-        assertTrue(events.captured.any { it is CleanerHandedProductEvent })
+        // The exchange is announced when it begins; the handover itself is only reported once the
+        // product actually moves, partway through the clip.
+        assertTrue(events.captured.any { it is InteractionStartedEvent })
+        assertTrue(events.captured.none { it is ProductHandedOverEvent })
 
         repeat(20) { shopFloor.update(0.05f, profiles) }
+
+        val handover = assertNotNull(events.captured.filterIsInstance<ProductHandedOverEvent>().singleOrNull())
+        assertEquals("cleaner-1", handover.objectId)
+        assertEquals("worker-1", handover.recipientObjectId)
+        assertEquals("product-1", handover.productInstanceId)
 
         val cleanerAfter = assertNotNull(shopFloor.findObjectById("cleaner-1"))
         val recipientAfter = assertNotNull(shopFloor.findObjectById("worker-1"))
@@ -214,9 +219,8 @@ class ShopFloorCleanerTest {
             ),
             initialProducts = listOf(carriedProduct),
             random = Random(seed = 5L),
-            eventBus = events.bus,
+            events = events.shopFloorEvents,
             cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false),
-            levelIdProvider = { "tutorial-shop" }
         )
 
         // One tick to enter the destroying phase.
@@ -254,9 +258,8 @@ class ShopFloorCleanerTest {
             machineSpecsById = emptyMap(),
             initialPlacements = listOf(worker),
             random = Random(seed = 1L), // first nextFloat() ≈ 0.73 — must be > slipBase+jitter to avoid slip. Force slip below.
-            eventBus = events.bus,
+            events = events.shopFloorEvents,
             cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false),
-            levelIdProvider = { "tutorial-shop" }
         )
         // Pre-wet the destination tile via a synthetic cleaner trail isn't accessible from outside,
         // so we instead spawn a cleaner adjacent that wets the tile first.
@@ -293,9 +296,8 @@ class ShopFloorCleanerTest {
             machineSpecsById = emptyMap(),
             initialPlacements = listOf(cleaner, worker2),
             random = Random(seed = 3L),
-            eventBus = events2.bus,
+            events = events2.shopFloorEvents,
             cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false),
-            levelIdProvider = { "tutorial-shop" }
         )
 
         // Tick once: the cleaner wets wetTile2 (its own position), worker advances onto wetTile2.
@@ -412,8 +414,9 @@ class ShopFloorCleanerTest {
         workerSpawnPoints = emptyList()
     )
 
-    private class CapturingBus {
+    private class CapturingBus(levelId: String = "tutorial-shop") {
         val bus: EventBus = EventBus()
+        val shopFloorEvents: ShopFloorEvents = ShopFloorEvents(bus) { levelId }
         val captured: MutableList<GameEvent> = mutableListOf()
         init {
             bus.subscribe { captured += it }

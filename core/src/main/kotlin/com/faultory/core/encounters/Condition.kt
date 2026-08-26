@@ -28,13 +28,13 @@ sealed interface Condition {
     @Serializable @SerialName("level.completed")
     data class LevelCompleted(val levelId: String, val minStars: Int = 1) : Condition {
         override fun evaluate(ctx: EvaluationContext): Boolean =
-            (ctx.saveRepository.load(levelId)?.lastCompletedRun?.starsEarned ?: 0) >= minStars
+            (ctx.levelSave(levelId)?.lastCompletedRun?.starsEarned ?: 0) >= minStars
     }
 
     @Serializable @SerialName("level.notCompleted")
     data class LevelNotCompleted(val levelId: String) : Condition {
         override fun evaluate(ctx: EvaluationContext): Boolean =
-            (ctx.saveRepository.load(levelId)?.lastCompletedRun?.starsEarned ?: 0) < 1
+            (ctx.levelSave(levelId)?.lastCompletedRun?.starsEarned ?: 0) < 1
     }
 
     @Serializable @SerialName("shipped")
@@ -49,8 +49,36 @@ sealed interface Condition {
 
         internal fun counterKey(levelId: String?): String {
             val q = if (quality == ProductQuality.ANY) "any" else quality.name.lowercase()
-            val s = if (scope == CountScope.CURRENT_LEVEL) (levelId ?: "__unknown__") else "__all__"
+            val s = if (scope == CountScope.CURRENT_LEVEL) {
+                levelId ?: GameEvent.UNKNOWN_SCOPE
+            } else {
+                GameEvent.ALL_SCOPE
+            }
             return if (productId != null) "shipped.$q.$s.$productId" else "shipped.$q.$s"
+        }
+    }
+
+    /**
+     * Reads any counter an event accumulates, so an achievement over a new event needs no new
+     * condition type — only the [GameEvent.counterName] and, for a breakdown key, its suffix.
+     */
+    @Serializable @SerialName("counter")
+    data class CounterAtLeast(
+        val counterName: String,
+        val scope: CountScope,
+        val suffix: String? = null,
+        val atLeast: Int
+    ) : Condition {
+        override fun evaluate(ctx: EvaluationContext): Boolean =
+            (ctx.encounterProgress.counters[counterKey(ctx.currentLevelId)] ?: 0L) >= atLeast
+
+        internal fun counterKey(levelId: String?): String {
+            val s = if (scope == CountScope.CURRENT_LEVEL) {
+                levelId ?: GameEvent.UNKNOWN_SCOPE
+            } else {
+                GameEvent.ALL_SCOPE
+            }
+            return if (suffix != null) "$counterName.$s.$suffix" else "$counterName.$s"
         }
     }
 

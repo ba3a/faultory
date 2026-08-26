@@ -3,12 +3,9 @@ package com.faultory.core.screens.shopfloor
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.WorkerProfile
-import com.faultory.core.encounters.EventBus
 import com.faultory.core.encounters.LevelCompletedEvent
-import com.faultory.core.encounters.ProductQuality
-import com.faultory.core.encounters.ProductShippedEvent
+import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.save.GameSave
-import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.systems.ProductionDayDirector
 
@@ -19,7 +16,7 @@ class ShiftLifecycleController(
     private val shopFloor: ShopFloor,
     private val workerProfilesById: Map<String, WorkerProfile>,
     initialSave: GameSave,
-    private val eventBus: EventBus? = null
+    private val events: ShopFloorEvents = ShopFloorEvents()
 ) {
     val dayDirector = ProductionDayDirector(
         shiftLengthSeconds = shopFloor.blueprint.shiftLengthSeconds,
@@ -52,15 +49,11 @@ class ShiftLifecycleController(
         }
 
         shopFloor.update(activeDelta, workerProfilesById)
+        // ConveyorSystem publishes the shipment on the bus as it happens; this drain is only the
+        // day's tally.
         for (shipment in shopFloor.consumeShipmentEvents()) {
             dayDirector.recordShipment(shipment.productId, shipment.faultReason)
             dirty = true
-            val quality = when (shipment.faultReason) {
-                null -> ProductQuality.GOOD
-                ProductFaultReason.PRODUCTION_DEFECT -> ProductQuality.FAULTY
-                ProductFaultReason.SABOTAGE -> ProductQuality.SABOTAGED
-            }
-            eventBus?.publish(ProductShippedEvent(productId = shipment.productId, quality = quality, levelId = level.id))
         }
         dayDirector.update(activeDelta)
         if (activeDelta > 0f) {
@@ -82,7 +75,9 @@ class ShiftLifecycleController(
         }
         isShiftEnded = true
         val stats = dayDirector.completedRunStats()
-        eventBus?.publish(LevelCompletedEvent(levelId = level.id, starsEarned = stats.starsEarned, passed = stats.passed))
+        events.publish {
+            LevelCompletedEvent(levelId = it, starsEarned = stats.starsEarned, passed = stats.passed)
+        }
         currentSave = currentSave.copy(lastCompletedRun = stats)
         persist()
         return true

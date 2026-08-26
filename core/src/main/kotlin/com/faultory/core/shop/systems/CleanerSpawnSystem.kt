@@ -4,7 +4,7 @@ import com.faultory.core.config.GameConfig
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.encounters.CleanerSpawnedEvent
-import com.faultory.core.encounters.EventBus
+import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
@@ -14,7 +14,7 @@ import kotlin.random.Random
 internal class CleanerSpawnSystem(
     private val state: ShopFloorState,
     private val random: Random,
-    private val eventBus: EventBus? = null,
+    private val events: ShopFloorEvents = ShopFloorEvents(),
     private val gate: CleanerSpawnGate
 ) {
     fun trySpawnAtShiftStart(workerProfilesById: Map<String, WorkerProfile>) {
@@ -40,7 +40,7 @@ internal class CleanerSpawnSystem(
             workerRole = WorkerRole.CLEANER
         )
         state.mutablePlacedObjects += cleaner
-        eventBus?.publish(CleanerSpawnedEvent(objectId = cleanerId, levelId = gate.levelId() ?: ""))
+        events.publish { CleanerSpawnedEvent(objectId = cleanerId, levelId = it ?: gate.levelId()) }
     }
 
     private fun pickEdgeSpawnTile(): TileCoordinate? {

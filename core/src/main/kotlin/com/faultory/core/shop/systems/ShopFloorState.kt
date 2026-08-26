@@ -5,6 +5,10 @@ import com.faultory.core.content.MachineSlotType
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.ProductDefinition
 import com.faultory.core.content.WorkerRole
+import com.faultory.core.encounters.CashEarnedEvent
+import com.faultory.core.encounters.CashFlowReason
+import com.faultory.core.encounters.CashSpentEvent
+import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.shop.MachineProductionState
 import com.faultory.core.shop.MachineRecipeState
 import com.faultory.core.shop.PlacedShopObject
@@ -26,7 +30,8 @@ internal class ShopFloorState(
     initialMachineProductionStates: List<MachineProductionState>,
     initialQaInspectionStates: List<QaInspectionState>,
     initialMachineRecipeStates: List<MachineRecipeState>,
-    initialCash: Int
+    initialCash: Int,
+    private val events: ShopFloorEvents = ShopFloorEvents()
 ) {
     var cash: Int = initialCash
         private set
@@ -207,17 +212,21 @@ internal class ShopFloorState(
         )
     }.maxOrNull()?.plus(1) ?: 1
 
-    fun tryDeductCash(amount: Int): Boolean {
+    /** The one place money leaves the bank, and so the one place a spend is published. */
+    fun tryDeductCash(amount: Int, reason: CashFlowReason): Boolean {
         if (amount < 0 || cash < amount) {
             return false
         }
         cash -= amount
+        events.publish { CashSpentEvent(amount = amount, reason = reason, levelId = it) }
         return true
     }
 
-    fun creditCash(amount: Int) {
+    /** The one place money enters the bank, and so the one place an earning is published. */
+    fun creditCash(amount: Int, reason: CashFlowReason) {
         if (amount <= 0) return
         cash += amount
+        events.publish { CashEarnedEvent(amount = amount, reason = reason, levelId = it) }
     }
 
     fun findObjectById(objectId: String): PlacedShopObject? {

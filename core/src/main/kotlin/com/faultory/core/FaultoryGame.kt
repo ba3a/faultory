@@ -116,6 +116,7 @@ class FaultoryGame : Game(), ShiftLifecycleHost {
     }
 
     override fun dispose() {
+        encounterEngine?.flush()
         super.dispose()
         renderContext.dispose()
         assetManager.dispose()
@@ -123,6 +124,7 @@ class FaultoryGame : Game(), ShiftLifecycleHost {
 
     override fun openLevelSelection() {
         ensureEncounterEngineReady()
+        encounterEngine?.flush()
         encounterEngine?.currentLevelId = null
         encounterEngine?.currentPlacedObjects = null
         setScreen(LevelSelectionScreen(this))
@@ -130,6 +132,7 @@ class FaultoryGame : Game(), ShiftLifecycleHost {
 
     override fun openLevel(level: LevelDefinition) {
         ensureEncounterEngineReady()
+        encounterEngine?.flush()
         encounterEngine?.currentLevelId = level.id
         encounterEngine?.currentPlacedObjects = null
         assetManager.load(level.shopAssetPath, ShopBlueprint::class.java)

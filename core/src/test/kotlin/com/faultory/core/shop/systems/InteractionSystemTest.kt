@@ -188,7 +188,7 @@ class InteractionSystemTest {
             initialMachineRecipeStates = emptyList(),
             initialCash = 0
         )
-        return Fixture(state, InteractionSystem(state) { catalog })
+        return Fixture(state, InteractionSystem(state, catalogProvider = { catalog }))
     }
 
     private class Fixture(

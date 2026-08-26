@@ -2,13 +2,19 @@ package com.faultory.core.shop.systems
 
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.MachineSlotType
+import com.faultory.core.encounters.CashFlowReason
+import com.faultory.core.encounters.ProductQuality
+import com.faultory.core.encounters.ProductShippedEvent
+import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.shop.PlacedShopObjectKind
+import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.ShipmentEvent
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
 
 internal class ConveyorSystem(
-    private val state: ShopFloorState
+    private val state: ShopFloorState,
+    private val events: ShopFloorEvents = ShopFloorEvents()
 ) {
     private val grid get() = state.grid
     private val mutableActiveProducts get() = state.mutableActiveProducts
@@ -52,9 +58,21 @@ internal class ConveyorSystem(
             }
             mutableActiveProducts.removeAt(productIndex)
             if (!product.isFaulty) {
-                productDefinitionsById[product.productId]?.saleValue?.let(state::creditCash)
+                productDefinitionsById[product.productId]?.saleValue?.let { saleValue ->
+                    state.creditCash(saleValue, CashFlowReason.PRODUCT_SALE)
+                }
             }
+            // The shipment list is the pull-side feed for the day's tally; the bus gets the same
+            // moment pushed, from here rather than from whoever happens to drain the list.
             pendingShipmentEvents += ShipmentEvent(product.productId, product.faultReason)
+            events.publish {
+                ProductShippedEvent(
+                    productInstanceId = product.id,
+                    productId = product.productId,
+                    quality = qualityOf(product.faultReason),
+                    levelId = it
+                )
+            }
             return
         }
 
@@ -63,6 +81,12 @@ internal class ConveyorSystem(
         }
 
         mutableActiveProducts[productIndex] = product.copy(tile = nextTile)
+    }
+
+    private fun qualityOf(faultReason: ProductFaultReason?): ProductQuality = when (faultReason) {
+        null -> ProductQuality.GOOD
+        ProductFaultReason.PRODUCTION_DEFECT -> ProductQuality.FAULTY
+        ProductFaultReason.SABOTAGE -> ProductQuality.SABOTAGED
     }
 
     private fun isBeltInputSinkAt(tile: TileCoordinate): Boolean {

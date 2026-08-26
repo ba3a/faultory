@@ -1,8 +1,15 @@
 package com.faultory.core.shop
 
 import com.faultory.core.content.*
-import com.faultory.core.encounters.EventBus
+import com.faultory.core.encounters.CashFlowReason
 import com.faultory.core.encounters.ObjectPlacedEvent
+import com.faultory.core.encounters.ObjectRotatedEvent
+import com.faultory.core.encounters.ObjectUpgradedEvent
+import com.faultory.core.encounters.ProductSuppliedEvent
+import com.faultory.core.encounters.ShopFloorEvents
+import com.faultory.core.encounters.WorkerAssignedEvent
+import com.faultory.core.encounters.WorkerAssignmentKind
+import com.faultory.core.encounters.WorkerAssignmentRejectedEvent
 import com.faultory.core.graphics.InteractionCatalog
 import com.faultory.core.graphics.InteractionDefinition
 import com.faultory.core.shop.pathfinding.DefaultMovementStrategyResolver
@@ -24,9 +31,8 @@ class ShopFloor(
     private val beltSupplyFeeder: BeltSupplyFeeder? = null,
     private val movementStrategyResolver: MovementStrategyResolver = DefaultMovementStrategyResolver,
     random: Random = Random.Default,
-    private val eventBus: EventBus? = null,
+    private val events: ShopFloorEvents = ShopFloorEvents(),
     private val cleanerSpawnGate: CleanerSpawnGate? = null,
-    private val levelIdProvider: () -> String? = { null },
     private val interactionCatalogProvider: () -> InteractionCatalog? = { null }
 ) {
 
@@ -42,36 +48,36 @@ class ShopFloor(
         initialMachineProductionStates = initialMachineProductionStates,
         initialQaInspectionStates = initialQaInspectionStates,
         initialMachineRecipeStates = initialMachineRecipeStates,
-        initialCash = initialCash
+        initialCash = initialCash,
+        events = events
     )
 
-    private val wetTileSystem: WetTileSystem = WetTileSystem(state)
-    private val unitPhaseSystem: UnitPhaseSystem = UnitPhaseSystem(state, random)
-    private val securitySystem: SecuritySystem = SecuritySystem(state, movementStrategyResolver, random)
+    private val wetTileSystem: WetTileSystem = WetTileSystem(state, events)
+    private val unitPhaseSystem: UnitPhaseSystem = UnitPhaseSystem(state, random, events)
+    private val securitySystem: SecuritySystem = SecuritySystem(state, movementStrategyResolver, random, events)
     private val workerMovementSystem: WorkerMovementSystem = WorkerMovementSystem(
         state = state,
         movementStrategyResolver = movementStrategyResolver,
         wetTileSystem = wetTileSystem,
         random = random,
-        eventBus = eventBus,
-        levelIdProvider = levelIdProvider
+        events = events
     )
-    private val conveyorSystem: ConveyorSystem = ConveyorSystem(state)
-    private val qaSystem: QaSystem = QaSystem(state, random)
-    private val workerObjectiveSystem: WorkerObjectiveSystem = WorkerObjectiveSystem(state, qaSystem, movementStrategyResolver, random)
-    private val productionSystem: ProductionSystem = ProductionSystem(state, random)
+    private val conveyorSystem: ConveyorSystem = ConveyorSystem(state, events)
+    private val qaSystem: QaSystem = QaSystem(state, random, events)
+    private val workerObjectiveSystem: WorkerObjectiveSystem =
+        WorkerObjectiveSystem(state, qaSystem, movementStrategyResolver, random, events)
+    private val productionSystem: ProductionSystem = ProductionSystem(state, random, events)
     private val cleanerSpawnSystem: CleanerSpawnSystem? = cleanerSpawnGate?.let {
-        CleanerSpawnSystem(state, random, eventBus, it)
+        CleanerSpawnSystem(state, random, events, it)
     }
-    private val interactionSystem: InteractionSystem = InteractionSystem(state, interactionCatalogProvider)
+    private val interactionSystem: InteractionSystem = InteractionSystem(state, interactionCatalogProvider, events)
     private val cleanerSystem: CleanerSystem = CleanerSystem(
         state = state,
         movementStrategyResolver = movementStrategyResolver,
         wetTileSystem = wetTileSystem,
         interactionSystem = interactionSystem,
         random = random,
-        eventBus = eventBus,
-        levelIdProvider = levelIdProvider
+        events = events
     )
 
     val cash: Int
@@ -160,6 +166,15 @@ class ShopFloor(
             state = ShopProductState.ON_BELT,
             tile = beltStartTile
         )
+        events.publish {
+            ProductSuppliedEvent(
+                productInstanceId = instanceId,
+                productId = productId,
+                faultReason = faultReason,
+                tile = beltStartTile,
+                levelId = it
+            )
+        }
         return true
     }
 
@@ -167,9 +182,9 @@ class ShopFloor(
         return pendingShipmentEvents.toList().also { pendingShipmentEvents.clear() }
     }
 
-    fun tryDeductCash(amount: Int): Boolean = state.tryDeductCash(amount)
+    fun tryDeductCash(amount: Int, reason: CashFlowReason): Boolean = state.tryDeductCash(amount, reason)
 
-    fun creditCash(amount: Int) = state.creditCash(amount)
+    fun creditCash(amount: Int, reason: CashFlowReason) = state.creditCash(amount, reason)
 
     fun tryUpgradeObject(
         objectId: String,
@@ -189,8 +204,18 @@ class ShopFloor(
             if (!canPlaceObject(upgraded, ignoreObjectId = current.id)) return false
         }
 
-        if (cost > 0 && !tryDeductCash(cost)) return false
+        if (cost > 0 && !tryDeductCash(cost, CashFlowReason.UPGRADE)) return false
         mutablePlacedObjects[index] = current.copy(catalogId = targetCatalogId)
+        events.publish {
+            ObjectUpgradedEvent(
+                objectId = current.id,
+                kind = current.kind,
+                fromCatalogId = current.catalogId,
+                toCatalogId = targetCatalogId,
+                cost = cost,
+                levelId = it
+            )
+        }
         return true
     }
 
@@ -291,7 +316,15 @@ class ShopFloor(
         }
 
         mutablePlacedObjects += placedObject
-        eventBus?.publish(ObjectPlacedEvent(kind = placedObject.kind, catalogId = placedObject.catalogId))
+        events.publish {
+            ObjectPlacedEvent(
+                objectId = placedObject.id,
+                kind = placedObject.kind,
+                catalogId = placedObject.catalogId,
+                tile = placedObject.position,
+                levelId = it
+            )
+        }
         return true
     }
 
@@ -327,10 +360,66 @@ class ShopFloor(
         }
 
         mutablePlacedObjects[machineIndex] = rotatedMachine
+        events.publish {
+            ObjectRotatedEvent(
+                objectId = rotatedMachine.id,
+                catalogId = rotatedMachine.catalogId,
+                orientation = orientation,
+                levelId = it
+            )
+        }
         return true
     }
 
     fun assignWorkerToMachine(
+        workerId: String,
+        machineId: String,
+        workersById: Map<String, WorkerProfile>
+    ): WorkerAssignmentResult =
+        planAssignmentToMachine(workerId, machineId, workersById)
+            .also { publishAssignmentOutcome(it, workerId, WorkerAssignmentKind.MACHINE, machineId) }
+
+    fun assignWorkerToQa(
+        workerId: String,
+        workersById: Map<String, WorkerProfile>
+    ): WorkerAssignmentResult =
+        planAssignmentToQa(workerId, workersById)
+            .also { publishAssignmentOutcome(it, workerId, WorkerAssignmentKind.QA_POST, machineId = null) }
+
+    /**
+     * Both outcomes are published: a rejection is as much a story beat as a success, and the
+     * failure counters are what tell a tutorial or hint system that the player is stuck.
+     */
+    private fun publishAssignmentOutcome(
+        result: WorkerAssignmentResult,
+        workerId: String,
+        assignment: WorkerAssignmentKind,
+        machineId: String?
+    ) {
+        when (result) {
+            is WorkerAssignmentResult.Success -> events.publish {
+                WorkerAssignedEvent(
+                    objectId = workerId,
+                    assignment = assignment,
+                    machineId = machineId,
+                    workerRole = result.worker.workerRole,
+                    levelId = it
+                )
+            }
+
+            is WorkerAssignmentResult.Failure -> events.publish {
+                WorkerAssignmentRejectedEvent(
+                    objectId = workerId,
+                    assignment = assignment,
+                    machineId = machineId,
+                    reason = result.reason,
+                    levelId = it
+                )
+            }
+        }
+    }
+
+    private fun planAssignmentToMachine(
         workerId: String,
         machineId: String,
         workersById: Map<String, WorkerProfile>
@@ -396,7 +485,7 @@ class ShopFloor(
         return WorkerAssignmentResult.Success(updatedWorker)
     }
 
-    fun assignWorkerToQa(
+    private fun planAssignmentToQa(
         workerId: String,
         workersById: Map<String, WorkerProfile>
     ): WorkerAssignmentResult {

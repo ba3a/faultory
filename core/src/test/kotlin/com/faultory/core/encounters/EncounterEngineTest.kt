@@ -42,7 +42,7 @@ class EncounterEngineTest {
         val eng = engine(EncounterCatalog(), bus)
         eng.currentLevelId = "test-level"
 
-        bus.publish(ProductShippedEvent("ceramic-mug", ProductQuality.GOOD, "test-level"))
+        bus.publish(ProductShippedEvent("product-1", "ceramic-mug", ProductQuality.GOOD, "test-level"))
 
         val counters = eng.progress.counters
         assertEquals(1L, counters["shipped.good.test-level"])

@@ -1,6 +1,9 @@
 package com.faultory.core.shop.systems
 
 import com.faultory.core.config.GameConfig
+import com.faultory.core.encounters.ProductDestroyedEvent
+import com.faultory.core.encounters.ShopFloorEvents
+import com.faultory.core.encounters.UnitStoodUpEvent
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.UnitPhase
@@ -8,7 +11,8 @@ import kotlin.random.Random
 
 internal class UnitPhaseSystem(
     private val state: ShopFloorState,
-    private val random: Random
+    private val random: Random,
+    private val events: ShopFloorEvents = ShopFloorEvents()
 ) {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val mutableActiveProducts get() = state.mutableActiveProducts
@@ -39,11 +43,14 @@ internal class UnitPhaseSystem(
                 unitPhaseTimer = 0f,
                 unitPhaseDurationSeconds = GameConfig.unitStandingSeconds
             )
-            UnitPhase.STANDING -> mutablePlacedObjects[index] = placed.copy(
-                unitPhase = null,
-                unitPhaseTimer = 0f,
-                unitPhaseDurationSeconds = 0f
-            )
+            UnitPhase.STANDING -> {
+                mutablePlacedObjects[index] = placed.copy(
+                    unitPhase = null,
+                    unitPhaseTimer = 0f,
+                    unitPhaseDurationSeconds = 0f
+                )
+                events.publish { UnitStoodUpEvent(objectId = placed.id, tile = placed.position, levelId = it) }
+            }
             UnitPhase.DESTROYING_PRODUCT -> completeDestroyProduct(index, placed)
         }
     }
@@ -53,7 +60,17 @@ internal class UnitPhaseSystem(
         if (productId != null) {
             val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
             if (productIndex >= 0) {
+                val destroyed = mutableActiveProducts[productIndex]
                 mutableActiveProducts.removeAt(productIndex)
+                events.publish {
+                    ProductDestroyedEvent(
+                        objectId = placed.id,
+                        productInstanceId = destroyed.id,
+                        productId = destroyed.productId,
+                        faultReason = destroyed.faultReason,
+                        levelId = it
+                    )
+                }
             }
         }
         mutablePlacedObjects[index] = placed.copy(

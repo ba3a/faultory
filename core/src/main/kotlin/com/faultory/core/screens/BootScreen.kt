@@ -13,6 +13,7 @@ import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.ShopCatalog
 import com.faultory.core.encounters.ConditionLibrary
+import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.graphics.SkinReferences
 import com.faultory.core.shop.ShopBlueprint
@@ -152,9 +153,8 @@ class BootScreen(
             productDefinitionsById = shopCatalog.products.associateBy { it.id },
             initialCash = save.activeShift.cash,
             beltSupplyFeeder = beltSupplyFeeder,
-            eventBus = game.eventBus,
+            events = ShopFloorEvents(game.eventBus) { level.id },
             cleanerSpawnGate = cleanerSpawnGate,
-            levelIdProvider = { level.id },
             interactionCatalogProvider = game::interactionCatalog
         )
 

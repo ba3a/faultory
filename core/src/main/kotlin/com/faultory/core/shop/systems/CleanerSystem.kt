@@ -3,9 +3,8 @@ package com.faultory.core.shop.systems
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
-import com.faultory.core.encounters.CleanerHandedProductEvent
-import com.faultory.core.encounters.CleanerTookProductEvent
-import com.faultory.core.encounters.EventBus
+import com.faultory.core.encounters.ProductPickedUpEvent
+import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.graphics.InteractionIds
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
@@ -21,8 +20,7 @@ internal class CleanerSystem(
     private val wetTileSystem: WetTileSystem,
     private val interactionSystem: InteractionSystem,
     private val random: Random,
-    private val eventBus: EventBus? = null,
-    private val levelIdProvider: () -> String? = { null }
+    private val events: ShopFloorEvents = ShopFloorEvents()
 ) {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val mutableActiveProducts get() = state.mutableActiveProducts
@@ -109,13 +107,16 @@ internal class CleanerSystem(
             movementProgress = 0f,
             orientation = orientation
         )
-        eventBus?.publish(
-            CleanerTookProductEvent(
-                cleanerObjectId = cleaner.id,
+        events.publish {
+            ProductPickedUpEvent(
+                objectId = cleaner.id,
+                workerRole = cleaner.workerRole,
                 productInstanceId = candidate.id,
-                levelId = levelIdProvider() ?: ""
+                productId = candidate.productId,
+                tile = productTile,
+                levelId = it
             )
-        )
+        }
         return true
     }
 
@@ -135,25 +136,13 @@ internal class CleanerSystem(
 
         // The product does not change hands here any more - InteractionSystem moves it partway
         // through the give/take clip, so both workers get to play their half of the exchange.
-        if (!interactionSystem.begin(
-                definitionId = InteractionIds.HAND_OFF,
-                initiatorId = cleaner.id,
-                recipientId = recipient.id,
-                payloadProductId = productId
-            )
-        ) {
-            return false
-        }
-
-        eventBus?.publish(
-            CleanerHandedProductEvent(
-                cleanerObjectId = cleaner.id,
-                workerObjectId = recipient.id,
-                productInstanceId = productId,
-                levelId = levelIdProvider() ?: ""
-            )
+        // It also publishes the handover, at the frame the payload actually moves.
+        return interactionSystem.begin(
+            definitionId = InteractionIds.HAND_OFF,
+            initiatorId = cleaner.id,
+            recipientId = recipient.id,
+            payloadProductId = productId
         )
-        return true
     }
 
     private fun planRoaming(cleanerIndex: Int, cleaner: PlacedShopObject) {

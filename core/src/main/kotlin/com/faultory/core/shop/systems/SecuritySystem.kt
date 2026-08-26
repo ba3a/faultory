@@ -4,6 +4,10 @@ import com.faultory.core.content.MachineType
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.content.WorkerRoleProfile
+import com.faultory.core.encounters.PursuitAbandonedEvent
+import com.faultory.core.encounters.SaboteurSpottedEvent
+import com.faultory.core.encounters.SabotageStoppedEvent
+import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ProductFaultReason
@@ -14,7 +18,8 @@ import kotlin.random.Random
 internal class SecuritySystem(
     private val state: ShopFloorState,
     private val movementStrategyResolver: MovementStrategyResolver,
-    private val random: Random
+    private val random: Random,
+    private val events: ShopFloorEvents = ShopFloorEvents()
 ) {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val placedWorkers get() = state.placedWorkers
@@ -91,11 +96,15 @@ internal class SecuritySystem(
                 movementPath = emptyList(),
                 movementProgress = 0f
             )
+            events.publish {
+                PursuitAbandonedEvent(objectId = security.id, saboteurObjectId = targetId, levelId = it)
+            }
             return
         }
 
         if (state.manhattanDistance(security.position, target.position) <= 1) {
-            cancelSabotage(target.assignedMachineId ?: return)
+            val sabotagedMachineId = target.assignedMachineId ?: return
+            cancelSabotage(sabotagedMachineId)
             pursuedSaboteurIds.remove(targetId)
             val orientation = Orientation.between(security.position, target.position) ?: security.orientation
             mutablePlacedObjects[securityIndex] = security.copy(
@@ -104,6 +113,14 @@ internal class SecuritySystem(
                 movementProgress = 0f,
                 orientation = orientation
             )
+            events.publish {
+                SabotageStoppedEvent(
+                    objectId = security.id,
+                    saboteurObjectId = targetId,
+                    machineId = sabotagedMachineId,
+                    levelId = it
+                )
+            }
             return
         }
 
@@ -197,6 +214,7 @@ internal class SecuritySystem(
             .firstOrNull()
     }
 
+    /** The single place a saboteur becomes someone's target, whether spotted on foot or on camera. */
     private fun assignPursuer(pursuer: PlacedShopObject, target: PlacedShopObject) {
         val pursuerIndex = mutablePlacedObjects.indexOfFirst { it.id == pursuer.id }
         if (pursuerIndex < 0) return
@@ -210,6 +228,15 @@ internal class SecuritySystem(
                 ?.let { Orientation.between(current.position, it) }
                 ?: current.orientation
         )
+        val sabotagedMachineId = target.assignedMachineId ?: return
+        events.publish {
+            SaboteurSpottedEvent(
+                objectId = current.id,
+                saboteurObjectId = target.id,
+                machineId = sabotagedMachineId,
+                levelId = it
+            )
+        }
     }
 
     private fun planSecurityPursuit(

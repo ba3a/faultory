@@ -2,6 +2,11 @@ package com.faultory.core.shop.systems
 
 import com.faultory.core.content.MachineRecipe
 import com.faultory.core.content.MachineSlotType
+import com.faultory.core.encounters.MachineInputLoadedEvent
+import com.faultory.core.encounters.MachineInputSource
+import com.faultory.core.encounters.ProductPickedUpEvent
+import com.faultory.core.encounters.ProductPlacedOnBeltEvent
+import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.shop.MachineRecipeState
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
@@ -17,7 +22,8 @@ internal class WorkerObjectiveSystem(
     private val state: ShopFloorState,
     private val qaSystem: QaSystem,
     private val movementStrategyResolver: MovementStrategyResolver,
-    private val random: Random
+    private val random: Random,
+    private val events: ShopFloorEvents = ShopFloorEvents()
 ) {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val mutableActiveProducts get() = state.mutableActiveProducts
@@ -146,6 +152,16 @@ internal class WorkerObjectiveSystem(
             movementProgress = 0f,
             orientation = orientation
         )
+        events.publish {
+            ProductPickedUpEvent(
+                objectId = worker.id,
+                workerRole = worker.workerRole,
+                productInstanceId = candidate.id,
+                productId = candidate.productId,
+                tile = productTile,
+                levelId = it
+            )
+        }
         return true
     }
 
@@ -242,6 +258,15 @@ internal class WorkerObjectiveSystem(
                     )
                 )
             )
+            events.publish {
+                MachineInputLoadedEvent(
+                    machineId = targetMachineId,
+                    productInstanceId = carriedProduct.id,
+                    productId = carriedProduct.productId,
+                    source = MachineInputSource.WORKER,
+                    levelId = it
+                )
+            }
         }
 
         mutableActiveProducts.removeAt(productIndex)
@@ -309,6 +334,15 @@ internal class WorkerObjectiveSystem(
             movementPath = emptyList(),
             movementProgress = 0f
         )
+        events.publish {
+            ProductPlacedOnBeltEvent(
+                productInstanceId = carriedProduct.id,
+                productId = carriedProduct.productId,
+                tile = targetBeltTile,
+                byObjectId = worker.id,
+                levelId = it
+            )
+        }
 
         val updatedWorker = mutablePlacedObjects[workerIndex]
         if (updatedWorker.assignedMachineId != null && !state.isWorkerAtAssignedSlot(updatedWorker)) {

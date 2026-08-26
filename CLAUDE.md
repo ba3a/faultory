@@ -36,6 +36,7 @@ Package-by-responsibility under `core/src/main/kotlin/com/faultory/core`:
 | `core.content` | JSON-backed catalog/content models (`@Serializable data class`) and their `AssetManager` loaders (`*AssetLoader`) |
 | `core.shop` | Shop/level layout models (`@Serializable data class`) and `ShopBlueprintAssetLoader` |
 | `core.shop.systems` | Per-responsibility simulation systems extracted from `ShopFloor`: `ShopFloorState` (mutable state + shared helpers), `ConveyorSystem`, `ProductionSystem`, `QaSystem`, `WorkerObjectiveSystem`, `WorkerMovementSystem`, `SecuritySystem`. `ShopFloor` is now a thin facade that wires these together. |
+| `core.encounters` | The event feed (`GameEvent`, `EventBus`, `ShopFloorEvents`), authored `Condition`/`Encounter` models and `EncounterEngine` |
 | `core.screens` | LibGDX screen classes (names end in `Screen`) |
 | `core.systems` | Time-step and simulation coordinators (noun names, e.g. `ProductionDayDirector`) |
 | `core.save` | Save models, codecs, `SaveRepository` / `LocalSaveRepository` |
@@ -81,6 +82,45 @@ frame. Do not resolve sprites in `drawSprite`.
 Raw art lives in `raw-art/<skinId>/<action>_<orientation-lowercase>/NNN.png` and is baked with the
 editor's Tools -> "Bake atlas..." dialog, which works for any skin id.
 
+## Events
+
+Everything that happens on the factory floor publishes a `GameEvent`, whether or not anything is
+listening. The feed is the single source achievements, storytelling beats, in-game encounters and
+statistics all read from, so an event missing today is a feature that cannot be built tomorrow
+without reopening the simulation.
+
+Systems publish through `ShopFloorEvents`, which stamps the current level on the event and hands it
+to the `EventBus`. It is never null and never optional: `events.publish { SomethingHappenedEvent(…,
+levelId = it) }`. Its default instance publishes into a bus nobody listens to, which is what tests
+and headless simulation get for free.
+
+`EncounterEngine` knows nothing about individual event types. Each event names its own counters via
+`counterName` and `counterKeys(scope)`; the default gives an all-levels and a per-level total, and
+an override adds breakdown keys in the `<counterName>.<scope>.<suffix>` shape that
+`Condition.CounterAtLeast` reads. A new event therefore starts accumulating statistics and becomes
+usable by authored content the moment it is published.
+
+**When you add eventful behaviour, add the event that publishes it.** Concretely:
+
+1. Add the event to `core.encounters.GameEvent`, implementing `GameEvent` plus whichever of
+   `ProductEvent` / `ActorEvent` / `MachineEvent` / `EconomyEvent` describe it, with a
+   `counterName` and a `levelId`.
+2. Publish it from the system that owns the behaviour, at the moment the state actually changes —
+   not where the change was requested. A handover is reported when the payload moves, not when the
+   interaction is asked for; a verdict is reported on the frame it is reached, not in a disposition
+   step that retries.
+3. Publish exactly once per occurrence. Where two actors tick the same event (interactions), only
+   the initiator reports; where a step is retried until it succeeds, publish on the transition.
+4. Prefer generalising over adding an actor-specific twin — `ProductPickedUpEvent` carries the
+   picker's `workerRole` rather than there being one event per role.
+
+`counterName` values and the legacy `shipped.<quality>.<scope>` keys are persisted in
+`encounters.json`; treat them like JSON field names and do not rename them casually.
+
+Continuous motion is deliberately not published: a product advancing one belt tile or a worker
+crossing one tile emits nothing. State transitions do — entering and leaving a belt, being blocked,
+falling, standing up, changing hands, being shipped.
+
 ## Adding New Features
 
 1. Add/extend domain model in `core.content`, `core.shop`, `core.systems`, or `core.save`.
@@ -88,6 +128,7 @@ editor's Tools -> "Bake atlas..." dialog, which works for any skin id.
 3. If loading changes: update the matching `*AssetLoader` (register it in `FaultoryGame.create`).
 4. If startup-affected: wire through `FaultoryGame` and `BootScreen`.
 5. If rendering/gameplay-affected: update or add a screen in `core.screens`.
+6. If it is eventful: add a `GameEvent` and publish it — see **Events** above.
 
 Modifying a `@Serializable` model: update the data class → update matching JSON assets → update the loader if root structure changed → update `GameSave.bootstrap()` if save defaults are affected → update any screen/system reading the changed fields.
 
@@ -105,4 +146,6 @@ Modifying a `@Serializable` model: update the data class → update matching JSO
 - Do not introduce new dependencies without strong justification; add via `gradle/libs.versions.toml` and the relevant `build.gradle.kts`.
 - Do not introduce Spring, Ktor, Hibernate, or any backend framework speculatively.
 - New tests go under `core/src/test/kotlin/com/faultory/core/...`.
+- Do not add eventful behaviour without publishing an event for it, and do not reintroduce a
+  nullable `EventBus` or a `levelIdProvider` into a system — take `ShopFloorEvents`.
 - Do not add simulation logic directly to `ShopFloor`. New `update*` behaviour belongs in one of the focused system classes (`ConveyorSystem`, `ProductionSystem`, `QaSystem`, `WorkerObjectiveSystem`, `WorkerMovementSystem`, `SecuritySystem`) or in a new system class if the responsibility is genuinely distinct. `ShopFloor` must remain a thin facade.

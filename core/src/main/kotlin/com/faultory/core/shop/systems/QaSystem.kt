@@ -6,6 +6,14 @@ import com.faultory.core.content.MachineType
 import com.faultory.core.content.Manuality
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
+import com.faultory.core.encounters.FaultyProductStoredEvent
+import com.faultory.core.encounters.ProductDestroyedEvent
+import com.faultory.core.encounters.ProductHandedOverEvent
+import com.faultory.core.encounters.ProductPlacedOnBeltEvent
+import com.faultory.core.encounters.ProductPlacedOnFloorEvent
+import com.faultory.core.encounters.QaInspectionCompletedEvent
+import com.faultory.core.encounters.QaInspectionStartedEvent
+import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
@@ -36,7 +44,8 @@ private data class QaInspectorConfig(
 
 internal class QaSystem(
     private val state: ShopFloorState,
-    private val random: Random
+    private val random: Random,
+    private val events: ShopFloorEvents = ShopFloorEvents()
 ) {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val placedMachines get() = state.placedMachines
@@ -67,11 +76,27 @@ internal class QaSystem(
 
             val updatedProgress = (currentState.progressSeconds + deltaSeconds).coerceAtMost(config.inspectionDurationSeconds)
             val isComplete = updatedProgress >= config.inspectionDurationSeconds
+            val verdict = if (isComplete) classifyProduct(product, config) else null
             mutableQaInspectionStates[inspectionIndex] = currentState.copy(
                 progressSeconds = updatedProgress,
                 isComplete = isComplete,
-                classifiedAsFaulty = if (isComplete) classifyProduct(product, config) else null
+                classifiedAsFaulty = verdict
             )
+            // Published on the transition, not in the resolve step: a disposition that cannot run
+            // yet (no free tile, no producer to hand to) is retried every frame, and the verdict
+            // was still only reached once.
+            if (verdict != null) {
+                events.publish {
+                    QaInspectionCompletedEvent(
+                        objectId = inspector.id,
+                        productInstanceId = product.id,
+                        productId = product.productId,
+                        classifiedAsFaulty = verdict,
+                        actuallyFaulty = product.isFaulty,
+                        levelId = it
+                    )
+                }
+            }
         }
 
         for (inspState in mutableQaInspectionStates.filter { it.isComplete }.toList()) {
@@ -126,6 +151,7 @@ internal class QaSystem(
                 productId = product.id,
                 beltTile = beltTile
             )
+            publishInspectionStarted(machine.id, product)
         }
     }
 
@@ -145,6 +171,18 @@ internal class QaSystem(
                 inspectorObjectId = worker.id,
                 productId = product.id,
                 beltTile = beltTile
+            )
+            publishInspectionStarted(worker.id, product)
+        }
+    }
+
+    private fun publishInspectionStarted(inspectorId: String, product: ShopProduct) {
+        events.publish {
+            QaInspectionStartedEvent(
+                objectId = inspectorId,
+                productInstanceId = product.id,
+                productId = product.productId,
+                levelId = it
             )
         }
     }
@@ -220,14 +258,24 @@ internal class QaSystem(
         val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
         if (productIndex < 0) return false
 
-        mutableActiveProducts[productIndex] = mutableActiveProducts[productIndex].copy(
+        val returned = mutableActiveProducts[productIndex].copy(
             state = ShopProductState.ON_BELT,
             tile = beltTile,
             carrierWorkerId = null,
             holderObjectId = null,
             reworkTargetMachineId = null
         )
+        mutableActiveProducts[productIndex] = returned
         state.clearWorkerHold(inspectorId)
+        events.publish {
+            ProductPlacedOnBeltEvent(
+                productInstanceId = returned.id,
+                productId = returned.productId,
+                tile = beltTile,
+                byObjectId = inspectorId,
+                levelId = it
+            )
+        }
         return true
     }
 
@@ -240,7 +288,17 @@ internal class QaSystem(
         }
         if (inspectorIndex < 0) {
             // Machine inspector — destroy instantly.
+            val destroyed = mutableActiveProducts[productIndex]
             mutableActiveProducts.removeAt(productIndex)
+            events.publish {
+                ProductDestroyedEvent(
+                    objectId = inspectorId,
+                    productInstanceId = destroyed.id,
+                    productId = destroyed.productId,
+                    faultReason = destroyed.faultReason,
+                    levelId = it
+                )
+            }
             return true
         }
 
@@ -272,14 +330,24 @@ internal class QaSystem(
                     .thenBy { it.y }
             ) ?: return false
 
-        mutableActiveProducts[productIndex] = mutableActiveProducts[productIndex].copy(
+        val discarded = mutableActiveProducts[productIndex].copy(
             state = ShopProductState.ON_FLOOR,
             tile = targetTile,
             carrierWorkerId = null,
             holderObjectId = null,
             reworkTargetMachineId = null
         )
+        mutableActiveProducts[productIndex] = discarded
         state.clearWorkerHold(inspector.id)
+        events.publish {
+            ProductPlacedOnFloorEvent(
+                productInstanceId = discarded.id,
+                productId = discarded.productId,
+                tile = targetTile,
+                byObjectId = inspector.id,
+                levelId = it
+            )
+        }
         return true
     }
 
@@ -295,19 +363,31 @@ internal class QaSystem(
         if (targetWorker != null) {
             val workerIndex = mutablePlacedObjects.indexOfFirst { it.id == targetWorker.id }
             if (workerIndex >= 0) {
-                mutableActiveProducts[productIndex] = mutableActiveProducts[productIndex].copy(
+                val handed = mutableActiveProducts[productIndex].copy(
                     state = ShopProductState.CARRIED,
                     tile = null,
                     carrierWorkerId = targetWorker.id,
                     holderObjectId = targetWorker.id,
                     reworkTargetMachineId = targetWorker.assignedMachineId
                 )
+                mutableActiveProducts[productIndex] = handed
                 mutablePlacedObjects[workerIndex] = targetWorker.copy(
                     carriedProductId = productId,
                     movementPath = emptyList(),
                     movementProgress = 0f
                 )
                 state.clearWorkerHold(inspector.id)
+                events.publish {
+                    ProductHandedOverEvent(
+                        objectId = inspector.id,
+                        giverRole = inspector.workerRole,
+                        recipientObjectId = targetWorker.id,
+                        recipientRole = targetWorker.workerRole,
+                        productInstanceId = handed.id,
+                        productId = handed.productId,
+                        levelId = it
+                    )
+                }
                 return true
             }
         }
@@ -319,8 +399,17 @@ internal class QaSystem(
                 mutablePlacedObjects[machineIndex] = automaticProducer.copy(
                     faultyInventoryCount = automaticProducer.faultyInventoryCount + 1
                 )
+                val stored = mutableActiveProducts[productIndex]
                 mutableActiveProducts.removeAt(productIndex)
                 state.clearWorkerHold(inspector.id)
+                events.publish {
+                    FaultyProductStoredEvent(
+                        machineId = automaticProducer.id,
+                        productInstanceId = stored.id,
+                        productId = stored.productId,
+                        levelId = it
+                    )
+                }
                 return true
             }
         }

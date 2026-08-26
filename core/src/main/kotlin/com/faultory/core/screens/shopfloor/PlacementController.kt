@@ -3,6 +3,7 @@ package com.faultory.core.screens.shopfloor
 import com.faultory.core.content.MachineType
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
+import com.faultory.core.encounters.CashFlowReason
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
@@ -27,11 +28,11 @@ class PlacementController(
             return false
         }
         val placedObject = placeablePlacementObject(key, tile) ?: return false
-        if (!shopFloor.tryDeductCash(cost)) {
+        if (!shopFloor.tryDeductCash(cost, CashFlowReason.PLACEMENT)) {
             return false
         }
         if (!shopFloor.placeObject(placedObject)) {
-            shopFloor.creditCash(cost)
+            shopFloor.creditCash(cost, CashFlowReason.REFUND)
             return false
         }
         shiftLifecycle.markDirty()
