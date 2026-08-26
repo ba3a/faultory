@@ -1,5 +1,6 @@
 package com.faultory.editor.ui.inspector.animations
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.g2d.TextureAtlas
 import com.badlogic.gdx.math.Vector2
@@ -13,7 +14,9 @@ import com.faultory.editor.graphics.AtlasBaker
 import com.faultory.editor.graphics.FrameBatchPlanner
 import com.faultory.editor.graphics.FrameGroup
 import com.faultory.editor.graphics.FrameImportService
+import com.faultory.editor.graphics.FrameMirrorService
 import com.faultory.editor.graphics.SkinStateService
+import com.faultory.editor.ui.dialogs.ConfirmDialog
 import com.faultory.editor.ui.dialogs.ImportBatchDialog
 import com.faultory.editor.util.LastUploadDirectory
 import com.faultory.editor.validation.Severity
@@ -22,6 +25,8 @@ import com.faultory.editor.validation.ValidationIssue
 import com.faultory.core.graphics.SocketNames
 import com.faultory.core.graphics.SocketPoint
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
+import com.kotcrab.vis.ui.widget.MenuItem
+import com.kotcrab.vis.ui.widget.PopupMenu
 import com.kotcrab.vis.ui.widget.VisTextButton
 import com.kotcrab.vis.ui.widget.VisTextField
 import com.kotcrab.vis.ui.widget.VisLabel
@@ -45,6 +50,7 @@ class AnimationsPanel(
 
     private val skinStateService = SkinStateService(assetsRoot)
     private val frameImportService = FrameImportService(defaultRawArtRoot(assetsRoot))
+    private val frameMirrorService = FrameMirrorService(defaultRawArtRoot(assetsRoot))
     private val atlasBaker = AtlasBaker()
 
     private val statusLabel = VisLabel("").apply { setWrap(true) }
@@ -159,6 +165,7 @@ class AnimationsPanel(
                     socketPoint = skin?.let {
                         skinStateService.socketFor(it, action, orientation, socketNameField.text.trim())
                     },
+                    onContextMenu = { showCellMenu(action, orientation) },
                 )
                 cell.render(atlas, skin)
                 cells[CellKey(action, orientation)] = cell
@@ -337,6 +344,135 @@ class AnimationsPanel(
     }
 
     /**
+     * The right-clicked cell is the mirror *source*, so the menu names where its flipped copy lands.
+     *
+     * What can be mirrored is read from raw art on disk, not from the skin definition. The two do
+     * drift apart - worker_line_inspector names walk frames it has no PNGs for - and only real files
+     * can be flipped.
+     */
+    private fun showCellMenu(action: String, source: Orientation) {
+        val stage = stageProvider() ?: return
+        val sourceFrames = frameMirrorService.framesIn(skinId, action, source)
+        val menu = PopupMenu()
+
+        if (sourceFrames.isEmpty()) {
+            menu.addItem(
+                MenuItem("No raw art in $action/${source.name} to mirror").apply { isDisabled = true },
+            )
+        } else {
+            Orientation.entries.filter { it != source }.forEach { target ->
+                menu.addItem(
+                    MenuItem("Mirror into ${target.name}").apply {
+                        addListener(object : ChangeListener() {
+                            override fun changed(
+                                event: ChangeEvent?,
+                                actor: com.badlogic.gdx.scenes.scene2d.Actor?,
+                            ) {
+                                confirmMirror(action, source, target, sourceFrames.size)
+                            }
+                        })
+                    },
+                )
+            }
+        }
+
+        val input = Gdx.input ?: return
+        menu.showMenu(stage, input.x.toFloat(), stage.height - input.y.toFloat())
+    }
+
+    /**
+     * Mirroring onto a pose that already has art destroys it: [FrameImportService.importFrames]
+     * wipes the target directory first, raw art is not under version control, and the rollback in
+     * [importAndBake] restores the skin JSON but never deleted PNGs. So ask before overwriting.
+     */
+    private fun confirmMirror(action: String, source: Orientation, target: Orientation, frameCount: Int) {
+        val existing = frameMirrorService.framesIn(skinId, action, target)
+        if (existing.isEmpty()) {
+            mirrorCell(action, source, target)
+            return
+        }
+
+        val stage = stageProvider() ?: return
+        ConfirmDialog(
+            title = "Replace drawn art?",
+            message = "$action/${target.name} already has ${existing.size} frame(s).\n" +
+                "Replace them with a mirror of ${source.name} ($frameCount frame(s))?\n" +
+                "Raw art is not under version control, so this cannot be undone.",
+            confirmText = "Mirror",
+            onConfirm = { mirrorCell(action, source, target) },
+        ).showOn(stage)
+    }
+
+    /**
+     * Fills [target] with a left-to-right flip of [source]'s art.
+     *
+     * Frames, cutout layers and sockets move together inside a single [importAndBake]: a mirrored
+     * body whose parts stayed behind is a torso with no arms, and a half-applied mirror has to roll
+     * back as one. The flipped PNGs are staged outside raw art, and deleted either way.
+     */
+    private fun mirrorCell(action: String, source: Orientation, target: Orientation) {
+        val baseFrames = frameMirrorService.framesIn(skinId, action, source)
+        if (baseFrames.isEmpty()) {
+            statusLabel.setText("$action/${source.name} has no raw art to mirror.")
+            return
+        }
+
+        val staged = mutableListOf<FrameMirrorService.MirroredFrames>()
+        try {
+            val mirroredBase = frameMirrorService.mirrorToTemp(baseFrames).also { staged += it }
+            val mirroredParts = skin?.actions?.get(action)?.parts.orEmpty().mapNotNull { (name, part) ->
+                val partFrames = frameMirrorService.framesIn(skinId, partImportAction(action, name), source)
+                if (partFrames.isEmpty()) {
+                    null
+                } else {
+                    val flipped = frameMirrorService.mirrorToTemp(partFrames).also { staged += it }
+                    MirroredPart(name = name, depth = part.depth, staged = flipped)
+                }
+            }
+
+            val mirrored = importAndBake(
+                failureDetail = { " Raw art for $action/${target.name} may already have been replaced." },
+            ) { base ->
+                val withFrames = skinStateService.setOrientationFrames(
+                    current = base,
+                    action = action,
+                    orientation = target,
+                    regionNames = frameImportService.importFrames(skinId, action, target, mirroredBase.frames),
+                )
+                val withParts = mirroredParts.fold(withFrames) { current, part ->
+                    skinStateService.setPart(
+                        current = current,
+                        action = action,
+                        orientation = target,
+                        partName = part.name,
+                        depth = part.depth,
+                        regionNames = frameImportService.importFrames(
+                            skinId,
+                            partImportAction(action, part.name),
+                            target,
+                            part.staged.frames,
+                        ),
+                    )
+                }
+                skinStateService.mirrorSockets(withParts, action, source, target, mirroredBase.widths)
+            }
+
+            if (mirrored) {
+                val parts = if (mirroredParts.isEmpty()) "" else " and ${mirroredParts.size} part(s)"
+                statusLabel.setText(
+                    "Mirrored ${baseFrames.size} frame(s)$parts from ${source.name} into " +
+                        "${target.name} of $action. ${statusLabel.text}",
+                )
+            }
+        } catch (t: Throwable) {
+            statusLabel.setText("Mirror failed: ${t.message ?: t.javaClass.simpleName}.")
+            rebuildGrid()
+        } finally {
+            staged.forEach { it.delete() }
+        }
+    }
+
+    /**
      * Imports every accepted group and bakes once, which is the entire reason batching exists —
      * [AtlasBaker] re-packs the whole skin on every call, so per-cell imports pay for each other.
      */
@@ -452,6 +588,13 @@ class AnimationsPanel(
     }
 
     private data class CellKey(val action: String, val orientation: Orientation)
+
+    /** One cutout layer staged for a mirror: what it is called, how deep, and its flipped frames. */
+    private data class MirroredPart(
+        val name: String,
+        val depth: Float,
+        val staged: FrameMirrorService.MirroredFrames,
+    )
 
     companion object {
         /** Keeps a part's baked region names out of the base frames' namespace for the same action. */

@@ -117,6 +117,56 @@ class SkinStateService(private val assetsRoot: Path) {
         return current.copy(actions = current.actions + (action to updatedClip))
     }
 
+    /**
+     * Copies every socket authored for [source] onto [target], reflected left to right.
+     *
+     * Only `x` moves. `y` is unaffected by a horizontal flip, and `depth` is a screen-space
+     * in-front-of/behind axis rather than a spatial one - mirroring an east pose leaves the far arm
+     * still the far arm, so a point sandwiched between two cutouts stays sandwiched.
+     *
+     * [widths] is the pixel width of each mirrored frame, in frame order.
+     */
+    fun mirrorSockets(
+        current: SkinDefinition,
+        action: String,
+        source: Orientation,
+        target: Orientation,
+        widths: List<Int>,
+    ): SkinDefinition {
+        val existing = current.actions[action] ?: return current
+        if (existing.sockets.isEmpty() || widths.isEmpty()) {
+            return current
+        }
+
+        val sockets = existing.sockets.mapValues { (_, socket) ->
+            val byOrientation = socket.byOrientation[source]?.let { point ->
+                socket.byOrientation + (target to reflect(point, widths.first()))
+            } ?: socket.byOrientation
+
+            val byFrame = socket.byFrame[source]?.let { points ->
+                socket.byFrame + (target to points.mapIndexed { index, point ->
+                    // Clamped rather than zipped: a per-frame list is allowed to disagree with the
+                    // frame count - SkinMetadataValidator warns about it instead of forbidding it.
+                    reflect(point, widths[index.coerceIn(0, widths.lastIndex)])
+                })
+            } ?: socket.byFrame
+
+            socket.copy(byOrientation = byOrientation, byFrame = byFrame)
+        }
+
+        return current.copy(actions = current.actions + (action to existing.copy(sockets = sockets)))
+    }
+
+    /**
+     * Reflects a sprite-local point about the frame's vertical centre line.
+     *
+     * `width - x`, not `width - 1 - x`: [SocketPoint] is a continuous offset from the region's
+     * bottom-left that SpritePlacement subtracts and adds as-is, not a pixel index. Borrowing the
+     * discrete form used for flipping pixel columns would drift every attachment by half a pixel.
+     */
+    private fun reflect(point: SocketPoint, width: Int): SocketPoint =
+        point.copy(x = width - point.x)
+
     fun socketFor(
         current: SkinDefinition,
         action: String,

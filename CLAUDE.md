@@ -84,6 +84,14 @@ frame. Do not resolve sprites in `drawSprite`.
 Raw art lives in `raw-art/<skinId>/<action>_<orientation-lowercase>/NNN.png` and is baked with the
 editor's Tools -> "Bake atlas..." dialog, which works for any skin id.
 
+Right-clicking a cell of the editor's animation grid offers **"Mirror into <ORIENTATION>"**, which
+writes a left-to-right flip of that cell's frames, cutout layers and sockets into another
+orientation as ordinary raw art and re-bakes. It is a corner-cutting tool for poses whose two
+facings differ by nothing but the flip - authoring a distinct animation per orientation is still the
+norm - and it deliberately leaves no trace: the copy is indistinguishable from drawn art, and
+redrawing the source does not update it. Nothing in `core` knows about it; the flip happens once, at
+authoring time, never while drawing.
+
 `SkinActionCatalog` lists the actions each kind can request, and is what the editor turns into
 animation grid rows (`AnimationTargets` maps a selected asset to its grids; belts hang off the
 blueprint selection, and `SkinActionCatalog.workerActions` merges in both halves of every

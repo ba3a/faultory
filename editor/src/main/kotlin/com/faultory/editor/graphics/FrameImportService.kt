@@ -7,10 +7,8 @@ import java.nio.file.StandardCopyOption
 
 class FrameImportService(private val rawArtRoot: Path) {
 
-    fun orientationDir(skinId: String, action: String, orientation: Orientation): Path {
-        val dirName = "${action}_${orientation.name.lowercase()}"
-        return SkinConvention.skinDirectory(rawArtRoot, skinId).resolve(dirName)
-    }
+    fun orientationDir(skinId: String, action: String, orientation: Orientation): Path =
+        SkinConvention.orientationDirectory(rawArtRoot, skinId, action, orientation)
 
     fun importFrames(
         skinId: String,

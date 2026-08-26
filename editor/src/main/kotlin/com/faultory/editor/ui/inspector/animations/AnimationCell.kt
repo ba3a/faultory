@@ -1,5 +1,6 @@
 package com.faultory.editor.ui.inspector.animations
 
+import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.g2d.TextureAtlas
 import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
@@ -20,8 +21,20 @@ class AnimationCell(
     /** Sprite-local pixels for a click on the preview; null while socket placing is off. */
     private val onSocketPlaced: ((Float, Float) -> Unit)? = null,
     private val socketPoint: SocketPoint? = null,
+    /** Opens the cell's context menu; the cell itself is the mirror source. */
+    private val onContextMenu: (() -> Unit)? = null,
 ) {
     val actor: VisTable = VisTable()
+
+    init {
+        // Registered on the whole cell and in init rather than in render: an empty cell has to be
+        // right-clickable too, and re-rendering must not stack a second listener on the same actor.
+        onContextMenu?.let { open ->
+            actor.addListener(object : ClickListener(Input.Buttons.RIGHT) {
+                override fun clicked(event: InputEvent?, x: Float, y: Float) = open()
+            })
+        }
+    }
 
     fun render(atlas: TextureAtlas?, skin: SkinDefinition?) {
         actor.clearChildren()
