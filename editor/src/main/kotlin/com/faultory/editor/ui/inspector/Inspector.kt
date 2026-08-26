@@ -5,13 +5,13 @@ import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.ProductDefinition
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
-import com.faultory.core.graphics.SkinActions
 import com.faultory.core.i18n.MessageKey
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.editor.i18n.TranslationStore
 import com.faultory.editor.model.EditorSession
 import com.faultory.editor.repository.EditorJson
 import com.faultory.editor.ui.dialogs.TranslationsDialog
+import com.faultory.editor.ui.inspector.animations.AnimationTargets
 import com.faultory.editor.ui.inspector.animations.AnimationsPanel
 import com.faultory.editor.ui.tree.AssetSelection
 import com.faultory.editor.ui.tree.SelectionBus
@@ -30,6 +30,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.serializer
+import com.faultory.editor.ui.scrollWhileHovered
 
 class Inspector(
     private val session: EditorSession,
@@ -40,7 +41,7 @@ class Inspector(
     private val scroll = VisScrollPane(content).apply {
         setFadeScrollBars(false)
         setScrollingDisabled(true, false)
-    }
+    }.scrollWhileHovered()
     private val issuePanel = IssuePanel()
     private val validationListeners = mutableListOf<(List<com.faultory.editor.validation.ValidationIssue>) -> Unit>()
     var currentIssues: List<com.faultory.editor.validation.ValidationIssue> = emptyList()
@@ -56,7 +57,7 @@ class Inspector(
     }
 
     private val listener: (AssetSelection?) -> Unit = { render(it) }
-    private var currentAnimations: AnimationsPanel? = null
+    private val currentAnimations = mutableListOf<AnimationsPanel>()
     private var currentSelectionIssues: List<com.faultory.editor.validation.ValidationIssue> = emptyList()
     private var currentSkinIssues: List<com.faultory.editor.validation.ValidationIssue> = emptyList()
 
@@ -201,49 +202,36 @@ class Inspector(
     }
 
     private fun appendAnimations(selection: AssetSelection) {
-        val spec = skinSpecFor(selection) ?: return
-        content.add(VisLabel("Animations")).colspan(2).left().pad(6f).row()
-        val panel = AnimationsPanel(
-            assetsRoot = repository.rootPath,
-            skinId = spec.skinId,
-            actions = spec.actions,
-            stageProvider = { actor.stage },
-            onValidationIssues = { issues ->
-                currentSkinIssues = issues
-                republishIssues()
-            },
+        val targets = AnimationTargets.forSelection(
+            selection = selection,
+            catalog = repository.shopCatalog,
+            blueprints = repository.blueprints,
+            interactions = repository.interactionCatalog,
         )
-        currentAnimations = panel
-        content.add(panel.actor).colspan(2).growX().left().pad(4f).row()
-    }
+        if (targets.isEmpty()) return
 
-    private data class SkinSpec(val skinId: String, val actions: List<String>)
-
-    private fun skinSpecFor(selection: AssetSelection): SkinSpec? {
-        return when (selection) {
-            is AssetSelection.Worker -> findWorker(selection.id)?.let { worker ->
-                worker.skin.takeIf { it.isNotBlank() }?.let { skinId ->
-                    SkinSpec(
-                        skinId = skinId,
-                        actions = listOf(SkinActions.IDLE, SkinActions.WALK),
-                    )
-                }
-            }
-            is AssetSelection.Machine -> findMachine(selection.id)?.let { machine ->
-                machine.skin.takeIf { it.isNotBlank() }?.let { skinId ->
-                    SkinSpec(
-                        skinId = skinId,
-                        actions = listOf(SkinActions.IDLE, SkinActions.WORKING),
-                    )
-                }
-            }
-            else -> null
+        val skinIssues = mutableMapOf<String, List<com.faultory.editor.validation.ValidationIssue>>()
+        targets.forEach { target ->
+            content.add(VisLabel(target.heading)).colspan(2).left().pad(6f).row()
+            val panel = AnimationsPanel(
+                assetsRoot = repository.rootPath,
+                skinId = target.skinId,
+                actions = target.actions,
+                stageProvider = { actor.stage },
+                onValidationIssues = { issues ->
+                    skinIssues[target.skinId] = issues
+                    currentSkinIssues = skinIssues.values.flatten()
+                    republishIssues()
+                },
+            )
+            currentAnimations += panel
+            content.add(panel.actor).colspan(2).growX().left().pad(4f).row()
         }
     }
 
     private fun disposeAnimations() {
-        currentAnimations?.dispose()
-        currentAnimations = null
+        currentAnimations.forEach(AnimationsPanel::dispose)
+        currentAnimations.clear()
     }
 
     private fun republishIssues() {

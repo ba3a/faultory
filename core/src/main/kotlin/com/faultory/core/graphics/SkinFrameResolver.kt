@@ -8,8 +8,8 @@ import com.faultory.core.shop.Orientation
  *
  * The chain is, in order: the requested action facing the requested way, then facing
  * [Orientation.SOUTH], then facing the nearest authored orientation by turning order;
- * then the same three steps again for [SkinActions.IDLE]. An unresolved lookup means the
- * caller should fall back to shape rendering.
+ * then the same three steps again for any stand-in the action declares, and finally for
+ * [SkinActions.IDLE]. An unresolved lookup means the caller should fall back to shape rendering.
  */
 object SkinFrameResolver {
     data class Resolution(
@@ -41,7 +41,20 @@ object SkinFrameResolver {
     }
 
     fun actionCandidates(action: String): List<String> =
-        listOf(action, SkinActions.IDLE).distinct()
+        (listOf(action) + actionFallbacks[action].orEmpty() + SkinActions.IDLE).distinct()
+
+    /**
+     * Actions whose natural stand-in is another action, tried before idle.
+     *
+     * Idle is the wrong stand-in for anything that plays while the entity is moving or off its
+     * feet: an unauthored `pursue` must not freeze a guard mid-stride into a standing pose.
+     */
+    private val actionFallbacks: Map<String, List<String>> = mapOf(
+        SkinActions.PURSUE to listOf(SkinActions.WALK),
+        SkinActions.FALL to listOf(SkinActions.LIE),
+        SkinActions.BELT_ENTER to listOf(SkinActions.BELT_RIDE),
+        SkinActions.BELT_EXIT to listOf(SkinActions.BELT_RIDE)
+    )
 
     /** Requested first, then the canonical south facing, then clockwise, counter-clockwise, opposite. */
     fun orientationCandidates(orientation: Orientation): List<Orientation> =

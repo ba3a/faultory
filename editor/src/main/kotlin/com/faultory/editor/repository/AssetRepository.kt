@@ -2,6 +2,7 @@ package com.faultory.editor.repository
 
 import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.ShopCatalog
+import com.faultory.core.graphics.InteractionCatalog
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.editor.util.AtomicJsonWriter
 import kotlinx.serialization.decodeFromString
@@ -16,6 +17,7 @@ class AssetRepository(val rootPath: Path) {
     var shopCatalog: ShopCatalog = readShopCatalog()
     var levelCatalog: LevelCatalog = readLevelCatalog()
     var blueprints: MutableMap<String, ShopBlueprint> = readBlueprints()
+    val interactionCatalog: InteractionCatalog = readInteractionCatalog()
 
     private val pendingFileDeletions: MutableSet<Path> = mutableSetOf()
 
@@ -62,6 +64,20 @@ class AssetRepository(val rootPath: Path) {
     private fun readLevelCatalog(): LevelCatalog {
         val path = rootPath.resolve(AssetPaths.levelCatalog)
         return EditorJson.instance.decodeFromString(path.readText(Charsets.UTF_8))
+    }
+
+    /**
+     * Read-only, and empty rather than fatal when absent: the editor only needs it to know which
+     * interaction clips a worker skin can author, which is not worth failing to open a project over.
+     */
+    private fun readInteractionCatalog(): InteractionCatalog {
+        val path = rootPath.resolve(AssetPaths.interactionCatalog)
+        if (!path.isRegularFile()) {
+            return InteractionCatalog()
+        }
+        return runCatching {
+            EditorJson.instance.decodeFromString<InteractionCatalog>(path.readText(Charsets.UTF_8))
+        }.getOrDefault(InteractionCatalog())
     }
 
     private fun readBlueprints(): MutableMap<String, ShopBlueprint> {

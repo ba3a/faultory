@@ -63,7 +63,9 @@ name and an orientation, and `SkinFrameResolver` picks the clip to draw.
 `SkinFrameResolver` degrades in a fixed order, so partially authored art still renders: requested
 action facing the requested way, then facing `SOUTH`, then the nearest authored orientation by
 turning order (clockwise neighbour, counter-clockwise neighbour, opposite); then those same three
-steps again for `idle`. Only when nothing resolves does the entity fall through to the
+steps again for any stand-in the action declares, and finally for `idle`. Stand-ins exist because
+idle is the wrong substitute for anything that plays while the entity is moving or off its feet —
+an unauthored `pursue` borrows `walk` rather than freezing a guard mid-stride. Only when nothing resolves does the entity fall through to the
 `ShapeRenderer` primitives in `PlacedObjectRenderer` / `GridBackgroundRenderer`. Set
 `DebugFlags.forceShapeRendering` (F9 on the shop floor, or `-Dfaultory.debug.shapes=true`) to force
 that fallback everywhere.
@@ -81,6 +83,19 @@ frame. Do not resolve sprites in `drawSprite`.
 
 Raw art lives in `raw-art/<skinId>/<action>_<orientation-lowercase>/NNN.png` and is baked with the
 editor's Tools -> "Bake atlas..." dialog, which works for any skin id.
+
+`SkinActionCatalog` lists the actions each kind can request, and is what the editor turns into
+animation grid rows (`AnimationTargets` maps a selected asset to its grids; belts hang off the
+blueprint selection, and `SkinActionCatalog.workerActions` merges in both halves of every
+interaction in `content/interactions.json`). **When a resolver learns a new action, add it there
+too** — an action the runtime asks for but nobody can author is an animation that never plays.
+`SkinActionCatalogTest` enforces this by driving the resolvers over every `UnitPhase`,
+`BeltRidePhase`, `InteractionRole`, `ShopProductState` and `BeltTileShape`.
+
+Two things that look like actions deliberately are not: **carrying** is the payload riding the
+`hands` socket over the ordinary pose, and **handing over** is an interaction, whose two halves are
+authored per interaction rather than as constants. Reach for a socket or an interaction before
+adding an action.
 
 ## Events
 

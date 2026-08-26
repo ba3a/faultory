@@ -7,6 +7,7 @@ import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.TileCoordinate
+import com.faultory.core.shop.UnitPhase
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -78,6 +79,60 @@ class WorkerActionResolverTest {
             movementProgress = movementProgress
         )
     }
+
+    @Test
+    fun `a guard closing on a saboteur pursues instead of walking`() {
+        val chasing = worker(
+            movementPath = listOf(TileCoordinate(6, 5)),
+            movementProgress = 0.4f
+        ).copy(pursuitTargetWorkerId = "worker-9")
+
+        assertEquals(SkinActions.PURSUE, WorkerActionResolver.actionFor(chasing))
+    }
+
+    @Test
+    fun `a guard standing still mid-chase is idle rather than pursuing`() {
+        // Pursuit is alert locomotion; a stationary run pose would read as a glitch.
+        val replanning = worker(movementPath = emptyList()).copy(pursuitTargetWorkerId = "worker-9")
+
+        assertEquals(SkinActions.IDLE, WorkerActionResolver.actionFor(replanning))
+    }
+
+    @Test
+    fun `riding a belt outranks pursuit`() {
+        val ridingWhileChasing = worker(
+            movementPath = listOf(TileCoordinate(6, 5)),
+            movementProgress = 0.4f
+        ).copy(pursuitTargetWorkerId = "worker-9", beltRidePhase = BeltRidePhase.RIDING)
+
+        assertEquals(SkinActions.BELT_RIDE, WorkerActionResolver.actionFor(ridingWhileChasing))
+    }
+
+    @Test
+    fun `each unit phase plays its own pose`() {
+        assertEquals(SkinActions.FALL, actionFor(UnitPhase.FALLING))
+        assertEquals(SkinActions.LIE, actionFor(UnitPhase.LYING))
+        assertEquals(SkinActions.STAND_UP, actionFor(UnitPhase.STANDING))
+        assertEquals(SkinActions.DESTROY, actionFor(UnitPhase.DESTROYING_PRODUCT))
+    }
+
+    @Test
+    fun `a unit phase outranks walking, belt riding and an interaction`() {
+        // Slipping is involuntary: nothing the worker was doing beforehand still describes it.
+        val slipped = worker(
+            movementPath = listOf(TileCoordinate(6, 5)),
+            movementProgress = 0.4f
+        ).copy(
+            beltRidePhase = BeltRidePhase.RIDING,
+            unitPhase = UnitPhase.FALLING,
+            interaction = interaction(InteractionRole.INITIATOR)
+        )
+
+        assertEquals(SkinActions.FALL, WorkerActionResolver.actionFor(slipped, ::definitionFor))
+    }
+
+    private fun actionFor(phase: UnitPhase): String =
+        WorkerActionResolver.actionFor(worker(movementPath = emptyList()).copy(unitPhase = phase))
 
     @Test
     fun `an interaction outranks walking and belt riding`() {

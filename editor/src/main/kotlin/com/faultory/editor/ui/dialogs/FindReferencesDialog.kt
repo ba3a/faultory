@@ -13,6 +13,7 @@ import com.kotcrab.vis.ui.widget.VisLabel
 import com.kotcrab.vis.ui.widget.VisScrollPane
 import com.kotcrab.vis.ui.widget.VisTable
 import com.kotcrab.vis.ui.widget.VisTextButton
+import com.faultory.editor.ui.scrollWhileHovered
 
 class FindReferencesDialog(
     target: AssetSelection,
@@ -36,7 +37,7 @@ class FindReferencesDialog(
             val scroll = VisScrollPane(list).apply {
                 setFadeScrollBars(false)
                 setScrollingDisabled(true, false)
-            }
+            }.scrollWhileHovered()
             contentTable.add(scroll).grow().minWidth(480f).minHeight(240f).row()
         }
 

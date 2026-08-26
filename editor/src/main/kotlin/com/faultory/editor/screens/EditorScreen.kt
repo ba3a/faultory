@@ -36,6 +36,7 @@ import com.kotcrab.vis.ui.widget.VisScrollPane
 import com.kotcrab.vis.ui.widget.VisSplitPane
 import com.kotcrab.vis.ui.widget.VisTable
 import com.kotcrab.vis.ui.widget.VisTextButton
+import com.faultory.editor.ui.scrollWhileHovered
 
 class EditorScreen(
     private val session: EditorSession? = null,
@@ -323,7 +324,7 @@ class EditorScreen(
         val scroll = VisScrollPane(tree).apply {
             setFadeScrollBars(false)
             setScrollingDisabled(true, false)
-        }
+        }.scrollWhileHovered()
         leftPanel.add(scroll).grow().pad(4f)
     }
 

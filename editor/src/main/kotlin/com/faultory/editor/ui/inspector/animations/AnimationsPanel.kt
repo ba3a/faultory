@@ -10,6 +10,7 @@ import com.faultory.core.shop.Orientation
 import com.faultory.editor.graphics.AtlasBaker
 import com.faultory.editor.graphics.FrameImportService
 import com.faultory.editor.graphics.SkinStateService
+import com.faultory.editor.util.LastUploadDirectory
 import com.faultory.editor.validation.Severity
 import com.faultory.editor.validation.SkinMetadataValidator
 import com.faultory.editor.validation.ValidationIssue
@@ -32,6 +33,7 @@ class AnimationsPanel(
     private val actions: List<String>,
     private val stageProvider: () -> Stage?,
     private val onValidationIssues: (List<ValidationIssue>) -> Unit,
+    private val lastUploadDirectory: LastUploadDirectory = LastUploadDirectory(),
 ) : Disposable {
 
     val actor: VisTable = VisTable()
@@ -230,6 +232,7 @@ class AnimationsPanel(
         val chooser = FileChooser(FileChooser.Mode.OPEN).apply {
             selectionMode = FileChooser.SelectionMode.FILES
             setMultiSelectionEnabled(true)
+            lastUploadDirectory.preOpen()?.let { setDirectory(it.toFile()) }
             val filter = FileTypeFilter(false).apply {
                 addRule("PNG images (*.png)", "png")
             }
@@ -238,6 +241,9 @@ class AnimationsPanel(
                 override fun selected(files: GdxArray<FileHandle>) {
                     val sources = files.map { it.file().toPath() }
                     if (sources.isEmpty()) return
+                    // Recorded before the import runs: where the artist browsed is worth keeping
+                    // even if the frames turn out to be unusable.
+                    lastUploadDirectory.remember(sources.first())
                     onChosen(sources)
                 }
             })

@@ -131,6 +131,65 @@ class SkinFrameResolverTest {
     }
 
     @Test
+    fun `an unauthored pursue borrows the walk cycle before idle`() {
+        // Idle here would freeze a guard mid-stride into a standing pose.
+        val definition = definition(
+            SkinActions.WALK to frames(Orientation.NORTH),
+            SkinActions.IDLE to frames(Orientation.NORTH)
+        )
+
+        val resolution = SkinFrameResolver.resolve(definition, SkinActions.PURSUE, Orientation.NORTH)
+
+        assertEquals(SkinActions.WALK to Orientation.NORTH, resolution.actionAndOrientation())
+    }
+
+    @Test
+    fun `an authored pursue still wins over its stand-in`() {
+        val definition = definition(
+            SkinActions.PURSUE to frames(Orientation.NORTH),
+            SkinActions.WALK to frames(Orientation.NORTH)
+        )
+
+        val resolution = SkinFrameResolver.resolve(definition, SkinActions.PURSUE, Orientation.NORTH)
+
+        assertEquals(SkinActions.PURSUE to Orientation.NORTH, resolution.actionAndOrientation())
+    }
+
+    @Test
+    fun `a stand-in is only tried after every orientation of the requested action`() {
+        val definition = definition(
+            SkinActions.PURSUE to frames(Orientation.WEST),
+            SkinActions.WALK to frames(Orientation.NORTH)
+        )
+
+        val resolution = SkinFrameResolver.resolve(definition, SkinActions.PURSUE, Orientation.NORTH)
+
+        assertEquals(SkinActions.PURSUE to Orientation.WEST, resolution.actionAndOrientation())
+    }
+
+    @Test
+    fun `stand-ins reach idle when neither the action nor its stand-in is authored`() {
+        val definition = definition(SkinActions.IDLE to frames(Orientation.NORTH))
+
+        val resolution = SkinFrameResolver.resolve(definition, SkinActions.PURSUE, Orientation.NORTH)
+
+        assertEquals(SkinActions.IDLE to Orientation.NORTH, resolution.actionAndOrientation())
+    }
+
+    @Test
+    fun `airborne and belt-mounting actions borrow a pose that is not standing still`() {
+        assertEquals(listOf(SkinActions.FALL, SkinActions.LIE, SkinActions.IDLE), SkinFrameResolver.actionCandidates(SkinActions.FALL))
+        assertEquals(
+            listOf(SkinActions.BELT_ENTER, SkinActions.BELT_RIDE, SkinActions.IDLE),
+            SkinFrameResolver.actionCandidates(SkinActions.BELT_ENTER)
+        )
+        assertEquals(
+            listOf(SkinActions.BELT_EXIT, SkinActions.BELT_RIDE, SkinActions.IDLE),
+            SkinFrameResolver.actionCandidates(SkinActions.BELT_EXIT)
+        )
+    }
+
+    @Test
     fun `requesting idle does not probe idle twice`() {
         assertEquals(listOf(SkinActions.IDLE), SkinFrameResolver.actionCandidates(SkinActions.IDLE))
     }
