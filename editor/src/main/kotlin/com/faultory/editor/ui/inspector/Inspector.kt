@@ -15,6 +15,8 @@ import com.faultory.editor.ui.inspector.animations.AnimationTargets
 import com.faultory.editor.ui.inspector.animations.AnimationsPanel
 import com.faultory.editor.ui.tree.AssetSelection
 import com.faultory.editor.ui.tree.SelectionBus
+import com.faultory.editor.util.FileDropBus
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.badlogic.gdx.utils.Array as GdxArray
 import com.kotcrab.vis.ui.widget.VisCheckBox
@@ -57,6 +59,7 @@ class Inspector(
     }
 
     private val listener: (AssetSelection?) -> Unit = { render(it) }
+    private val dropListener: (FileDropBus.Drop) -> Unit = { routeDrop(it) }
     private val currentAnimations = mutableListOf<AnimationsPanel>()
     private var currentSelectionIssues: List<com.faultory.editor.validation.ValidationIssue> = emptyList()
     private var currentSkinIssues: List<com.faultory.editor.validation.ValidationIssue> = emptyList()
@@ -66,12 +69,33 @@ class Inspector(
         actor.add(scroll).grow().pad(4f).row()
         actor.add(issuePanel.actor).growX().pad(4f).row()
         bus.addListener(listener)
+        FileDropBus.addListener(dropListener)
         render(bus.current)
     }
 
     fun dispose() {
         bus.removeListener(listener)
+        FileDropBus.removeListener(dropListener)
         disposeAnimations()
+    }
+
+    /**
+     * Hands a desktop drop to the animation grid it landed on.
+     *
+     * A blueprint selection can show several belt grids, so the drop point decides between them.
+     * When it misses every grid the drop still counts if only one is on screen — dropping a folder
+     * onto the tree or the property list plainly means "import this into what I have selected".
+     */
+    private fun routeDrop(drop: FileDropBus.Drop) {
+        if (currentAnimations.isEmpty()) return
+        val stage = actor.stage ?: return
+        val point = stage.screenToStageCoordinates(
+            Vector2(drop.screenX.toFloat(), drop.screenY.toFloat()),
+        )
+        val panel = currentAnimations.firstOrNull { it.containsStagePoint(point.x, point.y) }
+            ?: currentAnimations.singleOrNull()
+            ?: return
+        panel.onFilesDropped(drop.paths, point.x, point.y)
     }
 
     private val repository get() = session.repository

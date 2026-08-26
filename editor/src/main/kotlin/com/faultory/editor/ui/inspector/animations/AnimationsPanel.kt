@@ -2,14 +2,19 @@ package com.faultory.editor.ui.inspector.animations
 
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.g2d.TextureAtlas
+import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.utils.Disposable
 import com.badlogic.gdx.utils.Array as GdxArray
 import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.shop.Orientation
 import com.faultory.editor.graphics.AtlasBaker
+import com.faultory.editor.graphics.FrameBatchPlanner
+import com.faultory.editor.graphics.FrameGroup
 import com.faultory.editor.graphics.FrameImportService
 import com.faultory.editor.graphics.SkinStateService
+import com.faultory.editor.ui.dialogs.ImportBatchDialog
 import com.faultory.editor.util.LastUploadDirectory
 import com.faultory.editor.validation.Severity
 import com.faultory.editor.validation.SkinMetadataValidator
@@ -97,6 +102,17 @@ class AnimationsPanel(
         toolbar.add(VisLabel("depth")).pad(2f)
         toolbar.add(partDepthField).width(DEPTH_FIELD_WIDTH).pad(2f)
         toolbar.add(VisLabel("upload via cell Part… button")).pad(2f)
+        toolbar.row()
+
+        val importBatch = VisTextButton("Import batch…").apply {
+            addListener(object : ChangeListener() {
+                override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                    chooseBatch()
+                }
+            })
+        }
+        toolbar.add(importBatch).pad(2f)
+        toolbar.add(VisLabel(DROP_HINT)).colspan(4).left().pad(2f)
         toolbar.row()
     }
 
@@ -227,16 +243,17 @@ class AnimationsPanel(
         }
     }
 
-    private fun chooseFrames(onChosen: (List<Path>) -> Unit) {
+    private fun chooseFiles(
+        selectionMode: FileChooser.SelectionMode,
+        fileTypeFilter: FileTypeFilter?,
+        onChosen: (List<Path>) -> Unit,
+    ) {
         val stage = stageProvider() ?: return
         val chooser = FileChooser(FileChooser.Mode.OPEN).apply {
-            selectionMode = FileChooser.SelectionMode.FILES
+            this.selectionMode = selectionMode
             setMultiSelectionEnabled(true)
             lastUploadDirectory.preOpen()?.let { setDirectory(it.toFile()) }
-            val filter = FileTypeFilter(false).apply {
-                addRule("PNG images (*.png)", "png")
-            }
-            setFileTypeFilter(filter)
+            fileTypeFilter?.let { setFileTypeFilter(it) }
             setListener(object : FileChooserAdapter() {
                 override fun selected(files: GdxArray<FileHandle>) {
                     val sources = files.map { it.file().toPath() }
@@ -251,12 +268,125 @@ class AnimationsPanel(
         stage.addActor(chooser.fadeIn())
     }
 
+    private fun chooseFrames(onChosen: (List<Path>) -> Unit) =
+        chooseFiles(FileChooser.SelectionMode.FILES, pngFilter(), onChosen)
+
+    /**
+     * The batch counterpart of [chooseFrames]. Directories select too because a bulk drop is
+     * normally a folder, and no type filter is applied because the planner ignores anything that is
+     * not a PNG anyway — filtering here would only hide files from the artist browsing for them.
+     */
+    private fun chooseBatch() =
+        chooseFiles(FileChooser.SelectionMode.FILES_AND_DIRECTORIES, null, ::openBatchDialog)
+
+    /**
+     * Routes a desktop drop. A dropped directory always means "here is everything", so it opens the
+     * batch dialog wherever it landed; loose files dropped on a cell fill that one cell.
+     */
+    fun onFilesDropped(paths: List<Path>, stageX: Float, stageY: Float) {
+        val target = if (paths.any { Files.isDirectory(it) }) null else cellAt(stageX, stageY)
+        if (target == null) {
+            openBatchDialog(paths)
+            return
+        }
+
+        val frames = FrameBatchPlanner.orderFrames(paths)
+        if (frames.isEmpty()) {
+            statusLabel.setText("Dropped files contain no PNG frames.")
+            return
+        }
+        importCell(target.action, target.orientation, frames)
+    }
+
+    /** True when the point falls inside this panel, so the inspector can pick between belt grids. */
+    fun containsStagePoint(stageX: Float, stageY: Float): Boolean = actor.containsStagePoint(stageX, stageY)
+
+    private fun cellAt(stageX: Float, stageY: Float): CellKey? =
+        cells.entries.firstOrNull { (_, cell) -> cell.actor.containsStagePoint(stageX, stageY) }?.key
+
+    private fun openBatchDialog(sources: List<Path>) {
+        val stage = stageProvider() ?: return
+        val groups = FrameBatchPlanner.plan(sources, actions)
+        if (groups.isEmpty()) {
+            statusLabel.setText("No PNG frames found in the dropped files.")
+            return
+        }
+        ImportBatchDialog.open(
+            stage = stage,
+            skinId = skinId,
+            groups = groups,
+            knownActions = actions,
+            onImport = ::importBatch,
+        )
+    }
+
+    private fun importCell(action: String, orientation: Orientation, frames: List<Path>) {
+        val imported = importAndBake { base ->
+            skinStateService.setOrientationFrames(
+                current = base,
+                action = action,
+                orientation = orientation,
+                regionNames = frameImportService.importFrames(skinId, action, orientation, frames),
+            )
+        }
+        if (imported) {
+            statusLabel.setText(
+                "Dropped ${frames.size} frame(s) into $action/${orientation.name}. ${statusLabel.text}",
+            )
+        }
+    }
+
+    /**
+     * Imports every accepted group and bakes once, which is the entire reason batching exists —
+     * [AtlasBaker] re-packs the whole skin on every call, so per-cell imports pay for each other.
+     */
+    private fun importBatch(groups: List<FrameGroup>) {
+        val resolved = groups.filter { it.isResolved }
+        if (resolved.isEmpty()) return
+
+        // Checked before the first copy: importFrames wipes the target orientation directory, and
+        // the rollback below can restore the skin JSON but not raw art that has already been deleted.
+        val unreadable = resolved.flatMap { it.files }.filterNot { Files.isReadable(it) }
+        if (unreadable.isNotEmpty()) {
+            statusLabel.setText("Cannot read ${unreadable.size} source file(s); nothing was imported.")
+            return
+        }
+
+        val written = mutableListOf<String>()
+        val imported = importAndBake(
+            failureDetail = {
+                if (written.isEmpty()) " No raw art was written."
+                else " Raw art was already replaced for: ${written.joinToString()}."
+            },
+        ) { base ->
+            resolved.fold(base) { current, group ->
+                val action = requireNotNull(group.action)
+                val orientation = requireNotNull(group.orientation)
+                val regionNames = frameImportService.importFrames(skinId, action, orientation, group.files)
+                written += "$action/${orientation.name}"
+                skinStateService.setOrientationFrames(current, action, orientation, regionNames)
+            }
+        }
+
+        if (imported) {
+            statusLabel.setText(
+                "Imported ${written.size} state(s) in one bake (${written.joinToString()}). ${statusLabel.text}",
+            )
+        }
+    }
+
     /**
      * Runs one skin edit, rebakes the atlas, and rolls both the in-memory skin and the JSON back if
      * anything throws — a half-applied import would leave the definition pointing at regions the
      * atlas does not contain.
+     *
+     * [failureDetail] is appended to the failure message so a batch can name what it had already
+     * written by the time it gave up.
      */
-    private fun importAndBake(mutate: (SkinDefinition) -> SkinDefinition) {
+    private fun importAndBake(
+        failureDetail: () -> String = { "" },
+        mutate: (SkinDefinition) -> SkinDefinition,
+    ): Boolean {
         val previousSkin = skin
         val previousJson = try {
             val path = skinStateService.skinJsonPath(skinId)
@@ -281,6 +411,7 @@ class AnimationsPanel(
             )
             rebuildGrid()
             reportValidation(bakeResult.regionNames)
+            return true
         } catch (t: Throwable) {
             skin = previousSkin
             if (previousJson != null) {
@@ -288,8 +419,11 @@ class AnimationsPanel(
                     Files.write(skinStateService.skinJsonPath(skinId), previousJson)
                 } catch (_: Exception) { }
             }
-            statusLabel.setText("Upload/bake failed: ${t.message ?: t.javaClass.simpleName}")
+            statusLabel.setText(
+                "Upload/bake failed: ${t.message ?: t.javaClass.simpleName}.${failureDetail()}",
+            )
             rebuildGrid()
+            return false
         }
     }
 
@@ -325,6 +459,12 @@ class AnimationsPanel(
 
         private const val FIELD_WIDTH = 110f
         private const val DEPTH_FIELD_WIDTH = 55f
+        private const val DROP_HINT =
+            "Drop PNGs on a cell to fill it, or drop a folder anywhere on this panel to import in bulk."
+
+        private fun pngFilter(): FileTypeFilter = FileTypeFilter(false).apply {
+            addRule("PNG images (*.png)", "png")
+        }
 
         fun defaultRawArtRoot(assetsRoot: Path): Path =
             assetsRoot.resolve("../raw-art").normalize()
@@ -336,4 +476,17 @@ class AnimationsPanel(
             Orientation.WEST -> "W"
         }
     }
+}
+
+/**
+ * Whether a stage-space point falls within this actor.
+ *
+ * A drop carries a screen position rather than a scene2d event, so the hit test has to be done by
+ * hand; [com.badlogic.gdx.scenes.scene2d.Stage.hit] would return the topmost actor anywhere on the
+ * stage rather than answering for one particular cell.
+ */
+internal fun Actor.containsStagePoint(stageX: Float, stageY: Float): Boolean {
+    if (stage == null) return false
+    val point = stageToLocalCoordinates(Vector2(stageX, stageY))
+    return point.x >= 0f && point.y >= 0f && point.x <= width && point.y <= height
 }
