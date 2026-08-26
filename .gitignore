@@ -48,3 +48,4 @@ bin/
 .DS_Store
 /raw-art/
 /.claude/settings.local.json
+/CODE_REVIEW.md
