@@ -1,0 +1,79 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:EditorCommitter.kt$EditorCommitter$fun commit(editors: List&lt;PropertyEditor&gt;, original: JsonObject): JsonObject</ID>
+    <ID>CyclomaticComplexMethod:Inspector.kt$Inspector$private fun actorFor(editor: PropertyEditor, onChange: () -&gt; Unit): com.badlogic.gdx.scenes.scene2d.Actor</ID>
+    <ID>CyclomaticComplexMethod:MachineValidator.kt$MachineValidator$override fun validate( selection: AssetSelection.Machine, context: ValidationContext, ): List&lt;ValidationIssue&gt;</ID>
+    <ID>CyclomaticComplexMethod:ReflectionForm.kt$ReflectionForm$private fun editorFor( ownerChain: List&lt;SerialDescriptor&gt;, name: String, descriptor: SerialDescriptor, value: JsonElement?, ): PropertyEditor?</ID>
+    <ID>LongMethod:Inspector.kt$Inspector$fun rebuild()</ID>
+    <ID>LongMethod:MachineValidator.kt$MachineValidator$override fun validate( selection: AssetSelection.Machine, context: ValidationContext, ): List&lt;ValidationIssue&gt;</ID>
+    <ID>LongMethod:ReflectionForm.kt$ReflectionForm$private fun editorFor( ownerChain: List&lt;SerialDescriptor&gt;, name: String, descriptor: SerialDescriptor, value: JsonElement?, ): PropertyEditor?</ID>
+    <ID>LongMethod:ReflectionFormTest.kt$ReflectionFormTest$@Test fun `MachineSpec nested classes produce ClassEditor with recursive fields`()</ID>
+    <ID>LongParameterList:SkinStateService.kt$SkinStateService$( current: SkinDefinition, action: String, orientation: Orientation, partName: String, depth: Float, regionNames: List&lt;String&gt;, )</ID>
+    <ID>MagicNumber:AnimationsPanel.kt$AnimationsPanel$4</ID>
+    <ID>MagicNumber:AnimationsPanel.kt$AnimationsPanel$4f</ID>
+    <ID>MagicNumber:AnimationsPanel.kt$AnimationsPanel$5</ID>
+    <ID>MagicNumber:BakeAtlasDialog.kt$BakeAtlasDialog$16f</ID>
+    <ID>MagicNumber:BakeAtlasDialog.kt$BakeAtlasDialog$320f</ID>
+    <ID>MagicNumber:BakeAtlasDialog.kt$BakeAtlasDialog$6f</ID>
+    <ID>MagicNumber:ConfirmDialog.kt$ConfirmDialog$16f</ID>
+    <ID>MagicNumber:ConfirmDialog.kt$ConfirmDialog$8f</ID>
+    <ID>MagicNumber:EditorLauncher.kt$1280</ID>
+    <ID>MagicNumber:EditorLauncher.kt$720</ID>
+    <ID>MagicNumber:EditorScreen.kt$EditorScreen$0.1f</ID>
+    <ID>MagicNumber:EditorScreen.kt$EditorScreen$4f</ID>
+    <ID>MagicNumber:EditorScreen.kt$EditorScreen$8</ID>
+    <ID>MagicNumber:EditorScreen.kt$EditorScreen$8f</ID>
+    <ID>MagicNumber:FindReferencesDialog.kt$FindReferencesDialog$16f</ID>
+    <ID>MagicNumber:FindReferencesDialog.kt$FindReferencesDialog$240f</ID>
+    <ID>MagicNumber:FindReferencesDialog.kt$FindReferencesDialog$480f</ID>
+    <ID>MagicNumber:FindReferencesDialog.kt$FindReferencesDialog$4f</ID>
+    <ID>MagicNumber:ImportBatchDialog.kt$ImportBatchDialog$12f</ID>
+    <ID>MagicNumber:ImportBatchDialog.kt$ImportBatchDialog$4f</ID>
+    <ID>MagicNumber:Inspector.kt$Inspector$3</ID>
+    <ID>MagicNumber:Inspector.kt$Inspector$4</ID>
+    <ID>MagicNumber:Inspector.kt$Inspector$4f</ID>
+    <ID>MagicNumber:Inspector.kt$Inspector$6f</ID>
+    <ID>MagicNumber:Inspector.kt$Inspector$8f</ID>
+    <ID>MagicNumber:NewIdDialog.kt$NewIdDialog$16f</ID>
+    <ID>MagicNumber:NewIdDialog.kt$NewIdDialog$240f</ID>
+    <ID>MagicNumber:NewIdDialog.kt$NewIdDialog$6f</ID>
+    <ID>MagicNumber:RenameDialog.kt$RenameDialog$16f</ID>
+    <ID>MagicNumber:RenameDialog.kt$RenameDialog$280f</ID>
+    <ID>MagicNumber:RenameDialog.kt$RenameDialog$6f</ID>
+    <ID>MagicNumber:TranslationsDialog.kt$TranslationsDialog$16f</ID>
+    <ID>MagicNumber:TranslationsDialog.kt$TranslationsDialog$280f</ID>
+    <ID>MagicNumber:TranslationsDialog.kt$TranslationsDialog$4f</ID>
+    <ID>MagicNumber:TranslationsDialog.kt$TranslationsDialog$6f</ID>
+    <ID>MagicNumber:WorkerRoleProfilesEditor.kt$WorkerRoleProfilesEditor.Companion$0.05</ID>
+    <ID>MagicNumber:WorkerRoleProfilesEditor.kt$WorkerRoleProfilesEditor.Companion$0.1</ID>
+    <ID>MagicNumber:WorkerRoleProfilesEditor.kt$WorkerRoleProfilesEditor.Companion$0.85</ID>
+    <ID>MagicNumber:WorkerRoleProfilesEditor.kt$WorkerRoleProfilesEditor.Companion$1.5</ID>
+    <ID>MagicNumber:WorkerRoleProfilesEditor.kt$WorkerRoleProfilesEditor.Companion$5.0</ID>
+    <ID>MaxLineLength:AtomicJsonWriterTest.kt$AtomicJsonWriterTest$assertFalse(Files.exists(dir.resolve("products.json.tmp")), "tmp file should be gone after successful write")</ID>
+    <ID>MaxLineLength:BlueprintValidator.kt$BlueprintValidator$"Conveyor belt '${belt.id}' has a zero-length segment between checkpoints $segmentIndex and ${segmentIndex + 1}"</ID>
+    <ID>MaxLineLength:Inspector.kt$Inspector.&lt;no name provided&gt;$com.faultory.editor.ui.dialogs.ConfirmDialog.info(stage, "Rename failed", result.message)</ID>
+    <ID>MaxLineLength:ReflectionFormTest.kt$ReflectionFormTest$EnumEditor("faultyProductStrategy", "DESTROY", listOf("DESTROY", "PUT_ON_FREE_TILE", "HAND_TO_PRODUCER"))</ID>
+    <ID>MaxLineLength:ReflectionFormTest.kt$ReflectionFormTest$assertEquals(IntEditor("faultyProductCapacity", 3), recipe.children.single { it.fieldName == "faultyProductCapacity" })</ID>
+    <ID>MaxLineLength:ReflectionFormTest.kt$ReflectionFormTest$assertEquals(StringEditor("outputProductId", "bolt"), recipe.children.single { it.fieldName == "outputProductId" })</ID>
+    <ID>MaxLineLength:SkinMetadataValidatorSocketTest.kt$SkinMetadataValidatorSocketTest$assertTrue(issues.any { "socket 'hands'" in it.message &amp;&amp; "2 point(s) for 3 frame(s)" in it.message }, "$issues")</ID>
+    <ID>MaxLineLength:SkinStateServiceMirrorTest.kt$SkinStateServiceMirrorTest$actions = mapOf(SkinActions.WALK to ActionClip(frames = mapOf(Orientation.EAST to listOf("walk_east_000"))))</ID>
+    <ID>MaxLineLength:SkinStateServiceSocketTest.kt$SkinStateServiceSocketTest$assertEquals(SocketPoint(18f, 20f, depth = 1f), clip.sockets.getValue(SocketNames.HANDS).byOrientation.getValue(Orientation.EAST))</ID>
+    <ID>MaxLineLength:SkinStateServiceSocketTest.kt$SkinStateServiceSocketTest$val byOrientation = withBoth.actions.getValue(ProductActions.CARRIED).sockets.getValue(SocketNames.HANDS).byOrientation</ID>
+    <ID>MaxLineLength:SkinStateServiceSocketTest.kt$SkinStateServiceSocketTest$val first = service.setPart(skinWith(), ProductActions.CARRIED, Orientation.EAST, "near_arm", 2f, listOf("a_000"))</ID>
+    <ID>MaxLineLength:SkinStateServiceSocketTest.kt$SkinStateServiceSocketTest$val placed = service.setPart(skinWith(), ProductActions.CARRIED, Orientation.EAST, "near_arm", 2f, listOf("a_000"))</ID>
+    <ID>MaxLineLength:SkinStateServiceSocketTest.kt$SkinStateServiceSocketTest$val placed = service.setSocket(skinWith(), ProductActions.CARRIED, Orientation.EAST, SocketNames.HANDS, SocketPoint(1f, 2f))</ID>
+    <ID>MaxLineLength:SkinStateServiceSocketTest.kt$SkinStateServiceSocketTest$val placed = service.setSocket(skinWith(), ProductActions.CARRIED, Orientation.EAST, SocketNames.HANDS, SocketPoint(7f, 8f, depth = 1.5f))</ID>
+    <ID>MaxLineLength:SkinStateServiceSocketTest.kt$SkinStateServiceSocketTest$val withBoth = service.setSocket(withEast, ProductActions.CARRIED, Orientation.WEST, SocketNames.HANDS, SocketPoint(3f, 4f))</ID>
+    <ID>MaxLineLength:SkinStateServiceSocketTest.kt$SkinStateServiceSocketTest$val withEast = service.setSocket(skinWith(), ProductActions.CARRIED, Orientation.EAST, SocketNames.HANDS, SocketPoint(1f, 2f))</ID>
+    <ID>NestedBlockDepth:FrameBatchPlanner.kt$FrameBatchPlanner$fun expand(sources: List&lt;Path&gt;): List&lt;Path&gt;</ID>
+    <ID>NestedBlockDepth:FrameMirrorServiceTest.kt$FrameMirrorServiceTest$@Test fun `mirrorToTemp flips every column left to right`()</ID>
+    <ID>NestedBlockDepth:Inspector.kt$Inspector$private fun workerRoleProfilesActor(table: VisTable, editor: WorkerRoleProfilesEditor, onChange: () -&gt; Unit)</ID>
+    <ID>UnusedParameter:IdDeleter.kt$IdDeleter$id: String</ID>
+    <ID>UnusedParameter:IdRenamer.kt$IdRenamer$newId: String</ID>
+    <ID>UnusedParameter:IdRenamer.kt$IdRenamer$oldId: String</ID>
+    <ID>UnusedPrivateMember:EditorScreen.kt$EditorScreen$private fun showNotImplemented(feature: String)</ID>
+    <ID>VariableNaming:IdDeleter.kt$IdDeleter$@Suppress("UNUSED_VARIABLE") val _ignored = blueprint</ID>
+  </CurrentIssues>
+</SmellBaseline>

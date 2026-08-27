@@ -1,0 +1,57 @@
+# Overrides on top of detekt's shipped defaults (buildUponDefaultConfig = true in the
+# buildsrc.convention.kotlin-jvm plugin). Only rules that genuinely do not fit a LibGDX game are
+# adjusted here. Everything else stays at detekt's default, and the pre-existing findings that
+# remain are absorbed by the per-module baselines in this directory - so existing code stays quiet
+# while newly written code has to clear the bar.
+
+complexity:
+  LongParameterList:
+    # @Serializable content/save models legitimately take many constructor properties - that is the
+    # JSON shape, not a design smell.
+    ignoreDefaultParameters: true
+    ignoreDataClasses: true
+    ignoreAnnotated: ['Serializable']
+  TooManyFunctions:
+    # Simulation systems and screens accumulate many small focused members.
+    thresholdInClasses: 20
+    thresholdInFiles: 25
+    ignorePrivate: true
+    ignoreOverridden: true
+
+empty-blocks:
+  EmptyFunctionBlock:
+    # LibGDX forces you to override the whole Screen/InputProcessor surface; most overrides are
+    # deliberately empty and adding a comment to each would be noise.
+    ignoreOverridden: true
+
+style:
+  MagicNumber:
+    # Kept active: it is what catches things like a hardcoded starting budget. Excluded from tests,
+    # where literals are fixtures, and from the handful of values that are never anything but
+    # themselves.
+    excludes: ['**/test/**']
+    ignoreNumbers: ['-1', '0', '1', '2', '0.5', '100', '360']
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotated: ['Serializable']
+  ReturnCount:
+    # SkinFrameResolver's documented degradation order is a sequence of early returns; that is the
+    # clearest way to write it. Guard clauses should not count against the budget.
+    max: 5
+    excludeGuardClauses: true
+  LoopWithTooManyJumpStatements:
+    # A simulation loop that skips two kinds of entity needs two continues.
+    maxJumpCount: 2
+  MaxLineLength:
+    # p99 of this codebase is 110 characters, so 120 is a real limit rather than a fought-over one.
+    maxLineLength: 120
+    excludeCommentStatements: true
+
+naming:
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
+
+exceptions:
+  TooGenericExceptionCaught:
+    # The editor deliberately catches wide so a bad asset cannot take the whole tool down.
+    excludes: ['**/editor/**']

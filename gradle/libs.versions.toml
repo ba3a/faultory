@@ -4,12 +4,14 @@
 
 [versions]
 kotlin = "2.3.0"
+detekt = "1.23.8"
 gdx = "1.14.0"
 kotlinxSerializationJson = "1.9.0"
 visUi = "1.5.8"
 
 [libraries]
 kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+detektGradlePlugin = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", version.ref = "detekt" }
 gdxCore = { module = "com.badlogicgames.gdx:gdx", version.ref = "gdx" }
 gdxBackendLwjgl3 = { module = "com.badlogicgames.gdx:gdx-backend-lwjgl3", version.ref = "gdx" }
 gdxFreetype = { module = "com.badlogicgames.gdx:gdx-freetype", version.ref = "gdx" }
