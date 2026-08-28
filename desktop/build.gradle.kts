@@ -25,6 +25,14 @@ sourceSets {
 
 tasks.named<JavaExec>("run") {
     workingDir = rootProject.file("assets")
+    // `-D` on the gradlew command line sets the Gradle *daemon's* properties, not this JavaExec's -
+    // forward the faultory.* ones through explicitly so `-Dfaultory.capture=...` (and the
+    // pre-existing `-Dfaultory.debug.shapes`) actually reach the game.
+    systemProperties(
+        System.getProperties().entries
+            .mapNotNull { (key, value) -> (key as? String)?.takeIf { it.startsWith("faultory.") }?.let { it to value } }
+            .toMap()
+    )
 }
 
 tasks.named<CreateStartScripts>("startScripts") {

@@ -18,7 +18,8 @@ class PlacedObjectRenderer(
     private val failureBlink: FailureBlinkController,
     private val hoverState: HoverState,
     private val spriteDrawnIds: Set<String> = emptySet(),
-    private val spriteDrawnProductIds: Set<String> = emptySet()
+    private val spriteDrawnProductIds: Set<String> = emptySet(),
+    private val chromeVisibility: ChromeVisibility = AllVisible
 ) : ShopFloorLayer {
     override fun drawFill(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
@@ -34,18 +35,20 @@ class PlacedObjectRenderer(
 
     override fun drawLine(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
+        val showOrientationMarkers = chromeVisibility.isVisible(ChromeElement.ORIENTATION_MARKERS)
+        val showRecipeIndicators = chromeVisibility.isVisible(ChromeElement.RECIPE_INDICATORS)
         for (placedObject in shopFloor.placedObjects) {
             if (placedObject.id in spriteDrawnIds) continue
             drawPlacedObjectOutline(renderer, placedObject)
-            drawOrientationMarker(renderer, placedObject)
-            drawRecipeIndicators(renderer, placedObject)
+            if (showOrientationMarkers) drawOrientationMarker(renderer, placedObject)
+            if (showRecipeIndicators) drawRecipeIndicators(renderer, placedObject)
         }
         for (product in shopFloor.activeProducts) {
             if (product.id in spriteDrawnProductIds) continue
             drawProductOutline(renderer, product)
         }
-        drawAssignmentTargetHover(renderer)
-        drawFailureBlink(renderer)
+        if (chromeVisibility.isVisible(ChromeElement.HOVER_HIGHLIGHTS)) drawAssignmentTargetHover(renderer)
+        if (chromeVisibility.isVisible(ChromeElement.FAILURE_BLINK)) drawFailureBlink(renderer)
     }
 
     private fun drawRecipeIndicators(renderer: ShapeRenderer, placedObject: PlacedShopObject) {

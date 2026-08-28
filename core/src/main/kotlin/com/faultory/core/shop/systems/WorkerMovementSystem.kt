@@ -22,7 +22,8 @@ internal class WorkerMovementSystem(
     private val movementStrategyResolver: MovementStrategyResolver,
     private val wetTileSystem: WetTileSystem,
     private val random: Random,
-    private val events: ShopFloorEvents = ShopFloorEvents()
+    private val events: ShopFloorEvents = ShopFloorEvents(),
+    private val chance: ChanceOracle = RandomChanceOracle(random)
 ) {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val grid get() = state.grid
@@ -73,7 +74,7 @@ internal class WorkerMovementSystem(
                 progress -= 1f
 
                 if (placedObject.workerRole != WorkerRole.CLEANER && wetTileSystem.isWet(currentPosition)) {
-                    if (random.nextFloat() < jitteredSlipChance()) {
+                    if (chance.roll(ChanceKind.WORKER_SLIP, jitteredSlipChance())) {
                         slipped = true
                         break
                     }

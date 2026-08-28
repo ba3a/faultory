@@ -45,7 +45,8 @@ private data class QaInspectorConfig(
 internal class QaSystem(
     private val state: ShopFloorState,
     private val random: Random,
-    private val events: ShopFloorEvents = ShopFloorEvents()
+    private val events: ShopFloorEvents = ShopFloorEvents(),
+    private val chance: ChanceOracle = RandomChanceOracle(random)
 ) {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val placedMachines get() = state.placedMachines
@@ -503,9 +504,9 @@ internal class QaSystem(
 
     private fun classifyProduct(product: ShopProduct, config: QaInspectorConfig): Boolean {
         return if (product.isFaulty) {
-            random.nextFloat() < config.detectionAccuracy
+            chance.roll(ChanceKind.QA_DETECTION, config.detectionAccuracy)
         } else {
-            random.nextFloat() < config.falsePositiveChance
+            chance.roll(ChanceKind.QA_FALSE_POSITIVE, config.falsePositiveChance)
         }
     }
 

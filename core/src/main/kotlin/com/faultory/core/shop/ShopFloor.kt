@@ -31,6 +31,7 @@ class ShopFloor(
     private val beltSupplyFeeder: BeltSupplyFeeder? = null,
     private val movementStrategyResolver: MovementStrategyResolver = DefaultMovementStrategyResolver,
     random: Random = Random.Default,
+    chanceOracle: ChanceOracle = RandomChanceOracle(random),
     private val events: ShopFloorEvents = ShopFloorEvents(),
     private val cleanerSpawnGate: CleanerSpawnGate? = null,
     private val interactionCatalogProvider: () -> InteractionCatalog? = { null }
@@ -60,13 +61,14 @@ class ShopFloor(
         movementStrategyResolver = movementStrategyResolver,
         wetTileSystem = wetTileSystem,
         random = random,
+        chance = chanceOracle,
         events = events
     )
     private val conveyorSystem: ConveyorSystem = ConveyorSystem(state, events)
-    private val qaSystem: QaSystem = QaSystem(state, random, events)
+    private val qaSystem: QaSystem = QaSystem(state, random, events, chanceOracle)
     private val workerObjectiveSystem: WorkerObjectiveSystem =
         WorkerObjectiveSystem(state, qaSystem, movementStrategyResolver, random, events)
-    private val productionSystem: ProductionSystem = ProductionSystem(state, random, events)
+    private val productionSystem: ProductionSystem = ProductionSystem(state, random, events, chanceOracle)
     private val cleanerSpawnSystem: CleanerSpawnSystem? = cleanerSpawnGate?.let {
         CleanerSpawnSystem(state, random, events, it)
     }

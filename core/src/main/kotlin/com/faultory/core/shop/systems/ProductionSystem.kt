@@ -32,7 +32,8 @@ import kotlin.random.Random
 internal class ProductionSystem(
     private val state: ShopFloorState,
     private val random: Random,
-    private val events: ShopFloorEvents = ShopFloorEvents()
+    private val events: ShopFloorEvents = ShopFloorEvents(),
+    private val chance: ChanceOracle = RandomChanceOracle(random)
 ) {
     private val grid get() = state.grid
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
@@ -420,7 +421,7 @@ internal class ProductionSystem(
         workerProfilesById: Map<String, WorkerProfile>
     ): ProductFaultReason? {
         if (machineSpec.manuality == Manuality.AUTOMATIC) {
-            return if (random.nextFloat() < recipe.defectChance) {
+            return if (chance.roll(ChanceKind.PRODUCTION_DEFECT, recipe.defectChance)) {
                 ProductFaultReason.PRODUCTION_DEFECT
             } else {
                 null
@@ -433,9 +434,10 @@ internal class ProductionSystem(
         val workerDefectChance = workerRoleProfile.defectChance
 
         return when {
-            random.nextFloat() < workerRoleProfile.sabotageChance -> ProductFaultReason.SABOTAGE
+            chance.roll(ChanceKind.SABOTAGE, workerRoleProfile.sabotageChance) -> ProductFaultReason.SABOTAGE
             workerDefectChance != null &&
-                random.nextFloat() < recipe.defectChance * workerDefectChance -> ProductFaultReason.PRODUCTION_DEFECT
+                chance.roll(ChanceKind.PRODUCTION_DEFECT, recipe.defectChance * workerDefectChance) ->
+                ProductFaultReason.PRODUCTION_DEFECT
             else -> null
         }
     }

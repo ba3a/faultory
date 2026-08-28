@@ -10,6 +10,8 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter
 import com.faultory.core.assets.AssetPaths
+import com.faultory.core.capture.persistenceRootFor
+import com.faultory.core.config.CaptureMode
 import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.LevelCatalogAssetLoader
 import com.faultory.core.content.LevelDefinition
@@ -47,6 +49,7 @@ import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopBlueprintAssetLoader
 import com.faultory.core.tutorial.TutorialCoordinator
+import kotlin.random.Random
 import kotlin.text.Charsets
 
 class FaultoryGame : Game(), ShiftLifecycleHost {
@@ -77,9 +80,10 @@ class FaultoryGame : Game(), ShiftLifecycleHost {
             uiFont = createUiFont(),
             shapeRenderer = ShapeRenderer()
         )
-        saveRepository = LocalSaveRepository()
-        encounterProgressRepository = LocalEncounterProgressRepository()
-        preferencesRepository = LocalPlayerPreferencesRepository()
+        val persistenceRoot = persistenceRoot()
+        saveRepository = LocalSaveRepository(rootDirectory = persistenceRoot)
+        encounterProgressRepository = LocalEncounterProgressRepository(rootDirectory = persistenceRoot)
+        preferencesRepository = LocalPlayerPreferencesRepository(rootDirectory = persistenceRoot)
         val preferences = preferencesRepository.load()
         val translations = CatalogTranslations(resourceReader = { path ->
             val handle = Gdx.files.internal(path)
@@ -163,14 +167,26 @@ class FaultoryGame : Game(), ShiftLifecycleHost {
         val library = if (assetManager.isLoaded(AssetPaths.conditionLibrary))
             assetManager.get(AssetPaths.conditionLibrary, ConditionLibrary::class.java)
         else ConditionLibrary()
+        val settings = CaptureMode.settings
         return EvaluationContext(
             saveRepository = saveRepository,
             encounterProgress = encounterEngine?.progress ?: encounterProgressRepository.load(),
             conditionLibrary = library,
             currentLevelId = levelId,
-            placedObjects = placedObjects
+            placedObjects = placedObjects,
+            random = if (settings.isActive) Random(settings.seed) else Random.Default
         )
     }
+
+    /**
+     * The root every persistence repository is built against, so a tainted capture run (see
+     * [com.faultory.core.config.CaptureTier.isTainted]) can never touch the player's real saves,
+     * encounter progress or preferences - the one invariant capture mode exists to keep. The
+     * decision itself lives in [persistenceRootFor], which [CaptureIsolationTest] exercises
+     * directly; this is only the live call site. Nothing outside these two should call
+     * [com.faultory.core.save.SavePathResolver] directly.
+     */
+    private fun persistenceRoot(): String = persistenceRootFor(CaptureMode.settings)
 
     fun updateEncounterPlacedObjects(placedObjects: List<PlacedShopObject>?) {
         encounterEngine?.currentPlacedObjects = placedObjects

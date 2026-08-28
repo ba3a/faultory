@@ -8,6 +8,8 @@ import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.faultory.core.FaultoryGame
 import com.faultory.core.assets.AssetPaths
+import com.faultory.core.capture.CaptureRuntime
+import com.faultory.core.config.CaptureMode
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.LevelDefinition
@@ -67,11 +69,36 @@ class BootScreen(
             }
             transitioned = true
             if (level == null) {
-                game.openLevelSelection()
+                openInitialScreen()
             } else {
                 startLevel(level)
             }
         }
+    }
+
+    /**
+     * The normal boot's destination is level selection, unless `-Dfaultory.capture.level` names a
+     * level to jump straight into - see the "Capture mode" section of CLAUDE.md. Level-lock checks
+     * are bypassed here: a tainted run's progress does not count towards unlocking anything anyway.
+     */
+    private fun openInitialScreen() {
+        val settings = CaptureMode.settings
+        val captureLevelId = settings.levelId?.takeIf { settings.isActive }
+        if (captureLevelId == null) {
+            game.openLevelSelection()
+            return
+        }
+        val captureLevel = game.assetManager.get(AssetPaths.levelCatalog, LevelCatalog::class.java)
+            .levels.firstOrNull { it.id == captureLevelId }
+        if (captureLevel == null) {
+            Gdx.app?.error(
+                LOG_TAG,
+                "Capture level '$captureLevelId' not found in level catalog; opening level selection."
+            )
+            game.openLevelSelection()
+            return
+        }
+        game.openLevel(captureLevel)
     }
 
     private fun enqueueBeltSkinDefinitions() {
@@ -136,10 +163,11 @@ class BootScreen(
         val conditionLibrary = if (game.assetManager.isLoaded(AssetPaths.conditionLibrary)) {
             game.assetManager.get(AssetPaths.conditionLibrary, ConditionLibrary::class.java)
         } else ConditionLibrary()
-        val cleanerSpawnGate = CleanerConditionSpawnGate(
+        val captureRuntime = CaptureRuntime.forLevel(level.id)
+        val realCleanerSpawnGate = CleanerConditionSpawnGate(
             saveRepository = game.saveRepository,
             conditionLibrary = conditionLibrary,
-            random = Random.Default,
+            random = captureRuntime.simulationRandom,
             currentLevelIdProvider = { level.id }
         )
         val shopFloor = ShopFloor(
@@ -153,12 +181,14 @@ class BootScreen(
             productDefinitionsById = shopCatalog.products.associateBy { it.id },
             initialCash = save.activeShift.cash,
             beltSupplyFeeder = beltSupplyFeeder,
+            random = captureRuntime.simulationRandom,
+            chanceOracle = captureRuntime.chanceOracle,
             events = ShopFloorEvents(game.eventBus) { level.id },
-            cleanerSpawnGate = cleanerSpawnGate,
+            cleanerSpawnGate = captureRuntime.cleanerSpawnGate ?: realCleanerSpawnGate,
             interactionCatalogProvider = game::interactionCatalog
         )
 
-        game.setScreen(ShopFloorScreen(game, level, nextLevel, shopFloor, save, shopCatalog))
+        game.setScreen(ShopFloorScreen(game, level, nextLevel, shopFloor, save, shopCatalog, captureRuntime))
     }
 
     private fun buildBeltSupplyFeeder(

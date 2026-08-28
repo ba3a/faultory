@@ -7,26 +7,41 @@ import com.faultory.core.shop.TileCoordinate
 
 class GridBackgroundRenderer(
     private val shopFloor: ShopFloor,
-    private val spriteDrawnBeltTiles: Set<TileCoordinate> = emptySet()
+    private val spriteDrawnBeltTiles: Set<TileCoordinate> = emptySet(),
+    private val chromeVisibility: ChromeVisibility = AllVisible
 ) : ShopFloorLayer {
     override fun drawFill(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
-        renderer.color = BACKGROUND
-        renderer.rect(0f, 0f, GameConfig.virtualWidth, GameConfig.virtualHeight)
+        val hudVisible = chromeVisibility.isVisible(ChromeElement.HUD_BAND)
+        val bankVisible = chromeVisibility.isVisible(ChromeElement.BANK_PANEL)
 
-        renderer.color = PLAY_AREA
-        renderer.rect(
-            0f,
-            GameConfig.bankHeight,
-            GameConfig.virtualWidth,
-            GameConfig.virtualHeight - GameConfig.hudHeight - GameConfig.bankHeight
-        )
+        if (hudVisible || bankVisible) {
+            renderer.color = BACKGROUND
+            renderer.rect(0f, 0f, GameConfig.virtualWidth, GameConfig.virtualHeight)
 
-        renderer.color = HUD_BAND
-        renderer.rect(0f, GameConfig.virtualHeight - GameConfig.hudHeight, GameConfig.virtualWidth, GameConfig.hudHeight)
+            renderer.color = PLAY_AREA
+            renderer.rect(
+                0f,
+                GameConfig.bankHeight,
+                GameConfig.virtualWidth,
+                GameConfig.virtualHeight - GameConfig.hudHeight - GameConfig.bankHeight
+            )
 
-        renderer.color = BANK_BAND
-        renderer.rect(0f, 0f, GameConfig.virtualWidth, GameConfig.bankHeight)
+            if (hudVisible) {
+                renderer.color = HUD_BAND
+                renderer.rect(0f, GameConfig.virtualHeight - GameConfig.hudHeight, GameConfig.virtualWidth, GameConfig.hudHeight)
+            }
+
+            if (bankVisible) {
+                renderer.color = BANK_BAND
+                renderer.rect(0f, 0f, GameConfig.virtualWidth, GameConfig.bankHeight)
+            }
+        } else {
+            // Both bands hidden: one uniform floor edge-to-edge, or the empty strips where they
+            // used to be would still read as "screenshot of a game UI" in otherwise clean footage.
+            renderer.color = PLAY_AREA
+            renderer.rect(0f, 0f, GameConfig.virtualWidth, GameConfig.virtualHeight)
+        }
 
         renderer.color = BELT_FILL
         for (beltTile in shopFloor.grid.beltTiles) {
@@ -52,18 +67,26 @@ class GridBackgroundRenderer(
 
     override fun drawLine(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
-        renderer.color = GRID_LINE
 
-        var currentX = 0f
-        while (currentX <= GameConfig.virtualWidth) {
-            renderer.line(currentX, GameConfig.bankHeight, currentX, GameConfig.virtualHeight - GameConfig.hudHeight)
-            currentX += GameConfig.tileSize
-        }
+        if (chromeVisibility.isVisible(ChromeElement.GRID_LINES)) {
+            renderer.color = GRID_LINE
 
-        var currentY = GameConfig.bankHeight
-        while (currentY <= GameConfig.virtualHeight - GameConfig.hudHeight) {
-            renderer.line(0f, currentY, GameConfig.virtualWidth, currentY)
-            currentY += GameConfig.tileSize
+            var currentX = 0f
+            while (currentX <= GameConfig.virtualWidth) {
+                renderer.line(
+                    currentX,
+                    GameConfig.bankHeight,
+                    currentX,
+                    GameConfig.virtualHeight - GameConfig.hudHeight
+                )
+                currentX += GameConfig.tileSize
+            }
+
+            var currentY = GameConfig.bankHeight
+            while (currentY <= GameConfig.virtualHeight - GameConfig.hudHeight) {
+                renderer.line(0f, currentY, GameConfig.virtualWidth, currentY)
+                currentY += GameConfig.tileSize
+            }
         }
 
         renderer.color = BELT_OUTLINE

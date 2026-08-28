@@ -76,6 +76,7 @@ Package-by-responsibility under `core/src/main/kotlin/com/faultory/core`:
 | `core.screens` | LibGDX screen classes (names end in `Screen`) |
 | `core.systems` | Time-step and simulation coordinators (noun names, e.g. `ProductionDayDirector`) |
 | `core.save` | Save models, codecs, `SaveRepository` / `LocalSaveRepository` |
+| `core.capture` | Capture mode's composition root and supporting types - see **Capture mode** below |
 
 Data flow:
 
@@ -124,6 +125,37 @@ persisted in `encounters.json`; treat them like JSON field names.
 Full contract — which interface to implement, where and when to publish, and how counters are
 derived — is in the **`game-events`** skill (`.claude/skills/game-events/`). Load it whenever you
 add or change eventful behaviour.
+
+## Capture mode
+
+`core.capture` runs the game as a filming rig for promo footage: chrome that can be switched off
+and back on, a seeded and directable simulation, and offline frame export. It is off unless
+`-Dfaultory.capture=<tier>` names one (see `README.md` for the full flag table, keymap and the
+ffmpeg command to encode an exported sequence), and of the three declared `CaptureTier` entries
+only `DEVELOPER` is implemented — `RECORDING` and `DIRECTED` are declared for a future iteration and
+fall back to `OFF` today.
+
+**A run is *tainted* when its tier lets anyone influence the simulation** (`DIRECTED`, `DEVELOPER`;
+see `CaptureTier.isTainted`). A tainted run must never write to the player's saves, encounter
+progress or preferences — that is the one invariant capture mode exists to keep, and
+`CaptureIsolationTest` locks it. All three persistence repositories are constructed in
+`FaultoryGame.create()` against a root chosen by `persistenceRootFor` (in `core.capture`); never
+call `SavePathResolver.defaultRootDirectory()` from anywhere else, and never build a
+`LocalSaveRepository`/`LocalEncounterProgressRepository`/`LocalPlayerPreferencesRepository` outside
+that one call site.
+
+**Check every new feature against capture mode — some will need tweaking to work under it:**
+
+- **Rolls a random?** Route it through `ChanceOracle` with a `ChanceKind` (`core.shop.systems`), not
+  `random.nextFloat()` at the call site, or it can be neither cued nor made repeatable.
+- **Draws interface?** Give it a `ChromeElement` (`core.screens.shopfloor`) and gate it with
+  `GatedLayer` or an injected `ChromeVisibility`, or it will show up in clean footage.
+- **Persists anything?** It must go through a repository built in `FaultoryGame.create()`, or a
+  capture run leaks into real progress.
+- **Reads wall-clock time or the real frame delta directly?** Capture mode runs a fixed timestep
+  (`CaptureRuntime.fixedDeltaSeconds`); anything bypassing it breaks repeatability.
+- **Adds a `CaptureTier`?** `CaptureIsolationTest` is exhaustive over `CaptureTier.entries` and will
+  fail until you state whether the new tier is tainted.
 
 ## Adding New Features
 
