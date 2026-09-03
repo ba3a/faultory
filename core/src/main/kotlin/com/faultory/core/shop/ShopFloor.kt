@@ -82,6 +82,34 @@ class ShopFloor(
         events = events
     )
 
+    private val systemContext = SystemContext()
+
+    /**
+     * The per-frame system order. Built once; each system declares its [SimulationPhase] and the
+     * schedule runs them phase by phase. The ordering contract — what each phase does and why it
+     * sits where it does — lives on [SimulationPhase]. `internal` so `SimulationScheduleTest` can
+     * lock the order.
+     */
+    internal val schedule: SimulationSchedule = SimulationSchedule(
+        buildList {
+            cleanerSpawnSystem?.let { add(it) }
+            add(unitPhaseSystem)
+            add(interactionSystem)
+            add(wetTileSystem)
+            beltSupplyFeeder?.let { add(BeltSupplyFeederSystem(it, ::trySpawnSuppliedProduct)) }
+            add(workerMovementSystem)
+            add(ProductionBeltIntakeSystem(productionSystem))
+            add(productionSystem)
+            add(ProductionOutputSystem(productionSystem))
+            add(qaSystem)
+            add(securitySystem)
+            add(conveyorSystem)
+            add(workerObjectiveSystem)
+            add(cleanerSystem)
+            add(RecipeStateCleanupSystem(productionSystem))
+        }
+    )
+
     val cash: Int
         get() = state.cash
 
@@ -133,21 +161,9 @@ class ShopFloor(
         deltaSeconds: Float,
         workerProfilesById: Map<String, WorkerProfile>
     ) {
-        cleanerSpawnSystem?.trySpawnAtShiftStart(workerProfilesById)
-        unitPhaseSystem.update(deltaSeconds)
-        interactionSystem.update(deltaSeconds)
-        wetTileSystem.update(deltaSeconds)
-        beltSupplyFeeder?.update(deltaSeconds, ::trySpawnSuppliedProduct)
-        workerMovementSystem.update(deltaSeconds, workerProfilesById)
-        productionSystem.acceptBeltInputs()
-        productionSystem.update(deltaSeconds, workerProfilesById)
-        productionSystem.drainRecipeOutputs(workerProfilesById)
-        qaSystem.update(deltaSeconds, workerProfilesById)
-        securitySystem.update(workerProfilesById)
-        conveyorSystem.update(deltaSeconds)
-        workerObjectiveSystem.update()
-        cleanerSystem.update(deltaSeconds, workerProfilesById)
-        productionSystem.pruneEmptyRecipeStates()
+        systemContext.deltaSeconds = deltaSeconds
+        systemContext.workerProfilesById = workerProfilesById
+        schedule.tick(systemContext)
     }
 
     fun resetShiftLifecycle() {

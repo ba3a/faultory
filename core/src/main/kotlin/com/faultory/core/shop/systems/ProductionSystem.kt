@@ -34,7 +34,7 @@ internal class ProductionSystem(
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents(),
     private val chance: ChanceOracle = RandomChanceOracle(random)
-) {
+) : SimulationSystem {
     private val grid get() = state.grid
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val placedMachines get() = state.placedMachines
@@ -42,6 +42,15 @@ internal class ProductionSystem(
     private val mutableMachineProductionStates get() = state.mutableMachineProductionStates
     private val mutableMachineRecipeStates get() = state.mutableMachineRecipeStates
     private val machineSpecsById get() = state.machineSpecsById
+
+    /**
+     * The recipe tick. Belt intake ([ProductionBeltIntakeSystem]) runs before it and output drain
+     * ([ProductionOutputSystem]) after it, both in [SimulationPhase.PRODUCTION]; recipe-state
+     * cleanup ([RecipeStateCleanupSystem]) runs in [SimulationPhase.CLEANUP].
+     */
+    override val phase = SimulationPhase.PRODUCTION
+
+    override fun step(context: SystemContext) = update(context.deltaSeconds, context.workerProfilesById)
 
     fun update(
         deltaSeconds: Float,
@@ -452,4 +461,36 @@ internal class ProductionSystem(
             else -> null
         }
     }
+}
+
+/**
+ * Pulls belt items sitting on a machine's belt-input slot into its recipe input buffer. Scheduled
+ * in [SimulationPhase.PRODUCTION] before [ProductionSystem.step] so an input that lands this frame
+ * can start production this frame.
+ */
+internal class ProductionBeltIntakeSystem(private val production: ProductionSystem) : SimulationSystem {
+    override val phase = SimulationPhase.PRODUCTION
+
+    override fun step(context: SystemContext) = production.acceptBeltInputs()
+}
+
+/**
+ * Places finished recipe outputs onto the belt / floor / operator. Scheduled in
+ * [SimulationPhase.PRODUCTION] after [ProductionSystem.step] so an output completed this frame
+ * leaves the machine this frame.
+ */
+internal class ProductionOutputSystem(private val production: ProductionSystem) : SimulationSystem {
+    override val phase = SimulationPhase.PRODUCTION
+
+    override fun step(context: SystemContext) = production.drainRecipeOutputs(context.workerProfilesById)
+}
+
+/**
+ * Drops emptied [com.faultory.core.shop.MachineRecipeState] rows. Scheduled dead last in
+ * [SimulationPhase.CLEANUP], once every system that read recipe state this frame has run.
+ */
+internal class RecipeStateCleanupSystem(private val production: ProductionSystem) : SimulationSystem {
+    override val phase = SimulationPhase.CLEANUP
+
+    override fun step(context: SystemContext) = production.pruneEmptyRecipeStates()
 }

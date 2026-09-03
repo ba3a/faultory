@@ -14,7 +14,7 @@ import com.faultory.core.shop.TileCoordinate
 internal class ConveyorSystem(
     private val state: ShopFloorState,
     private val events: ShopFloorEvents = ShopFloorEvents()
-) {
+) : SimulationSystem {
     private val grid get() = state.grid
     private val mutableActiveProducts get() = state.mutableActiveProducts
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
@@ -23,6 +23,10 @@ internal class ConveyorSystem(
     private val pendingShipmentEvents get() = state.pendingShipmentEvents
 
     private var conveyorProgress = 0f
+
+    override val phase = SimulationPhase.CONVEYOR
+
+    override fun step(context: SystemContext) = update(context.deltaSeconds)
 
     fun update(deltaSeconds: Float) {
         conveyorProgress += deltaSeconds * GameConfig.conveyorSpeedTilesPerSecond

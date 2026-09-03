@@ -20,13 +20,17 @@ internal class SecuritySystem(
     private val movementStrategyResolver: MovementStrategyResolver,
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents()
-) {
+) : SimulationSystem {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val placedWorkers get() = state.placedWorkers
     private val placedSecurityWorkers get() = state.placedSecurityWorkers
     private val mutableMachineProductionStates get() = state.mutableMachineProductionStates
     private val machineSpecsById get() = state.machineSpecsById
     private val grid get() = state.grid
+
+    override val phase = SimulationPhase.SECURITY
+
+    override fun step(context: SystemContext) = update(context.workerProfilesById)
 
     fun update(workerProfilesById: Map<String, WorkerProfile>) {
         val securityWorkers = placedSecurityWorkers

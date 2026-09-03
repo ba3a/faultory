@@ -47,7 +47,7 @@ internal class QaSystem(
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents(),
     private val chance: ChanceOracle = RandomChanceOracle(random)
-) {
+) : SimulationSystem {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val placedMachines get() = state.placedMachines
     private val placedWorkers get() = state.placedWorkers
@@ -55,6 +55,10 @@ internal class QaSystem(
     private val mutableQaInspectionStates get() = state.mutableQaInspectionStates
     private val machineSpecsById get() = state.machineSpecsById
     private val grid get() = state.grid
+
+    override val phase = SimulationPhase.QUALITY
+
+    override fun step(context: SystemContext) = update(context.deltaSeconds, context.workerProfilesById)
 
     fun update(deltaSeconds: Float, workerProfilesById: Map<String, WorkerProfile>) {
         startQaInspections(workerProfilesById)

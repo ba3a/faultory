@@ -21,12 +21,16 @@ internal class CleanerSystem(
     private val interactionSystem: InteractionSystem,
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents()
-) {
+) : SimulationSystem {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val mutableActiveProducts get() = state.mutableActiveProducts
     private val grid get() = state.grid
 
     private val previousPositionByCleanerId: HashMap<String, TileCoordinate> = HashMap()
+
+    override val phase = SimulationPhase.PLANNING
+
+    override fun step(context: SystemContext) = update(context.deltaSeconds, context.workerProfilesById)
 
     fun update(deltaSeconds: Float, workerProfilesById: Map<String, WorkerProfile>) {
         val cleaners = mutablePlacedObjects.filter {

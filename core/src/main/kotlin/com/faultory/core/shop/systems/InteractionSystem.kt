@@ -28,9 +28,13 @@ internal class InteractionSystem(
     private val state: ShopFloorState,
     private val catalogProvider: () -> InteractionCatalog?,
     private val events: ShopFloorEvents = ShopFloorEvents()
-) {
+) : SimulationSystem {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val mutableActiveProducts get() = state.mutableActiveProducts
+
+    override val phase = SimulationPhase.ANIMATION
+
+    override fun step(context: SystemContext) = update(context.deltaSeconds)
 
     fun update(deltaSeconds: Float) {
         if (mutablePlacedObjects.none { it.interaction != null }) {

@@ -8,7 +8,11 @@ import com.faultory.core.shop.TileCoordinate
 internal class WetTileSystem(
     private val state: ShopFloorState,
     private val events: ShopFloorEvents = ShopFloorEvents()
-) {
+) : SimulationSystem {
+    override val phase = SimulationPhase.ENVIRONMENT
+
+    override fun step(context: SystemContext) = update(context.deltaSeconds)
+
     fun update(deltaSeconds: Float) {
         val iterator = state.mutableWetTiles.entries.iterator()
         while (iterator.hasNext()) {

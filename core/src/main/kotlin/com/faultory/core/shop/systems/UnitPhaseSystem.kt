@@ -13,9 +13,13 @@ internal class UnitPhaseSystem(
     private val state: ShopFloorState,
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents()
-) {
+) : SimulationSystem {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val mutableActiveProducts get() = state.mutableActiveProducts
+
+    override val phase = SimulationPhase.ANIMATION
+
+    override fun step(context: SystemContext) = update(context.deltaSeconds)
 
     fun update(deltaSeconds: Float) {
         for (index in mutablePlacedObjects.indices) {

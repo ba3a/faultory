@@ -24,9 +24,13 @@ internal class WorkerMovementSystem(
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents(),
     private val chance: ChanceOracle = RandomChanceOracle(random)
-) {
+) : SimulationSystem {
     private val mutablePlacedObjects get() = state.mutablePlacedObjects
     private val grid get() = state.grid
+
+    override val phase = SimulationPhase.MOVEMENT
+
+    override fun step(context: SystemContext) = update(context.deltaSeconds, context.workerProfilesById)
 
     fun update(
         deltaSeconds: Float,

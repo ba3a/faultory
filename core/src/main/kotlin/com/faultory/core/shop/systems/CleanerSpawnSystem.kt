@@ -16,7 +16,11 @@ internal class CleanerSpawnSystem(
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents(),
     private val gate: CleanerSpawnGate
-) {
+) : SimulationSystem {
+    override val phase = SimulationPhase.SHIFT_START
+
+    override fun step(context: SystemContext) = trySpawnAtShiftStart(context.workerProfilesById)
+
     fun trySpawnAtShiftStart(workerProfilesById: Map<String, WorkerProfile>) {
         if (state.cleanerSpawnedThisShift) return
         state.cleanerSpawnedThisShift = true
