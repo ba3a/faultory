@@ -8,26 +8,26 @@ import com.faultory.core.shop.ShopFloor
 object MachineActionResolver {
     fun actionFor(shopFloor: ShopFloor, placedObject: PlacedShopObject): String {
         if (placedObject.kind != PlacedShopObjectKind.MACHINE) {
-            return SkinActions.IDLE
+            return SpriteAction.IDLE.id
         }
 
         if (shopFloor.machineProductionStateFor(placedObject.id) != null) {
-            return SkinActions.WORKING
+            return SpriteAction.WORKING.id
         }
 
         // A QA machine holds the product it is checking, which is a working state of its own: the
         // product already plays `inspected`, and the gate scanning it should not read as idle.
         if (shopFloor.qaInspectionStates.any { it.inspectorObjectId == placedObject.id }) {
-            return SkinActions.INSPECT
+            return SpriteAction.INSPECT.id
         }
 
         // A full output queue is why the machine stopped, and the one stall worth showing: waiting
         // on inputs is ordinary idling, but a backed-up machine needs the player to act.
         val outputQueue = shopFloor.machineRecipeStateFor(placedObject.id)?.outputQueue.orEmpty()
         if (outputQueue.size >= GameConfig.machineOutputQueueCap) {
-            return SkinActions.BLOCKED
+            return SpriteAction.BLOCKED.id
         }
 
-        return SkinActions.IDLE
+        return SpriteAction.IDLE.id
     }
 }

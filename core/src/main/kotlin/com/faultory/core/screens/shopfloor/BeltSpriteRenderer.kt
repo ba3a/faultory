@@ -2,7 +2,7 @@ package com.faultory.core.screens.shopfloor
 
 import com.faultory.core.config.DebugFlags
 import com.faultory.core.config.GameConfig
-import com.faultory.core.graphics.BeltActions
+import com.faultory.core.graphics.SpriteAction
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.TileCoordinate
 
@@ -35,7 +35,7 @@ class BeltSpriteRenderer(
             val region = ctx.frameLookup.region(
                 definition = definition,
                 animationId = "$BELT_ANIMATION_PREFIX${tile.x},${tile.y}",
-                action = BeltActions.actionFor(info.shape),
+                action = SpriteAction.forBeltShape(info.shape).id,
                 orientation = info.flow,
                 delta = delta
             ) ?: continue

@@ -1,7 +1,7 @@
 package com.faultory.editor.graphics
 
 import com.faultory.core.graphics.SkinActionCatalog
-import com.faultory.core.graphics.SkinActions
+import com.faultory.core.graphics.SpriteAction
 import com.faultory.core.shop.Orientation
 import java.nio.file.Files
 import java.nio.file.Path
@@ -50,7 +50,7 @@ class FrameBatchPlannerTest {
 
         val group = FrameBatchPlanner.plan(files, knownActions).single()
 
-        assertEquals(SkinActions.WALK, group.action)
+        assertEquals(SpriteAction.WALK.id, group.action)
         assertEquals(Orientation.NORTH, group.orientation)
         assertTrue(group.isResolved)
     }
@@ -59,7 +59,7 @@ class FrameBatchPlannerTest {
     fun `resolves a single letter orientation when an action precedes it`() {
         val group = FrameBatchPlanner.plan(listOf(write("walk_n1.png")), knownActions).single()
 
-        assertEquals(SkinActions.WALK, group.action)
+        assertEquals(SpriteAction.WALK.id, group.action)
         assertEquals(Orientation.NORTH, group.orientation)
     }
 
@@ -83,7 +83,7 @@ class FrameBatchPlannerTest {
     fun `resolves an action with no orientation in the name`() {
         val group = FrameBatchPlanner.plan(listOf(write("walk1.png")), knownActions).single()
 
-        assertEquals(SkinActions.WALK, group.action)
+        assertEquals(SpriteAction.WALK.id, group.action)
         assertNull(group.orientation)
     }
 
@@ -116,10 +116,10 @@ class FrameBatchPlannerTest {
 
         assertEquals(2, groups.size, "numbered frames must group by their directory, not merge")
         val walk = groups.single { it.orientation == Orientation.NORTH }
-        assertEquals(SkinActions.WALK, walk.action)
+        assertEquals(SpriteAction.WALK.id, walk.action)
         assertEquals(2, walk.files.size)
         val idle = groups.single { it.orientation == Orientation.EAST }
-        assertEquals(SkinActions.IDLE, idle.action)
+        assertEquals(SpriteAction.IDLE.id, idle.action)
     }
 
     @Test

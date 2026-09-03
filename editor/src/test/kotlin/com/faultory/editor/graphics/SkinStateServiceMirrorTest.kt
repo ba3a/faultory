@@ -1,7 +1,7 @@
 package com.faultory.editor.graphics
 
 import com.faultory.core.graphics.ActionClip
-import com.faultory.core.graphics.SkinActions
+import com.faultory.core.graphics.SpriteAction
 import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.graphics.SocketClip
 import com.faultory.core.graphics.SocketNames
@@ -40,7 +40,7 @@ class SkinStateServiceMirrorTest {
 
         val mirrored = service.mirrorSockets(
             current = skin,
-            action = SkinActions.WALK,
+            action = SpriteAction.WALK.id,
             source = Orientation.EAST,
             target = Orientation.WEST,
             widths = listOf(34),
@@ -60,7 +60,7 @@ class SkinStateServiceMirrorTest {
         )
 
         val mirrored = service.mirrorSockets(
-            skin, SkinActions.WALK, Orientation.EAST, Orientation.WEST, listOf(34),
+            skin, SpriteAction.WALK.id, Orientation.EAST, Orientation.WEST, listOf(34),
         )
 
         assertEquals(SocketPoint(12f, 20f), mirrored.point(Orientation.EAST))
@@ -81,7 +81,7 @@ class SkinStateServiceMirrorTest {
         )
 
         val mirrored = service.mirrorSockets(
-            skin, SkinActions.WALK, Orientation.EAST, Orientation.WEST, widths = listOf(34, 36, 30),
+            skin, SpriteAction.WALK.id, Orientation.EAST, Orientation.WEST, widths = listOf(34, 36, 30),
         )
 
         assertEquals(
@@ -102,7 +102,7 @@ class SkinStateServiceMirrorTest {
         )
 
         val mirrored = service.mirrorSockets(
-            skin, SkinActions.WALK, Orientation.EAST, Orientation.WEST, widths = listOf(34),
+            skin, SpriteAction.WALK.id, Orientation.EAST, Orientation.WEST, widths = listOf(34),
         )
 
         assertEquals(
@@ -123,7 +123,7 @@ class SkinStateServiceMirrorTest {
         )
 
         val mirrored = service.mirrorSockets(
-            skin, SkinActions.WALK, Orientation.EAST, Orientation.WEST, listOf(34),
+            skin, SpriteAction.WALK.id, Orientation.EAST, Orientation.WEST, listOf(34),
         )
 
         assertEquals(SocketPoint(19f, 18f), mirrored.point(Orientation.SOUTH))
@@ -136,7 +136,7 @@ class SkinStateServiceMirrorTest {
         )
 
         val mirrored = service.mirrorSockets(
-            skin, SkinActions.WALK, Orientation.EAST, Orientation.WEST, listOf(34),
+            skin, SpriteAction.WALK.id, Orientation.EAST, Orientation.WEST, listOf(34),
         )
 
         assertNull(mirrored.point(Orientation.WEST))
@@ -146,29 +146,31 @@ class SkinStateServiceMirrorTest {
     fun `an action with no sockets an unknown action and no widths all pass through untouched`() {
         val bare = SkinDefinition(
             atlas = ATLAS,
-            actions = mapOf(SkinActions.WALK to ActionClip(frames = mapOf(Orientation.EAST to listOf("walk_east_000")))),
+            actions = mapOf(
+                SpriteAction.WALK.id to ActionClip(frames = mapOf(Orientation.EAST to listOf("walk_east_000"))),
+            ),
         )
 
         assertSame(
             bare,
-            service.mirrorSockets(bare, SkinActions.WALK, Orientation.EAST, Orientation.WEST, listOf(34)),
+            service.mirrorSockets(bare, SpriteAction.WALK.id, Orientation.EAST, Orientation.WEST, listOf(34)),
         )
         assertSame(
             bare,
-            service.mirrorSockets(bare, SkinActions.IDLE, Orientation.EAST, Orientation.WEST, listOf(34)),
+            service.mirrorSockets(bare, SpriteAction.IDLE.id, Orientation.EAST, Orientation.WEST, listOf(34)),
         )
 
         val authored = skinWith(SocketClip(byOrientation = mapOf(Orientation.EAST to SocketPoint(12f, 20f))))
         assertSame(
             authored,
-            service.mirrorSockets(authored, SkinActions.WALK, Orientation.EAST, Orientation.WEST, emptyList()),
+            service.mirrorSockets(authored, SpriteAction.WALK.id, Orientation.EAST, Orientation.WEST, emptyList()),
         )
     }
 
     private fun skinWith(socket: SocketClip): SkinDefinition = SkinDefinition(
         atlas = ATLAS,
         actions = mapOf(
-            SkinActions.WALK to ActionClip(
+            SpriteAction.WALK.id to ActionClip(
                 frames = mapOf(Orientation.EAST to listOf("walk_east_000")),
                 sockets = mapOf(SocketNames.HANDS to socket),
             ),
@@ -176,7 +178,7 @@ class SkinStateServiceMirrorTest {
     )
 
     private fun SkinDefinition.socket(): SocketClip? =
-        actions[SkinActions.WALK]?.sockets?.get(SocketNames.HANDS)
+        actions[SpriteAction.WALK.id]?.sockets?.get(SocketNames.HANDS)
 
     private fun SkinDefinition.point(orientation: Orientation): SocketPoint? =
         socket()?.byOrientation?.get(orientation)

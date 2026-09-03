@@ -10,25 +10,25 @@ class AnimationPlayerTest {
     fun `advance tracks elapsed per id while action stays the same`() {
         val player = AnimationPlayer()
 
-        val first = player.advance("worker-1", SkinActions.IDLE, Orientation.NORTH, 0.25f)
-        val second = player.advance("worker-1", SkinActions.IDLE, Orientation.WEST, 0.25f)
-        val other = player.advance("worker-2", SkinActions.IDLE, Orientation.SOUTH, 1f)
+        val first = player.advance("worker-1", SpriteAction.IDLE.id, Orientation.NORTH, 0.25f)
+        val second = player.advance("worker-1", SpriteAction.IDLE.id, Orientation.WEST, 0.25f)
+        val other = player.advance("worker-2", SpriteAction.IDLE.id, Orientation.SOUTH, 1f)
 
-        assertEquals(AnimationState(SkinActions.IDLE, Orientation.NORTH, 0f), first)
-        assertEquals(AnimationState(SkinActions.IDLE, Orientation.WEST, 0.25f), second)
-        assertEquals(AnimationState(SkinActions.IDLE, Orientation.SOUTH, 0f), other)
+        assertEquals(AnimationState(SpriteAction.IDLE.id, Orientation.NORTH, 0f), first)
+        assertEquals(AnimationState(SpriteAction.IDLE.id, Orientation.WEST, 0.25f), second)
+        assertEquals(AnimationState(SpriteAction.IDLE.id, Orientation.SOUTH, 0f), other)
     }
 
     @Test
     fun `advance resets elapsed when the action changes`() {
         val player = AnimationPlayer()
 
-        player.advance("machine-1", SkinActions.IDLE, Orientation.NORTH, 0.25f)
-        player.advance("machine-1", SkinActions.IDLE, Orientation.NORTH, 0.25f)
+        player.advance("machine-1", SpriteAction.IDLE.id, Orientation.NORTH, 0.25f)
+        player.advance("machine-1", SpriteAction.IDLE.id, Orientation.NORTH, 0.25f)
 
-        val changed = player.advance("machine-1", SkinActions.WORKING, Orientation.EAST, 0.5f)
+        val changed = player.advance("machine-1", SpriteAction.WORKING.id, Orientation.EAST, 0.5f)
 
-        assertEquals(AnimationState(SkinActions.WORKING, Orientation.EAST, 0f), changed)
+        assertEquals(AnimationState(SpriteAction.WORKING.id, Orientation.EAST, 0f), changed)
     }
 
     @Test
@@ -38,7 +38,7 @@ class AnimationPlayerTest {
 
         val region = player.regionName(
             clip,
-            AnimationState(SkinActions.WALK, Orientation.NORTH, elapsed = 0.3f)
+            AnimationState(SpriteAction.WALK.id, Orientation.NORTH, elapsed = 0.3f)
         )
 
         assertEquals("north_0", region)
@@ -51,7 +51,7 @@ class AnimationPlayerTest {
 
         val region = player.regionName(
             clip,
-            AnimationState(SkinActions.WALK, Orientation.NORTH, elapsed = 1.2f)
+            AnimationState(SpriteAction.WALK.id, Orientation.NORTH, elapsed = 1.2f)
         )
 
         assertEquals("north_2", region)
@@ -66,7 +66,7 @@ class AnimationPlayerTest {
 
         val region = player.regionName(
             clip,
-            AnimationState(SkinActions.IDLE, Orientation.NORTH, elapsed = 0f)
+            AnimationState(SpriteAction.IDLE.id, Orientation.NORTH, elapsed = 0f)
         )
 
         assertNull(region)
@@ -87,15 +87,15 @@ class AnimationPlayerTest {
     @Test
     fun `endFrame drops clocks that were not advanced`() {
         val player = AnimationPlayer()
-        player.advance("product-1", SkinActions.IDLE, Orientation.NORTH, 0.25f)
-        player.advance("product-2", SkinActions.IDLE, Orientation.NORTH, 0.25f)
+        player.advance("product-1", SpriteAction.IDLE.id, Orientation.NORTH, 0.25f)
+        player.advance("product-2", SpriteAction.IDLE.id, Orientation.NORTH, 0.25f)
         player.endFrame()
 
-        player.advance("product-2", SkinActions.IDLE, Orientation.NORTH, 0.25f)
+        player.advance("product-2", SpriteAction.IDLE.id, Orientation.NORTH, 0.25f)
         player.endFrame()
 
-        val revived = player.advance("product-1", SkinActions.IDLE, Orientation.NORTH, 0.25f)
-        val survivor = player.advance("product-2", SkinActions.IDLE, Orientation.NORTH, 0.25f)
+        val revived = player.advance("product-1", SpriteAction.IDLE.id, Orientation.NORTH, 0.25f)
+        val survivor = player.advance("product-2", SpriteAction.IDLE.id, Orientation.NORTH, 0.25f)
 
         assertEquals(0f, revived.elapsed)
         assertEquals(0.5f, survivor.elapsed)
@@ -104,9 +104,9 @@ class AnimationPlayerTest {
     @Test
     fun `the clock keeps running when only the resolved orientation changes`() {
         val player = AnimationPlayer()
-        player.advance("worker-1", SkinActions.WALK, Orientation.NORTH, 0.25f)
+        player.advance("worker-1", SpriteAction.WALK.id, Orientation.NORTH, 0.25f)
 
-        val turned = player.advance("worker-1", SkinActions.WALK, Orientation.EAST, 0.25f)
+        val turned = player.advance("worker-1", SpriteAction.WALK.id, Orientation.EAST, 0.25f)
 
         assertEquals(0.25f, turned.elapsed)
     }

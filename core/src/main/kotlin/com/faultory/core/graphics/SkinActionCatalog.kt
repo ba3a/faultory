@@ -1,70 +1,32 @@
 package com.faultory.core.graphics
 
 /**
- * The actions each kind of entity can actually request at runtime, in authoring order.
+ * The actions each kind of entity can actually request at runtime, as `List<String>` in authoring
+ * order — this is what the editor turns into animation grid rows.
  *
- * This is what the editor offers as animation rows. It lives beside the action constants rather
- * than in the editor so the two cannot drift: an action a resolver can ask for but nobody can
- * author is an animation that never plays.
+ * The lists are derived from [SpriteAction], the single declarative table of every action, so they
+ * cannot drift from what the resolvers ask for: an action a resolver requests but the table does not
+ * list is an animation that never plays, and `SkinActionCatalogTest` proves it does not happen.
  *
- * Two worker states are deliberately absent because the architecture covers them elsewhere.
- * Carrying is not an action - the payload rides the `hands` socket over the ordinary pose - and
- * handing something over is an interaction, whose clip names are authored per interaction and
- * merged in by [workerActions].
+ * The only addition on top of [SpriteAction] is interactions: a worker can be asked to play either
+ * half of any authored interaction, and those clip names come from `interactions.json` at runtime
+ * rather than the table, so [workerActions] merges them in.
  */
 object SkinActionCatalog {
-    private val workerBase: List<String> = listOf(
-        SkinActions.IDLE,
-        SkinActions.WALK,
-        SkinActions.BELT_ENTER,
-        SkinActions.BELT_RIDE,
-        SkinActions.BELT_EXIT,
-        SkinActions.PURSUE,
-        SkinActions.FALL,
-        SkinActions.LIE,
-        SkinActions.STAND_UP,
-        SkinActions.DESTROY
-    )
+    val worker: List<String> = SpriteAction.idsFor(SpriteKind.WORKER)
 
-    val worker: List<String> get() = workerBase
+    val machine: List<String> = SpriteAction.idsFor(SpriteKind.MACHINE)
 
-    val machine: List<String> = listOf(
-        SkinActions.IDLE,
-        SkinActions.WORKING,
-        SkinActions.INSPECT,
-        SkinActions.BLOCKED
-    )
+    val product: List<String> = SpriteAction.idsFor(SpriteKind.PRODUCT)
 
-    val product: List<String> = listOf(
-        ProductActions.IDLE,
-        ProductActions.PRODUCING,
-        ProductActions.ON_BELT,
-        ProductActions.CARRIED,
-        ProductActions.INSPECTED,
-        ProductActions.DESTROYING,
-        ProductActions.FAULT_DEFECT,
-        ProductActions.FAULT_SABOTAGE
-    )
-
-    /**
-     * Idle leads because a belt skin that authors nothing else still renders every tile through
-     * the [SkinFrameResolver] fallback.
-     */
-    val belt: List<String> = listOf(
-        SkinActions.IDLE,
-        BeltActions.STRAIGHT,
-        BeltActions.TURN_CW,
-        BeltActions.TURN_CCW,
-        BeltActions.START,
-        BeltActions.END
-    )
+    val belt: List<String> = SpriteAction.idsFor(SpriteKind.BELT)
 
     /**
      * Worker actions including both halves of every authored interaction, since a worker can be
      * asked to play either side and each side comes off its own skin.
      */
     fun workerActions(interactions: InteractionCatalog?): List<String> =
-        (workerBase + interactionActions(interactions)).distinct()
+        (worker + interactionActions(interactions)).distinct()
 
     fun interactionActions(interactions: InteractionCatalog?): List<String> =
         interactions?.interactions

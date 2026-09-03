@@ -5,7 +5,7 @@ import com.faultory.core.config.DebugFlags
 import com.faultory.core.config.GameConfig
 import com.faultory.core.graphics.MachineActionResolver
 import com.faultory.core.graphics.ProductActionResolver
-import com.faultory.core.graphics.ProductActions
+import com.faultory.core.graphics.SpriteAction
 import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.graphics.SkinFrameLookup
 import com.faultory.core.graphics.SkinRegistry
@@ -312,7 +312,7 @@ class EntitySpriteLayer(
             val frame = ctx.frameLookup.resolveFrame(
                 definition = definition,
                 animationId = "$PRODUCING_ANIMATION_PREFIX${productionState.machineId}",
-                action = ProductActions.PRODUCING,
+                action = SpriteAction.PRODUCING.id,
                 orientation = machine.orientation,
                 delta = delta
             ) ?: continue
@@ -345,7 +345,7 @@ class EntitySpriteLayer(
         product: ShopProduct,
         orientation: Orientation,
         delta: Float
-    ) = ProductActions.faultOverlayActionFor(product.faultReason)?.let { overlayAction ->
+    ) = SpriteAction.faultOverlayFor(product.faultReason)?.id?.let { overlayAction ->
         ctx.frameLookup.overlayRegion(
             definition = definition,
             animationId = "${product.id}$FAULT_ANIMATION_SUFFIX",

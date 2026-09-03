@@ -15,7 +15,7 @@ class WorkerActionResolverTest {
     @Test
     fun `action is walk while worker is moving along a path`() {
         assertEquals(
-            SkinActions.WALK,
+            SpriteAction.WALK.id,
             WorkerActionResolver.actionFor(
                 worker(
                     movementPath = listOf(TileCoordinate(6, 5)),
@@ -28,7 +28,7 @@ class WorkerActionResolverTest {
     @Test
     fun `action is idle when worker has no remaining movement`() {
         assertEquals(
-            SkinActions.IDLE,
+            SpriteAction.IDLE.id,
             WorkerActionResolver.actionFor(
                 worker(
                     movementPath = listOf(TileCoordinate(6, 5)),
@@ -87,7 +87,7 @@ class WorkerActionResolverTest {
             movementProgress = 0.4f
         ).copy(pursuitTargetWorkerId = "worker-9")
 
-        assertEquals(SkinActions.PURSUE, WorkerActionResolver.actionFor(chasing))
+        assertEquals(SpriteAction.PURSUE.id, WorkerActionResolver.actionFor(chasing))
     }
 
     @Test
@@ -95,7 +95,7 @@ class WorkerActionResolverTest {
         // Pursuit is alert locomotion; a stationary run pose would read as a glitch.
         val replanning = worker(movementPath = emptyList()).copy(pursuitTargetWorkerId = "worker-9")
 
-        assertEquals(SkinActions.IDLE, WorkerActionResolver.actionFor(replanning))
+        assertEquals(SpriteAction.IDLE.id, WorkerActionResolver.actionFor(replanning))
     }
 
     @Test
@@ -105,15 +105,15 @@ class WorkerActionResolverTest {
             movementProgress = 0.4f
         ).copy(pursuitTargetWorkerId = "worker-9", beltRidePhase = BeltRidePhase.RIDING)
 
-        assertEquals(SkinActions.BELT_RIDE, WorkerActionResolver.actionFor(ridingWhileChasing))
+        assertEquals(SpriteAction.BELT_RIDE.id, WorkerActionResolver.actionFor(ridingWhileChasing))
     }
 
     @Test
     fun `each unit phase plays its own pose`() {
-        assertEquals(SkinActions.FALL, actionFor(UnitPhase.FALLING))
-        assertEquals(SkinActions.LIE, actionFor(UnitPhase.LYING))
-        assertEquals(SkinActions.STAND_UP, actionFor(UnitPhase.STANDING))
-        assertEquals(SkinActions.DESTROY, actionFor(UnitPhase.DESTROYING_PRODUCT))
+        assertEquals(SpriteAction.FALL.id, actionFor(UnitPhase.FALLING))
+        assertEquals(SpriteAction.LIE.id, actionFor(UnitPhase.LYING))
+        assertEquals(SpriteAction.STAND_UP.id, actionFor(UnitPhase.STANDING))
+        assertEquals(SpriteAction.DESTROY.id, actionFor(UnitPhase.DESTROYING_PRODUCT))
     }
 
     @Test
@@ -128,7 +128,7 @@ class WorkerActionResolverTest {
             interaction = interaction(InteractionRole.INITIATOR)
         )
 
-        assertEquals(SkinActions.FALL, WorkerActionResolver.actionFor(slipped, ::definitionFor))
+        assertEquals(SpriteAction.FALL.id, WorkerActionResolver.actionFor(slipped, ::definitionFor))
     }
 
     private fun actionFor(phase: UnitPhase): String =
@@ -166,7 +166,7 @@ class WorkerActionResolverTest {
             movementProgress = 0.4f
         ).copy(interaction = interaction(InteractionRole.INITIATOR))
 
-        assertEquals(SkinActions.WALK, WorkerActionResolver.actionFor(walking) { null })
+        assertEquals(SpriteAction.WALK.id, WorkerActionResolver.actionFor(walking) { null })
     }
 
     @Test

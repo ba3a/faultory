@@ -21,7 +21,7 @@ class ProductActionResolverTest {
         val product = beltProduct(TileCoordinate(5, 5))
         val shopFloor = shopFloor(products = listOf(product))
 
-        assertEquals(ProductActions.ON_BELT, ProductActionResolver.actionFor(shopFloor, product))
+        assertEquals(SpriteAction.ON_BELT.id, ProductActionResolver.actionFor(shopFloor, product))
         assertEquals(
             Orientation.EAST,
             ProductActionResolver.orientationFor(shopFloor, product, ProductOrientationMemory())
@@ -33,7 +33,7 @@ class ProductActionResolverTest {
         val product = beltProduct(TileCoordinate(5, 5)).copy(state = ShopProductState.ON_FLOOR)
         val shopFloor = shopFloor(products = listOf(product))
 
-        assertEquals(ProductActions.IDLE, ProductActionResolver.actionFor(shopFloor, product))
+        assertEquals(SpriteAction.IDLE.id, ProductActionResolver.actionFor(shopFloor, product))
     }
 
     @Test
@@ -79,7 +79,7 @@ class ProductActionResolverTest {
             placements = listOf(worker(orientation = Orientation.WEST))
         )
 
-        assertEquals(ProductActions.CARRIED, ProductActionResolver.actionFor(shopFloor, product))
+        assertEquals(SpriteAction.CARRIED.id, ProductActionResolver.actionFor(shopFloor, product))
         assertEquals(
             Orientation.WEST,
             ProductActionResolver.orientationFor(shopFloor, product, ProductOrientationMemory())
@@ -95,7 +95,7 @@ class ProductActionResolverTest {
             inspections = listOf(inspection(product.id))
         )
 
-        assertEquals(ProductActions.INSPECTED, ProductActionResolver.actionFor(shopFloor, product))
+        assertEquals(SpriteAction.INSPECTED.id, ProductActionResolver.actionFor(shopFloor, product))
     }
 
     @Test
@@ -109,7 +109,7 @@ class ProductActionResolverTest {
             inspections = listOf(inspection(product.id))
         )
 
-        assertEquals(ProductActions.DESTROYING, ProductActionResolver.actionFor(shopFloor, product))
+        assertEquals(SpriteAction.DESTROYING.id, ProductActionResolver.actionFor(shopFloor, product))
     }
 
     private fun beltProduct(tile: TileCoordinate) = ShopProduct(

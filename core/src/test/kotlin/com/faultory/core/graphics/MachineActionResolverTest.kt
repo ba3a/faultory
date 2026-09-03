@@ -32,7 +32,7 @@ class MachineActionResolverTest {
             )
         )
 
-        assertEquals(SkinActions.WORKING, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
+        assertEquals(SpriteAction.WORKING.id, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
     }
 
     @Test
@@ -42,7 +42,7 @@ class MachineActionResolverTest {
             machineSpecsById = emptyMap()
         )
 
-        assertEquals(SkinActions.IDLE, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
+        assertEquals(SpriteAction.IDLE.id, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
     }
 
     @Test
@@ -60,7 +60,7 @@ class MachineActionResolverTest {
             )
         )
 
-        assertEquals(SkinActions.BLOCKED, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
+        assertEquals(SpriteAction.BLOCKED.id, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
     }
 
     @Test
@@ -78,7 +78,7 @@ class MachineActionResolverTest {
             )
         )
 
-        assertEquals(SkinActions.IDLE, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
+        assertEquals(SpriteAction.IDLE.id, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
     }
 
     @Test
@@ -104,7 +104,7 @@ class MachineActionResolverTest {
             )
         )
 
-        assertEquals(SkinActions.WORKING, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
+        assertEquals(SpriteAction.WORKING.id, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
     }
 
     @Test
@@ -121,7 +121,7 @@ class MachineActionResolverTest {
             )
         )
 
-        assertEquals(SkinActions.INSPECT, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
+        assertEquals(SpriteAction.INSPECT.id, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
     }
 
     @Test
@@ -145,7 +145,7 @@ class MachineActionResolverTest {
             )
         )
 
-        assertEquals(SkinActions.WORKING, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
+        assertEquals(SpriteAction.WORKING.id, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
     }
 
     @Test
@@ -162,7 +162,7 @@ class MachineActionResolverTest {
             )
         )
 
-        assertEquals(SkinActions.IDLE, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
+        assertEquals(SpriteAction.IDLE.id, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
     }
 
     private fun machine(id: String): PlacedShopObject {

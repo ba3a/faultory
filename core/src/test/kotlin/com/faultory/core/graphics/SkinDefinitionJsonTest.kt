@@ -13,7 +13,7 @@ class SkinDefinitionJsonTest {
         val definition = SkinDefinition(
             atlas = "textures/worker_line_inspector.atlas",
             actions = mapOf(
-                SkinActions.IDLE to ActionClip(
+                SpriteAction.IDLE.id to ActionClip(
                     frames = mapOf(
                         Orientation.NORTH to listOf("idle_north_000"),
                         Orientation.EAST to listOf("idle_east_000"),
@@ -21,7 +21,7 @@ class SkinDefinitionJsonTest {
                         Orientation.WEST to listOf("idle_west_000")
                     )
                 ),
-                SkinActions.WALK to ActionClip(
+                SpriteAction.WALK.id to ActionClip(
                     frames = mapOf(
                         Orientation.NORTH to listOf("walk_north_000", "walk_north_001"),
                         Orientation.EAST to listOf("walk_east_000", "walk_east_001"),
@@ -54,8 +54,8 @@ class SkinDefinitionJsonTest {
         val decoded = FaultoryJson.instance.decodeFromString<SkinDefinition>(legacy)
 
         assertEquals(emptyMap(), decoded.sockets)
-        assertEquals(emptyMap(), decoded.actions.getValue(SkinActions.IDLE).sockets)
-        assertEquals(emptyMap(), decoded.actions.getValue(SkinActions.IDLE).parts)
+        assertEquals(emptyMap(), decoded.actions.getValue(SpriteAction.IDLE.id).sockets)
+        assertEquals(emptyMap(), decoded.actions.getValue(SpriteAction.IDLE.id).parts)
     }
 
     @Test
@@ -63,7 +63,7 @@ class SkinDefinitionJsonTest {
         val definition = SkinDefinition(
             atlas = "textures/worker_line_inspector.atlas",
             actions = mapOf(
-                ProductActions.CARRIED to ActionClip(
+                SpriteAction.CARRIED.id to ActionClip(
                     frames = mapOf(Orientation.EAST to listOf("carry_east_body_000")),
                     sockets = mapOf(
                         SocketNames.HANDS to SocketClip(

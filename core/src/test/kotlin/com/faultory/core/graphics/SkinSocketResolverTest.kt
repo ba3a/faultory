@@ -51,10 +51,10 @@ class SkinSocketResolverTest {
     fun `falls back to the skin-wide default when the action authors no such socket`() {
         val definition = SkinDefinition(
             atlas = ATLAS,
-            actions = mapOf(SkinActions.WALK to clip()),
+            actions = mapOf(SpriteAction.WALK.id to clip()),
             sockets = mapOf(SocketNames.HANDS to point(7f))
         )
-        val resolution = SkinFrameResolver.resolve(definition, SkinActions.WALK, Orientation.EAST)!!
+        val resolution = SkinFrameResolver.resolve(definition, SpriteAction.WALK.id, Orientation.EAST)!!
 
         assertEquals(
             point(7f),
@@ -69,7 +69,7 @@ class SkinSocketResolverTest {
         val definition = SkinDefinition(
             atlas = ATLAS,
             actions = mapOf(
-                SkinActions.IDLE to clip(
+                SpriteAction.IDLE.id to clip(
                     sockets = mapOf(
                         SocketNames.HANDS to SocketClip(byOrientation = mapOf(Orientation.EAST to point(5f)))
                     )
@@ -77,9 +77,9 @@ class SkinSocketResolverTest {
             ),
             sockets = mapOf(SocketNames.HANDS to point(99f))
         )
-        val resolution = SkinFrameResolver.resolve(definition, ProductActions.CARRIED, Orientation.EAST)!!
+        val resolution = SkinFrameResolver.resolve(definition, SpriteAction.CARRIED.id, Orientation.EAST)!!
 
-        assertEquals(SkinActions.IDLE, resolution.action)
+        assertEquals(SpriteAction.IDLE.id, resolution.action)
         assertEquals(
             point(5f),
             SkinSocketResolver.resolve(definition, resolution, SocketNames.HANDS, frameIndex = 0)
@@ -88,8 +88,8 @@ class SkinSocketResolverTest {
 
     @Test
     fun `resolves to null when nothing authored the socket at any level`() {
-        val definition = SkinDefinition(atlas = ATLAS, actions = mapOf(SkinActions.WALK to clip()))
-        val resolution = SkinFrameResolver.resolve(definition, SkinActions.WALK, Orientation.EAST)!!
+        val definition = SkinDefinition(atlas = ATLAS, actions = mapOf(SpriteAction.WALK.id to clip()))
+        val resolution = SkinFrameResolver.resolve(definition, SpriteAction.WALK.id, Orientation.EAST)!!
 
         assertNull(SkinSocketResolver.resolve(definition, resolution, SocketNames.HANDS, frameIndex = 0))
     }
@@ -103,9 +103,9 @@ class SkinSocketResolverTest {
     private fun resolve(socket: SocketClip, orientation: Orientation, frameIndex: Int): SocketPoint? {
         val definition = SkinDefinition(
             atlas = ATLAS,
-            actions = mapOf(SkinActions.WALK to clip(sockets = mapOf(SocketNames.HANDS to socket)))
+            actions = mapOf(SpriteAction.WALK.id to clip(sockets = mapOf(SocketNames.HANDS to socket)))
         )
-        val resolution = SkinFrameResolver.resolve(definition, SkinActions.WALK, orientation)!!
+        val resolution = SkinFrameResolver.resolve(definition, SpriteAction.WALK.id, orientation)!!
         return SkinSocketResolver.resolve(definition, resolution, SocketNames.HANDS, frameIndex)
     }
 

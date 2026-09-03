@@ -4,7 +4,7 @@ import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.PixmapIO
 import com.badlogic.gdx.utils.SharedLibraryLoader
-import com.faultory.core.graphics.SkinActions
+import com.faultory.core.graphics.SpriteAction
 import com.faultory.core.shop.Orientation
 import java.nio.file.Files
 import java.nio.file.Path
@@ -41,13 +41,13 @@ class FrameMirrorServiceTest {
 
     @Test
     fun `framesIn lists a cell's png frames in frame order`() {
-        val dir = orientationDir(SkinActions.WALK, Orientation.EAST)
+        val dir = orientationDir(SpriteAction.WALK.id, Orientation.EAST)
         writeStripe(dir.resolve("002.png"))
         writeStripe(dir.resolve("000.png"))
         writeStripe(dir.resolve("001.png"))
         Files.writeString(dir.resolve("notes.txt"), "not a frame")
 
-        val frames = service.framesIn(SKIN, SkinActions.WALK, Orientation.EAST)
+        val frames = service.framesIn(SKIN, SpriteAction.WALK.id, Orientation.EAST)
 
         assertContentEquals(
             listOf("000.png", "001.png", "002.png"),
@@ -57,19 +57,19 @@ class FrameMirrorServiceTest {
 
     @Test
     fun `framesIn is empty for a cell with no directory and for one with no pngs`() {
-        assertTrue(service.framesIn(SKIN, SkinActions.WALK, Orientation.NORTH).isEmpty())
+        assertTrue(service.framesIn(SKIN, SpriteAction.WALK.id, Orientation.NORTH).isEmpty())
 
-        val dir = orientationDir(SkinActions.WALK, Orientation.SOUTH)
+        val dir = orientationDir(SpriteAction.WALK.id, Orientation.SOUTH)
         Files.writeString(dir.resolve("readme.txt"), "still not a frame")
 
-        assertTrue(service.framesIn(SKIN, SkinActions.WALK, Orientation.SOUTH).isEmpty())
+        assertTrue(service.framesIn(SKIN, SpriteAction.WALK.id, Orientation.SOUTH).isEmpty())
     }
 
     @Test
     fun `mirrorToTemp flips every column left to right`() {
-        val dir = orientationDir(SkinActions.WALK, Orientation.EAST)
+        val dir = orientationDir(SpriteAction.WALK.id, Orientation.EAST)
         writeStripe(dir.resolve("000.png"), width = 4, height = 3)
-        val sources = service.framesIn(SKIN, SkinActions.WALK, Orientation.EAST)
+        val sources = service.framesIn(SKIN, SpriteAction.WALK.id, Orientation.EAST)
 
         val mirrored = service.mirrorToTemp(sources)
         try {
@@ -98,9 +98,9 @@ class FrameMirrorServiceTest {
 
     @Test
     fun `mirrorToTemp leaves the middle column of an odd width frame in place`() {
-        val dir = orientationDir(SkinActions.IDLE, Orientation.EAST)
+        val dir = orientationDir(SpriteAction.IDLE.id, Orientation.EAST)
         writeStripe(dir.resolve("000.png"), width = 5, height = 2)
-        val sources = service.framesIn(SKIN, SkinActions.IDLE, Orientation.EAST)
+        val sources = service.framesIn(SKIN, SpriteAction.IDLE.id, Orientation.EAST)
 
         val mirrored = service.mirrorToTemp(sources)
         try {
@@ -120,11 +120,11 @@ class FrameMirrorServiceTest {
 
     @Test
     fun `mirrorToTemp keeps frame order and reports each source width`() {
-        val dir = orientationDir(SkinActions.WALK, Orientation.EAST)
+        val dir = orientationDir(SpriteAction.WALK.id, Orientation.EAST)
         writeStripe(dir.resolve("000.png"), width = 4, height = 2)
         writeStripe(dir.resolve("001.png"), width = 6, height = 2)
         writeStripe(dir.resolve("002.png"), width = 5, height = 2)
-        val sources = service.framesIn(SKIN, SkinActions.WALK, Orientation.EAST)
+        val sources = service.framesIn(SKIN, SpriteAction.WALK.id, Orientation.EAST)
 
         val mirrored = service.mirrorToTemp(sources)
         try {
@@ -142,9 +142,9 @@ class FrameMirrorServiceTest {
 
     @Test
     fun `mirrorToTemp stages outside raw art and leaves the source untouched`() {
-        val dir = orientationDir(SkinActions.WALK, Orientation.EAST)
+        val dir = orientationDir(SpriteAction.WALK.id, Orientation.EAST)
         writeStripe(dir.resolve("000.png"), width = 4, height = 2)
-        val sources = service.framesIn(SKIN, SkinActions.WALK, Orientation.EAST)
+        val sources = service.framesIn(SKIN, SpriteAction.WALK.id, Orientation.EAST)
         val sourceBytes = Files.readAllBytes(sources.single())
 
         val mirrored = service.mirrorToTemp(sources)
@@ -161,10 +161,10 @@ class FrameMirrorServiceTest {
 
     @Test
     fun `delete removes the staging directory`() {
-        val dir = orientationDir(SkinActions.WALK, Orientation.EAST)
+        val dir = orientationDir(SpriteAction.WALK.id, Orientation.EAST)
         writeStripe(dir.resolve("000.png"))
 
-        val mirrored = service.mirrorToTemp(service.framesIn(SKIN, SkinActions.WALK, Orientation.EAST))
+        val mirrored = service.mirrorToTemp(service.framesIn(SKIN, SpriteAction.WALK.id, Orientation.EAST))
         mirrored.delete()
 
         assertTrue(Files.notExists(mirrored.directory))

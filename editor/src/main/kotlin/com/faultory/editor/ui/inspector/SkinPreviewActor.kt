@@ -10,7 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.Actor
 import com.faultory.core.graphics.ActionClip
 import com.faultory.core.graphics.AnimationPlayer
 import com.faultory.core.graphics.AnimationState
-import com.faultory.core.graphics.SkinActions
+import com.faultory.core.graphics.SpriteAction
 import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.graphics.SkinFrameResolver
 import com.faultory.core.graphics.SkinPartResolver
@@ -20,7 +20,7 @@ import com.faultory.core.shop.Orientation
 class SkinPreviewActor(
     private val atlas: TextureAtlas,
     private val skin: SkinDefinition,
-    private val action: String = SkinActions.IDLE,
+    private val action: String = SpriteAction.IDLE.id,
     private val orientation: Orientation = Orientation.SOUTH,
     private val previewId: String = "skin-preview",
 ) : Actor() {

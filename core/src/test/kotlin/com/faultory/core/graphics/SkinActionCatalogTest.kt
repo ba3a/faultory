@@ -167,14 +167,14 @@ class SkinActionCatalogTest {
     @Test
     fun `every belt tile shape is authorable`() {
         BeltTileShape.entries.forEach { shape ->
-            assertContains(SkinActionCatalog.belt, BeltActions.actionFor(shape))
+            assertContains(SkinActionCatalog.belt, SpriteAction.forBeltShape(shape).id)
         }
     }
 
     @Test
     fun `the product catalog covers both fault overlays`() {
-        assertContains(SkinActionCatalog.product, ProductActions.FAULT_DEFECT)
-        assertContains(SkinActionCatalog.product, ProductActions.FAULT_SABOTAGE)
+        assertContains(SkinActionCatalog.product, SpriteAction.FAULT_DEFECT.id)
+        assertContains(SkinActionCatalog.product, SpriteAction.FAULT_SABOTAGE.id)
     }
 
     @Test
@@ -185,7 +185,7 @@ class SkinActionCatalogTest {
             SkinActionCatalog.product,
             SkinActionCatalog.belt
         ).forEach { actions ->
-            assertTrue(actions.first() == SkinActions.IDLE, "expected idle first in $actions")
+            assertTrue(actions.first() == SpriteAction.IDLE.id, "expected idle first in $actions")
             assertTrue(actions.distinct() == actions, "expected no duplicates in $actions")
         }
     }

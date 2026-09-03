@@ -58,15 +58,7 @@
     <ID>MaxLineLength:ReflectionFormTest.kt$ReflectionFormTest$assertEquals(IntEditor("faultyProductCapacity", 3), recipe.children.single { it.fieldName == "faultyProductCapacity" })</ID>
     <ID>MaxLineLength:ReflectionFormTest.kt$ReflectionFormTest$assertEquals(StringEditor("outputProductId", "bolt"), recipe.children.single { it.fieldName == "outputProductId" })</ID>
     <ID>MaxLineLength:SkinMetadataValidatorSocketTest.kt$SkinMetadataValidatorSocketTest$assertTrue(issues.any { "socket 'hands'" in it.message &amp;&amp; "2 point(s) for 3 frame(s)" in it.message }, "$issues")</ID>
-    <ID>MaxLineLength:SkinStateServiceMirrorTest.kt$SkinStateServiceMirrorTest$actions = mapOf(SkinActions.WALK to ActionClip(frames = mapOf(Orientation.EAST to listOf("walk_east_000"))))</ID>
     <ID>MaxLineLength:SkinStateServiceSocketTest.kt$SkinStateServiceSocketTest$assertEquals(SocketPoint(18f, 20f, depth = 1f), clip.sockets.getValue(SocketNames.HANDS).byOrientation.getValue(Orientation.EAST))</ID>
-    <ID>MaxLineLength:SkinStateServiceSocketTest.kt$SkinStateServiceSocketTest$val byOrientation = withBoth.actions.getValue(ProductActions.CARRIED).sockets.getValue(SocketNames.HANDS).byOrientation</ID>
-    <ID>MaxLineLength:SkinStateServiceSocketTest.kt$SkinStateServiceSocketTest$val first = service.setPart(skinWith(), ProductActions.CARRIED, Orientation.EAST, "near_arm", 2f, listOf("a_000"))</ID>
-    <ID>MaxLineLength:SkinStateServiceSocketTest.kt$SkinStateServiceSocketTest$val placed = service.setPart(skinWith(), ProductActions.CARRIED, Orientation.EAST, "near_arm", 2f, listOf("a_000"))</ID>
-    <ID>MaxLineLength:SkinStateServiceSocketTest.kt$SkinStateServiceSocketTest$val placed = service.setSocket(skinWith(), ProductActions.CARRIED, Orientation.EAST, SocketNames.HANDS, SocketPoint(1f, 2f))</ID>
-    <ID>MaxLineLength:SkinStateServiceSocketTest.kt$SkinStateServiceSocketTest$val placed = service.setSocket(skinWith(), ProductActions.CARRIED, Orientation.EAST, SocketNames.HANDS, SocketPoint(7f, 8f, depth = 1.5f))</ID>
-    <ID>MaxLineLength:SkinStateServiceSocketTest.kt$SkinStateServiceSocketTest$val withBoth = service.setSocket(withEast, ProductActions.CARRIED, Orientation.WEST, SocketNames.HANDS, SocketPoint(3f, 4f))</ID>
-    <ID>MaxLineLength:SkinStateServiceSocketTest.kt$SkinStateServiceSocketTest$val withEast = service.setSocket(skinWith(), ProductActions.CARRIED, Orientation.EAST, SocketNames.HANDS, SocketPoint(1f, 2f))</ID>
     <ID>NestedBlockDepth:FrameBatchPlanner.kt$FrameBatchPlanner$fun expand(sources: List&lt;Path&gt;): List&lt;Path&gt;</ID>
     <ID>NestedBlockDepth:FrameMirrorServiceTest.kt$FrameMirrorServiceTest$@Test fun `mirrorToTemp flips every column left to right`()</ID>
     <ID>NestedBlockDepth:Inspector.kt$Inspector$private fun workerRoleProfilesActor(table: VisTable, editor: WorkerRoleProfilesEditor, onChange: () -&gt; Unit)</ID>

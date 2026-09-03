@@ -2,7 +2,7 @@ package com.faultory.editor.graphics
 
 import com.faultory.core.assets.AssetPaths as CoreAssetPaths
 import com.faultory.core.graphics.ActionClip
-import com.faultory.core.graphics.SkinActions
+import com.faultory.core.graphics.SpriteAction
 import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.shop.Orientation
 import java.nio.file.Files
@@ -71,7 +71,7 @@ class SkinStateServiceTest {
         val original = SkinDefinition(
             atlas = "textures/custom.atlas",
             actions = mapOf(
-                SkinActions.IDLE to ActionClip(
+                SpriteAction.IDLE.id to ActionClip(
                     frames = mapOf(Orientation.SOUTH to listOf("idle_south_000")),
                 ),
             ),
@@ -92,12 +92,12 @@ class SkinStateServiceTest {
 
         val updated = service.setOrientationFrames(
             current = base,
-            action = SkinActions.WALK,
+            action = SpriteAction.WALK.id,
             orientation = Orientation.EAST,
             regionNames = listOf("walk_east_000", "walk_east_001"),
         )
 
-        val clip = updated.actions.getValue(SkinActions.WALK)
+        val clip = updated.actions.getValue(SpriteAction.WALK.id)
         assertEquals(listOf("walk_east_000", "walk_east_001"), clip.frames.getValue(Orientation.EAST))
         assertTrue(clip.loop, "new clips default to loop=true")
         assertEquals(1, clip.frames.size, "only the supplied orientation should be populated")
@@ -114,17 +114,17 @@ class SkinStateServiceTest {
         )
         val base = SkinDefinition(
             atlas = "textures/x.atlas",
-            actions = mapOf(SkinActions.IDLE to existing),
+            actions = mapOf(SpriteAction.IDLE.id to existing),
         )
 
         val updated = service.setOrientationFrames(
             current = base,
-            action = SkinActions.IDLE,
+            action = SpriteAction.IDLE.id,
             orientation = Orientation.EAST,
             regionNames = listOf("idle_east_000"),
         )
 
-        val clip = updated.actions.getValue(SkinActions.IDLE)
+        val clip = updated.actions.getValue(SpriteAction.IDLE.id)
         assertEquals(listOf("idle_north_000"), clip.frames[Orientation.NORTH])
         assertEquals(listOf("idle_south_000"), clip.frames[Orientation.SOUTH])
         assertEquals(listOf("idle_east_000"), clip.frames[Orientation.EAST])
@@ -138,17 +138,17 @@ class SkinStateServiceTest {
         )
         val base = SkinDefinition(
             atlas = "textures/x.atlas",
-            actions = mapOf(SkinActions.IDLE to existing),
+            actions = mapOf(SpriteAction.IDLE.id to existing),
         )
 
         service.setOrientationFrames(
             current = base,
-            action = SkinActions.IDLE,
+            action = SpriteAction.IDLE.id,
             orientation = Orientation.NORTH,
             regionNames = listOf("idle_north_000"),
         )
 
-        assertNull(base.actions.getValue(SkinActions.IDLE).frames[Orientation.NORTH])
+        assertNull(base.actions.getValue(SpriteAction.IDLE.id).frames[Orientation.NORTH])
     }
 
     @Test
@@ -157,7 +157,7 @@ class SkinStateServiceTest {
         val definition = SkinDefinition(
             atlas = "textures/$skinId.atlas",
             actions = mapOf(
-                SkinActions.IDLE to ActionClip(
+                SpriteAction.IDLE.id to ActionClip(
                     frames = mapOf(Orientation.SOUTH to listOf("idle_south_000")),
                 ),
             ),

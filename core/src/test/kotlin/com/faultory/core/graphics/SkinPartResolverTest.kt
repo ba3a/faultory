@@ -84,13 +84,13 @@ class SkinPartResolverTest {
         val definition = SkinDefinition(
             atlas = "textures/test.atlas",
             actions = mapOf(
-                ProductActions.CARRIED to ActionClip(
+                SpriteAction.CARRIED.id to ActionClip(
                     frames = mapOf(Orientation.EAST to listOf("body_000", "body_001", "body_002")),
                     parts = parts.toMap()
                 )
             )
         )
-        val resolution = SkinFrameResolver.resolve(definition, ProductActions.CARRIED, Orientation.EAST)!!
+        val resolution = SkinFrameResolver.resolve(definition, SpriteAction.CARRIED.id, Orientation.EAST)!!
         return SkinPartResolver.resolve(resolution, frameIndex)
     }
 

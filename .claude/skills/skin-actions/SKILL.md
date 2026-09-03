@@ -1,6 +1,6 @@
 ---
 name: skin-actions
-description: How sprites resolve in Faultory — SkinDefinition, the *ActionResolver family, SkinFrameResolver's fixed degradation order, the action-name constants (SkinActions, ProductActions, BeltActions), sockets and interactions versus actions, raw-art layout and atlas baking, and the SkinActionCatalog rule that every action a resolver can request must also be authorable. Use when adding or changing an action, a resolver, a renderer or a ShopFloorLayer, when art fails to appear or falls back to ShapeRenderer primitives, and when working under raw-art/ or assets/skins/.
+description: How sprites resolve in Faultory — SkinDefinition, the *ActionResolver family, SkinFrameResolver's fixed degradation order, the SpriteAction enum that is the single source for action names / catalog membership / stand-ins, sockets and interactions versus actions, raw-art layout and atlas baking, and the SkinActionCatalog rule that every action a resolver can request must also be authorable. Use when adding or changing an action, a resolver, a renderer or a ShopFloorLayer, when art fails to appear or falls back to ShapeRenderer primitives, and when working under raw-art/ or assets/skins/.
 ---
 
 # Sprites, actions and skins
@@ -28,26 +28,31 @@ Only when nothing resolves does the entity fall through to the `ShapeRenderer` p
 `PlacedObjectRenderer` / `GridBackgroundRenderer`. Set `DebugFlags.forceShapeRendering` (F9 on the
 shop floor, or `-Dfaultory.debug.shapes=true`) to force that fallback everywhere.
 
-## Action names are constants
+## Action names come from SpriteAction
 
-Never string literals at the call site: `SkinActions` (workers and machines), `ProductActions`,
-`BeltActions`.
+Every action is one entry in the `SpriteAction` enum, carrying its `id`, the `SpriteKind`s that may
+request it, and its optional stand-in. Name it `SpriteAction.WALK.id` at the call site, never a
+string literal. `SpriteAction.faultOverlayFor(faultReason)` / `SpriteAction.forBeltShape(shape)` are
+the two state→action mappers that live on the enum's companion.
 
 Products additionally support `fault_defect` / `fault_sabotage` overlay masks drawn over the base
 frame; without mask art the base sprite is tinted instead. Belt tiles have no catalog entry —
 `BeltTopology` derives flow direction and tile shape from `ShopGrid.orderedBeltPaths`, and the skin
 is `ConveyorBelt.skin` or `AssetPaths.defaultBeltSkin`.
 
-## When a resolver learns a new action, add it to SkinActionCatalog
+## When a resolver learns a new action, add a SpriteAction entry
 
-`SkinActionCatalog` lists the actions each kind can request, and is what the editor turns into
-animation grid rows (`AnimationTargets` maps a selected asset to its grids; belts hang off the
-blueprint selection, and `SkinActionCatalog.workerActions` merges in both halves of every
-interaction in `content/interactions.json`).
+`SkinActionCatalog`'s per-kind lists (`worker` / `machine` / `product` / `belt`) and
+`SkinFrameResolver`'s stand-in chain both **derive** from `SpriteAction`, so one entry catalogues
+the action and gives it its fallback — nothing to keep in sync by hand. `SkinActionCatalog` is what
+the editor turns into animation grid rows (`AnimationTargets` maps a selected asset to its grids;
+belts hang off the blueprint selection, and `SkinActionCatalog.workerActions` merges in both halves
+of every interaction in `content/interactions.json`).
 
-An action the runtime asks for but nobody can author is an animation that never plays.
-`SkinActionCatalogTest` enforces this by driving the resolvers over every `UnitPhase`,
-`BeltRidePhase`, `InteractionRole`, `ShopProductState` and `BeltTileShape`.
+An action the runtime asks for but the enum does not list is an animation that never plays.
+`SpriteActionTest` pins the table itself; `SkinActionCatalogTest` enforces the runtime↔author
+contract by driving the resolvers over every `UnitPhase`, `BeltRidePhase`, `InteractionRole`,
+`ShopProductState` and `BeltTileShape`.
 
 ## Two things that look like actions but are not
 

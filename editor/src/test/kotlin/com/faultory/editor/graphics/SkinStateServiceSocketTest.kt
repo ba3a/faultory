@@ -1,7 +1,7 @@
 package com.faultory.editor.graphics
 
 import com.faultory.core.graphics.ActionClip
-import com.faultory.core.graphics.ProductActions
+import com.faultory.core.graphics.SpriteAction
 import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.graphics.SocketNames
 import com.faultory.core.graphics.SocketPoint
@@ -18,6 +18,7 @@ import kotlin.test.assertTrue
 
 class SkinStateServiceSocketTest {
 
+    private val carried = SpriteAction.CARRIED.id
     private lateinit var assetsRoot: Path
     private lateinit var service: SkinStateService
 
@@ -39,12 +40,12 @@ class SkinStateServiceSocketTest {
         val authored = service.setPart(
             current = service.setSocket(
                 current = skinWith(ActionClip(frames = east("carry_east_000"), frameDurationSeconds = 0.25f)),
-                action = ProductActions.CARRIED,
+                action = carried,
                 orientation = Orientation.EAST,
                 socketName = SocketNames.HANDS,
                 point = SocketPoint(18f, 20f, depth = 1f),
             ),
-            action = ProductActions.CARRIED,
+            action = carried,
             orientation = Orientation.EAST,
             partName = "near_arm",
             depth = 2f,
@@ -53,12 +54,12 @@ class SkinStateServiceSocketTest {
 
         val reimported = service.setOrientationFrames(
             current = authored,
-            action = ProductActions.CARRIED,
+            action = carried,
             orientation = Orientation.EAST,
             regionNames = listOf("carry_east_000", "carry_east_001"),
         )
 
-        val clip = assertNotNull(reimported.actions[ProductActions.CARRIED])
+        val clip = assertNotNull(reimported.actions[carried])
         assertEquals(0.25f, clip.frameDurationSeconds)
         assertEquals(SocketPoint(18f, 20f, depth = 1f), clip.sockets.getValue(SocketNames.HANDS).byOrientation.getValue(Orientation.EAST))
         assertEquals(2f, clip.parts.getValue("near_arm").depth)
@@ -67,41 +68,43 @@ class SkinStateServiceSocketTest {
 
     @Test
     fun `setSocket places a point without disturbing other orientations`() {
-        val withEast = service.setSocket(skinWith(), ProductActions.CARRIED, Orientation.EAST, SocketNames.HANDS, SocketPoint(1f, 2f))
-        val withBoth = service.setSocket(withEast, ProductActions.CARRIED, Orientation.WEST, SocketNames.HANDS, SocketPoint(3f, 4f))
+        val withEast = service.setSocket(skinWith(), carried, Orientation.EAST, SocketNames.HANDS, SocketPoint(1f, 2f))
+        val withBoth = service.setSocket(withEast, carried, Orientation.WEST, SocketNames.HANDS, SocketPoint(3f, 4f))
 
-        val byOrientation = withBoth.actions.getValue(ProductActions.CARRIED).sockets.getValue(SocketNames.HANDS).byOrientation
+        val byOrientation = withBoth.actions.getValue(carried).sockets.getValue(SocketNames.HANDS).byOrientation
         assertEquals(SocketPoint(1f, 2f), byOrientation[Orientation.EAST])
         assertEquals(SocketPoint(3f, 4f), byOrientation[Orientation.WEST])
     }
 
     @Test
     fun `clearing the last point of a socket removes the socket entirely`() {
-        val placed = service.setSocket(skinWith(), ProductActions.CARRIED, Orientation.EAST, SocketNames.HANDS, SocketPoint(1f, 2f))
+        val placed = service.setSocket(skinWith(), carried, Orientation.EAST, SocketNames.HANDS, SocketPoint(1f, 2f))
 
-        val cleared = service.setSocket(placed, ProductActions.CARRIED, Orientation.EAST, SocketNames.HANDS, null)
+        val cleared = service.setSocket(placed, carried, Orientation.EAST, SocketNames.HANDS, null)
 
-        assertTrue(cleared.actions.getValue(ProductActions.CARRIED).sockets.isEmpty())
+        assertTrue(cleared.actions.getValue(carried).sockets.isEmpty())
     }
 
     @Test
     fun `socketFor reads back exactly what was placed`() {
-        val placed = service.setSocket(skinWith(), ProductActions.CARRIED, Orientation.EAST, SocketNames.HANDS, SocketPoint(7f, 8f, depth = 1.5f))
+        val placed = service.setSocket(
+            skinWith(), carried, Orientation.EAST, SocketNames.HANDS, SocketPoint(7f, 8f, depth = 1.5f)
+        )
 
         assertEquals(
             SocketPoint(7f, 8f, depth = 1.5f),
-            service.socketFor(placed, ProductActions.CARRIED, Orientation.EAST, SocketNames.HANDS)
+            service.socketFor(placed, carried, Orientation.EAST, SocketNames.HANDS)
         )
-        assertNull(service.socketFor(placed, ProductActions.CARRIED, Orientation.NORTH, SocketNames.HANDS))
+        assertNull(service.socketFor(placed, carried, Orientation.NORTH, SocketNames.HANDS))
     }
 
     @Test
     fun `setPart updates depth on an existing part rather than adding a second`() {
-        val first = service.setPart(skinWith(), ProductActions.CARRIED, Orientation.EAST, "near_arm", 2f, listOf("a_000"))
+        val first = service.setPart(skinWith(), carried, Orientation.EAST, "near_arm", 2f, listOf("a_000"))
 
-        val second = service.setPart(first, ProductActions.CARRIED, Orientation.WEST, "near_arm", 3f, listOf("b_000"))
+        val second = service.setPart(first, carried, Orientation.WEST, "near_arm", 3f, listOf("b_000"))
 
-        val parts = second.actions.getValue(ProductActions.CARRIED).parts
+        val parts = second.actions.getValue(carried).parts
         assertEquals(1, parts.size)
         assertEquals(3f, parts.getValue("near_arm").depth)
         assertEquals(listOf("a_000"), parts.getValue("near_arm").frames[Orientation.EAST])
@@ -110,28 +113,28 @@ class SkinStateServiceSocketTest {
 
     @Test
     fun `clearing the last orientation of a part removes the part entirely`() {
-        val placed = service.setPart(skinWith(), ProductActions.CARRIED, Orientation.EAST, "near_arm", 2f, listOf("a_000"))
+        val placed = service.setPart(skinWith(), carried, Orientation.EAST, "near_arm", 2f, listOf("a_000"))
 
-        val cleared = service.setPart(placed, ProductActions.CARRIED, Orientation.EAST, "near_arm", 2f, emptyList())
+        val cleared = service.setPart(placed, carried, Orientation.EAST, "near_arm", 2f, emptyList())
 
-        assertTrue(cleared.actions.getValue(ProductActions.CARRIED).parts.isEmpty())
+        assertTrue(cleared.actions.getValue(carried).parts.isEmpty())
     }
 
     @Test
     fun `placing a socket on an action with no frames yet still records it`() {
         val placed = service.setSocket(
             SkinDefinition(atlas = ATLAS, actions = emptyMap()),
-            ProductActions.CARRIED,
+            carried,
             Orientation.EAST,
             SocketNames.HANDS,
             SocketPoint(1f, 2f),
         )
 
-        assertNotNull(service.socketFor(placed, ProductActions.CARRIED, Orientation.EAST, SocketNames.HANDS))
+        assertNotNull(service.socketFor(placed, carried, Orientation.EAST, SocketNames.HANDS))
     }
 
     private fun skinWith(clip: ActionClip = ActionClip(frames = east("carry_east_000"))): SkinDefinition =
-        SkinDefinition(atlas = ATLAS, actions = mapOf(ProductActions.CARRIED to clip))
+        SkinDefinition(atlas = ATLAS, actions = mapOf(carried to clip))
 
     private fun east(vararg regionNames: String): Map<Orientation, List<String>> =
         mapOf(Orientation.EAST to regionNames.toList())

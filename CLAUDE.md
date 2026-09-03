@@ -96,13 +96,15 @@ Naming patterns: data models are nouns (`ShopCatalog`, `ShiftSnapshot`); `AssetM
 A skin id resolves to a `SkinDefinition` (`assets/skins/<id>.json`), an `*ActionResolver` maps
 entity state to an action name plus an orientation, and `SkinFrameResolver` picks the clip —
 degrading through orientations, then stand-ins, then `idle`, and only then falling back to the
-`ShapeRenderer` primitives. Action names are constants (`SkinActions`, `ProductActions`,
-`BeltActions`), never literals at the call site. Raw art lives in
+`ShapeRenderer` primitives. Action names come from the `SpriteAction` enum (`SpriteAction.WALK.id`),
+never literals at the call site. Raw art lives in
 `raw-art/<skinId>/<action>_<orientation-lowercase>/NNN.png` and is baked from the editor.
 
-**When a resolver learns a new action, add it to `SkinActionCatalog` too** — an action the runtime
-asks for but nobody can author is an animation that never plays. `SkinActionCatalogTest` enforces
-this.
+**When a resolver learns a new action, add a `SpriteAction` entry** — its `id`, which `SpriteKind`s
+may request it, and its optional stand-in. `SkinActionCatalog`'s per-kind lists and
+`SkinFrameResolver`'s stand-in chain both derive from that one entry, so nothing can drift; an
+action the runtime asks for but the table does not list is an animation that never plays, and
+`SkinActionCatalogTest` / `SpriteActionTest` enforce this.
 
 Full contract — degradation order, sockets vs. interactions, mirroring, layer discipline — is in
 the **`skin-actions`** skill (`.claude/skills/skin-actions/`). Load it before touching a resolver,

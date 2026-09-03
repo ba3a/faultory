@@ -1,6 +1,6 @@
 package com.faultory.editor.graphics
 
-import com.faultory.core.graphics.SkinActions
+import com.faultory.core.graphics.SpriteAction
 import com.faultory.core.shop.Orientation
 import java.nio.file.Files
 import java.nio.file.Path
@@ -39,7 +39,7 @@ class FrameImportServiceTest {
     fun `orientationDir resolves to skinId slash action_orientation lowercase`() {
         val dir = service.orientationDir(
             skinId = "worker_line_inspector",
-            action = SkinActions.WALK,
+            action = SpriteAction.WALK.id,
             orientation = Orientation.EAST,
         )
         val expected = rawArtRoot.resolve("worker_line_inspector").resolve("walk_east")
@@ -56,12 +56,12 @@ class FrameImportServiceTest {
 
         val regions = service.importFrames(
             skinId = "worker_w",
-            action = SkinActions.WALK,
+            action = SpriteAction.WALK.id,
             orientation = Orientation.NORTH,
             sources = sources,
         )
 
-        val targetDir = service.orientationDir("worker_w", SkinActions.WALK, Orientation.NORTH)
+        val targetDir = service.orientationDir("worker_w", SpriteAction.WALK.id, Orientation.NORTH)
         assertTrue(Files.isDirectory(targetDir))
         assertContentEquals(byteArrayOf(1), Files.readAllBytes(targetDir.resolve("000.png")))
         assertContentEquals(byteArrayOf(2), Files.readAllBytes(targetDir.resolve("001.png")))
@@ -81,19 +81,19 @@ class FrameImportServiceTest {
 
         service.importFrames(
             skinId = "worker_w",
-            action = SkinActions.IDLE,
+            action = SpriteAction.IDLE.id,
             orientation = Orientation.SOUTH,
             sources = sources,
         )
 
-        val targetDir = service.orientationDir("worker_w", SkinActions.IDLE, Orientation.SOUTH)
+        val targetDir = service.orientationDir("worker_w", SpriteAction.IDLE.id, Orientation.SOUTH)
         assertContentEquals(byteArrayOf(9), Files.readAllBytes(targetDir.resolve("000.png")))
         assertContentEquals(byteArrayOf(1), Files.readAllBytes(targetDir.resolve("001.png")))
     }
 
     @Test
     fun `importFrames wipes existing files in the target orientation directory`() {
-        val targetDir = service.orientationDir("worker_w", SkinActions.IDLE, Orientation.SOUTH)
+        val targetDir = service.orientationDir("worker_w", SpriteAction.IDLE.id, Orientation.SOUTH)
         Files.createDirectories(targetDir)
         val stale = targetDir.resolve("stale.png")
         stale.writeBytes(byteArrayOf(42))
@@ -103,7 +103,7 @@ class FrameImportServiceTest {
         val sources = listOf(writeBytesFile("new.png", byteArrayOf(7)))
         service.importFrames(
             skinId = "worker_w",
-            action = SkinActions.IDLE,
+            action = SpriteAction.IDLE.id,
             orientation = Orientation.SOUTH,
             sources = sources,
         )
@@ -117,14 +117,14 @@ class FrameImportServiceTest {
 
     @Test
     fun `importFrames does not touch other orientation directories`() {
-        val otherDir = service.orientationDir("worker_w", SkinActions.IDLE, Orientation.NORTH)
+        val otherDir = service.orientationDir("worker_w", SpriteAction.IDLE.id, Orientation.NORTH)
         Files.createDirectories(otherDir)
         otherDir.resolve("000.png").writeBytes(byteArrayOf(11))
 
         val sources = listOf(writeBytesFile("new.png", byteArrayOf(7)))
         service.importFrames(
             skinId = "worker_w",
-            action = SkinActions.IDLE,
+            action = SpriteAction.IDLE.id,
             orientation = Orientation.SOUTH,
             sources = sources,
         )
@@ -137,7 +137,7 @@ class FrameImportServiceTest {
         assertFailsWith<IllegalArgumentException> {
             service.importFrames(
                 skinId = "worker_w",
-                action = SkinActions.IDLE,
+                action = SpriteAction.IDLE.id,
                 orientation = Orientation.SOUTH,
                 sources = emptyList(),
             )

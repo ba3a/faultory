@@ -18,7 +18,7 @@ object WorkerActionResolver {
         catalogLookup: (String) -> InteractionDefinition? = { null }
     ): String {
         if (placedObject.kind != PlacedShopObjectKind.WORKER) {
-            return SkinActions.IDLE
+            return SpriteAction.IDLE.id
         }
 
         // A unit phase outranks everything: it is involuntary and the worker is off its feet, so
@@ -32,15 +32,15 @@ object WorkerActionResolver {
             ?.let { (definition, role) -> return actionFor(definition, role) }
 
         return when (placedObject.beltRidePhase) {
-            BeltRidePhase.ENTERING -> SkinActions.BELT_ENTER
-            BeltRidePhase.RIDING -> SkinActions.BELT_RIDE
-            BeltRidePhase.EXITING -> SkinActions.BELT_EXIT
+            BeltRidePhase.ENTERING -> SpriteAction.BELT_ENTER.id
+            BeltRidePhase.RIDING -> SpriteAction.BELT_RIDE.id
+            BeltRidePhase.EXITING -> SpriteAction.BELT_EXIT.id
             // Pursuit is alert locomotion, so it only replaces the walk cycle. A guard standing
             // still mid-chase - replanning its route - is idle, and reads better as such.
             null -> when {
-                !isMoving(placedObject) -> SkinActions.IDLE
-                placedObject.pursuitTargetWorkerId != null -> SkinActions.PURSUE
-                else -> SkinActions.WALK
+                !isMoving(placedObject) -> SpriteAction.IDLE.id
+                placedObject.pursuitTargetWorkerId != null -> SpriteAction.PURSUE.id
+                else -> SpriteAction.WALK.id
             }
         }
     }
@@ -49,10 +49,10 @@ object WorkerActionResolver {
         placedObject.movementPath.isNotEmpty() && placedObject.movementProgress < 1f
 
     fun actionFor(unitPhase: UnitPhase): String = when (unitPhase) {
-        UnitPhase.FALLING -> SkinActions.FALL
-        UnitPhase.LYING -> SkinActions.LIE
-        UnitPhase.STANDING -> SkinActions.STAND_UP
-        UnitPhase.DESTROYING_PRODUCT -> SkinActions.DESTROY
+        UnitPhase.FALLING -> SpriteAction.FALL.id
+        UnitPhase.LYING -> SpriteAction.LIE.id
+        UnitPhase.STANDING -> SpriteAction.STAND_UP.id
+        UnitPhase.DESTROYING_PRODUCT -> SpriteAction.DESTROY.id
     }
 
     fun actionFor(definition: InteractionDefinition, role: InteractionRole): String = when (role) {

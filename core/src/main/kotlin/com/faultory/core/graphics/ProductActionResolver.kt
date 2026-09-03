@@ -10,8 +10,8 @@ import com.faultory.core.shop.UnitPhase
 
 object ProductActionResolver {
     fun actionFor(shopFloor: ShopFloor, product: ShopProduct): String = when (product.state) {
-        ShopProductState.ON_BELT -> ProductActions.ON_BELT
-        ShopProductState.ON_FLOOR -> ProductActions.IDLE
+        ShopProductState.ON_BELT -> SpriteAction.ON_BELT.id
+        ShopProductState.ON_FLOOR -> SpriteAction.IDLE.id
         ShopProductState.CARRIED -> carriedActionFor(shopFloor, product)
     }
 
@@ -41,9 +41,9 @@ object ProductActionResolver {
     private fun carriedActionFor(shopFloor: ShopFloor, product: ShopProduct): String {
         val holder = holderFor(shopFloor, product)
         return when {
-            holder?.unitPhase == UnitPhase.DESTROYING_PRODUCT -> ProductActions.DESTROYING
-            shopFloor.qaInspectionStates.any { it.productId == product.id } -> ProductActions.INSPECTED
-            else -> ProductActions.CARRIED
+            holder?.unitPhase == UnitPhase.DESTROYING_PRODUCT -> SpriteAction.DESTROYING.id
+            shopFloor.qaInspectionStates.any { it.productId == product.id } -> SpriteAction.INSPECTED.id
+            else -> SpriteAction.CARRIED.id
         }
     }
 

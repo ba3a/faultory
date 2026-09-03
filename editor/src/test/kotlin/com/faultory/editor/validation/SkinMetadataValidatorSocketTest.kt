@@ -1,7 +1,7 @@
 package com.faultory.editor.validation
 
 import com.faultory.core.graphics.ActionClip
-import com.faultory.core.graphics.ProductActions
+import com.faultory.core.graphics.SpriteAction
 import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.graphics.SocketClip
 import com.faultory.core.graphics.SocketNames
@@ -142,7 +142,7 @@ class SkinMetadataValidatorSocketTest {
     private fun validate(clip: ActionClip, extraRegions: List<String> = emptyList()): List<ValidationIssue> {
         val skin = SkinDefinition(
             atlas = "textures/demo.atlas",
-            actions = mapOf(ProductActions.CARRIED to clip),
+            actions = mapOf(SpriteAction.CARRIED.id to clip),
         )
         val regions = clip.frames.values.flatten() + extraRegions
         return SkinMetadataValidator.validate(skin, regions)

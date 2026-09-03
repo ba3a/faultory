@@ -9,7 +9,7 @@ import com.faultory.core.shop.Orientation
  * The chain is, in order: the requested action facing the requested way, then facing
  * [Orientation.SOUTH], then facing the nearest authored orientation by turning order;
  * then the same three steps again for any stand-in the action declares, and finally for
- * [SkinActions.IDLE]. An unresolved lookup means the caller should fall back to shape rendering.
+ * [SpriteAction.IDLE]. An unresolved lookup means the caller should fall back to shape rendering.
  */
 object SkinFrameResolver {
     data class Resolution(
@@ -27,7 +27,7 @@ object SkinFrameResolver {
 
     /**
      * Resolves within a single action only, still walking the orientation candidates.
-     * Used for overlays, where falling back to [SkinActions.IDLE] would draw the base sprite twice.
+     * Used for overlays, where falling back to [SpriteAction.IDLE] would draw the base sprite twice.
      */
     fun resolveExactAction(definition: SkinDefinition, action: String, orientation: Orientation): Resolution? {
         val clip = definition.actions[action] ?: return null
@@ -40,21 +40,13 @@ object SkinFrameResolver {
         return null
     }
 
-    fun actionCandidates(action: String): List<String> =
-        (listOf(action) + actionFallbacks[action].orEmpty() + SkinActions.IDLE).distinct()
-
     /**
-     * Actions whose natural stand-in is another action, tried before idle.
-     *
-     * Idle is the wrong stand-in for anything that plays while the entity is moving or off its
-     * feet: an unauthored `pursue` must not freeze a guard mid-stride into a standing pose.
+     * The requested action, then its stand-in ([SpriteAction.standIns], tried before idle because
+     * idle is the wrong substitute for anything that plays while the entity is moving or off its
+     * feet — an unauthored `pursue` must not freeze a guard mid-stride), then `idle`.
      */
-    private val actionFallbacks: Map<String, List<String>> = mapOf(
-        SkinActions.PURSUE to listOf(SkinActions.WALK),
-        SkinActions.FALL to listOf(SkinActions.LIE),
-        SkinActions.BELT_ENTER to listOf(SkinActions.BELT_RIDE),
-        SkinActions.BELT_EXIT to listOf(SkinActions.BELT_RIDE)
-    )
+    fun actionCandidates(action: String): List<String> =
+        (listOf(action) + SpriteAction.standIns[action].orEmpty() + SpriteAction.IDLE.id).distinct()
 
     /** Requested first, then the canonical south facing, then clockwise, counter-clockwise, opposite. */
     fun orientationCandidates(orientation: Orientation): List<Orientation> =

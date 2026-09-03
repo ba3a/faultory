@@ -54,9 +54,12 @@ class SkinDefinitionAssetLoaderTest {
             val definition = loader.loadSync(assetManager, absolutePath, fileHandle, null)
 
             assertEquals("textures/worker_line_inspector.atlas", definition.atlas)
-            assertEquals(listOf("idle_north_000"), definition.actions[SkinActions.IDLE]?.frames?.get(Orientation.NORTH))
-            assertEquals(true, definition.actions[SkinActions.IDLE]?.loop)
-            assertEquals(false, definition.actions[SkinActions.WALK]?.loop)
+            assertEquals(
+                listOf("idle_north_000"),
+                definition.actions[SpriteAction.IDLE.id]?.frames?.get(Orientation.NORTH)
+            )
+            assertEquals(true, definition.actions[SpriteAction.IDLE.id]?.loop)
+            assertEquals(false, definition.actions[SpriteAction.WALK.id]?.loop)
             assertNull(loader.getDependencies(absolutePath, fileHandle, null))
         } finally {
             assetManager.dispose()

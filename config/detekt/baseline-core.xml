@@ -195,7 +195,6 @@
     <ID>MaxLineLength:ShopFloorState.kt$ShopFloorState$val workerIndex = mutablePlacedObjects.indexOfFirst { it.id == workerId &amp;&amp; it.kind == PlacedShopObjectKind.WORKER }</ID>
     <ID>MaxLineLength:SkinDefinitionJsonTest.kt$SkinDefinitionJsonTest$"far_arm" to SpritePart(depth = -1f, frames = mapOf(Orientation.EAST to listOf("carry_east_fararm_000")))</ID>
     <ID>MaxLineLength:SkinDefinitionJsonTest.kt$SkinDefinitionJsonTest$"near_arm" to SpritePart(depth = 2f, frames = mapOf(Orientation.EAST to listOf("carry_east_neararm_000")))</ID>
-    <ID>MaxLineLength:SkinFrameResolverTest.kt$SkinFrameResolverTest$assertEquals(listOf(SkinActions.FALL, SkinActions.LIE, SkinActions.IDLE), SkinFrameResolver.actionCandidates(SkinActions.FALL))</ID>
     <ID>MaxLineLength:SkinRegistry.kt$SkinRegistry$Gdx.app?.error(LOG_TAG, "Atlas '$atlasPath' was not pre-loaded; sprite rendering will fall back to shapes.")</ID>
     <ID>MaxLineLength:UpgradeModalLayoutTest.kt$UpgradeModalLayoutTest$assertTrue(opt.bounds.x + opt.bounds.width &lt;= modal.bounds.x + modal.bounds.width, "option right must be inside modal")</ID>
     <ID>MaxLineLength:UpgradeModalLayoutTest.kt$UpgradeModalLayoutTest$assertTrue(opt.bounds.y + opt.bounds.height &lt;= modal.bounds.y + modal.bounds.height, "option top must be inside modal")</ID>
