@@ -52,7 +52,18 @@ data class WorkerRoleProfile(
     val acceptedProductIds: List<String> = emptyList(),
     val eyesightRadius: Float? = null,
     val spawnChance: Float? = null
-)
+) {
+    /**
+     * True when this is a QA profile with every field a QA inspection needs. The three nullable
+     * fields are optional in the JSON but all required to actually work a post, so a worker with a
+     * half-filled QA profile is offered no QA action and rejected if assigned anyway.
+     */
+    val isEmployableAsQa: Boolean
+        get() = role == WorkerRole.QA &&
+            inspectionDurationSeconds != null &&
+            detectionAccuracy != null &&
+            faultyProductStrategy != null
+}
 
 @Serializable
 enum class WorkerRole {

@@ -127,11 +127,7 @@ class WorkerAssignmentController(
         val workerProfile = catalogLookup.workerProfilesById[worker.catalogId] ?: return
         val actions = buildList {
             add(ObjectContextAction.ASSIGN_TO_MACHINE)
-            val qaRole = workerProfile.profileFor(WorkerRole.QA)
-            if (qaRole?.inspectionDurationSeconds != null &&
-                qaRole.detectionAccuracy != null &&
-                qaRole.faultyProductStrategy != null
-            ) {
+            if (workerProfile.profileFor(WorkerRole.QA)?.isEmployableAsQa == true) {
                 add(ObjectContextAction.ASSIGN_TO_QA)
             }
             if (upgradeFlow.hasUpgradesFor(workerId)) {

@@ -12,8 +12,6 @@
     <ID>CyclomaticComplexMethod:QaSystem.kt$QaSystem$private fun resolveCompletedQaInspection( inspection: QaInspectionState, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
     <ID>CyclomaticComplexMethod:QaSystem.kt$QaSystem$private fun startMachineQaInspections(workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
     <ID>CyclomaticComplexMethod:QaSystem.kt$QaSystem$private fun startWorkerQaInspections(workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
-    <ID>CyclomaticComplexMethod:ShopFloor.kt$ShopFloor$private fun planAssignmentToMachine( workerId: String, machineId: String, workersById: Map&lt;String, WorkerProfile&gt; ): WorkerAssignmentResult</ID>
-    <ID>CyclomaticComplexMethod:ShopFloor.kt$ShopFloor$private fun planAssignmentToQa( workerId: String, workersById: Map&lt;String, WorkerProfile&gt; ): WorkerAssignmentResult</ID>
     <ID>CyclomaticComplexMethod:ShopFloorState.kt$ShopFloorState$private fun updateKindIndex(old: PlacedShopObject?, new: PlacedShopObject?)</ID>
     <ID>CyclomaticComplexMethod:WorkerMovementSystem.kt$WorkerMovementSystem$fun update( deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
     <ID>CyclomaticComplexMethod:WorkerMovementSystem.kt$WorkerMovementSystem$private fun handleBeltPhase(index: Int, worker: PlacedShopObject, deltaSeconds: Float)</ID>
@@ -175,11 +173,6 @@
     <ID>MaxLineLength:QaSystem.kt$QaSystem$val updatedProgress = (currentState.progressSeconds + deltaSeconds).coerceAtMost(config.inspectionDurationSeconds)</ID>
     <ID>MaxLineLength:QaSystem.kt$QaSystem$val workerIndex = mutablePlacedObjects.indexOfFirst { it.id == holderObjectId &amp;&amp; it.kind == PlacedShopObjectKind.WORKER }</ID>
     <ID>MaxLineLength:SecuritySystem.kt$SecuritySystem$compareBy&lt;PlacedShopObject&gt; { state.manhattanDistance(it.position, cameraSecurity.position) }.thenBy { it.id }</ID>
-    <ID>MaxLineLength:ShopFloor.kt$ShopFloor$(slotPosition.accessTile == worker.position || !isOccupied(slotPosition.accessTile, ignoreObjectId = worker.id))</ID>
-    <ID>MaxLineLength:ShopFloor.kt$ShopFloor$if</ID>
-    <ID>MaxLineLength:ShopFloor.kt$ShopFloor$slotPosition.accessTile in grid.beltTiles &amp;&amp; !isOccupied(slotPosition.accessTile, ignoreObjectId = ignoreObjectId)</ID>
-    <ID>MaxLineLength:ShopFloor.kt$ShopFloor$val machineIndex = mutablePlacedObjects.indexOfFirst { it.id == machineId &amp;&amp; it.kind == PlacedShopObjectKind.MACHINE }</ID>
-    <ID>MaxLineLength:ShopFloor.kt$ShopFloor$val workerIndex = mutablePlacedObjects.indexOfFirst { it.id == workerId &amp;&amp; it.kind == PlacedShopObjectKind.WORKER }</ID>
     <ID>MaxLineLength:ShopFloorBeltRideTest.kt$ShopFloorBeltRideTest$assertEquals(BeltRidePhase.ENTERING, s.beltRidePhase, "security keeps riding when the exit tile continues the belt")</ID>
     <ID>MaxLineLength:ShopFloorBeltRideTest.kt$ShopFloorBeltRideTest$shopFloor.update(0.25f, mapOf(profile.id to profile))</ID>
     <ID>MaxLineLength:ShopFloorBeltRideTest.kt$ShopFloorBeltRideTest$shopFloor.update(GameConfig.beltRideDurationSeconds, mapOf(profile.id to profile))</ID>
@@ -227,14 +220,8 @@
     <ID>NestedBlockDepth:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun resolveWorkerObjectives()</ID>
     <ID>ReturnCount:ProductionSystem.kt$ProductionSystem$private fun tickRecipeMachine( machine: PlacedShopObject, machineSpec: MachineSpec, recipe: MachineRecipe, deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
     <ID>ReturnCount:QaSystem.kt$QaSystem$private fun qaConfigFor( inspector: PlacedShopObject, workerProfilesById: Map&lt;String, WorkerProfile&gt;, requireReady: Boolean ): QaInspectorConfig?</ID>
-    <ID>ReturnCount:ShopFloor.kt$ShopFloor$fun canPlaceObject( placedObject: PlacedShopObject, ignoreObjectId: String? = null ): Boolean</ID>
-    <ID>ReturnCount:ShopFloor.kt$ShopFloor$fun rotateMachine( machineId: String, orientation: Orientation ): Boolean</ID>
-    <ID>ReturnCount:ShopFloor.kt$ShopFloor$fun tryUpgradeObject( objectId: String, targetCatalogId: String, cost: Int ): Boolean</ID>
-    <ID>ReturnCount:ShopFloor.kt$ShopFloor$private fun planAssignmentToMachine( workerId: String, machineId: String, workersById: Map&lt;String, WorkerProfile&gt; ): WorkerAssignmentResult</ID>
-    <ID>ReturnCount:ShopFloor.kt$ShopFloor$private fun planAssignmentToQa( workerId: String, workersById: Map&lt;String, WorkerProfile&gt; ): WorkerAssignmentResult</ID>
     <ID>TooGenericExceptionCaught:EncounterProgressRepository.kt$LocalEncounterProgressRepository$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:SaveRepository.kt$LocalSaveRepository$t: Throwable</ID>
-    <ID>TooManyFunctions:ShopFloor.kt$ShopFloor</ID>
     <ID>TooManyFunctions:ShopFloorState.kt$ShopFloorState</ID>
     <ID>UnusedParameter:CleanerSystem.kt$CleanerSystem$cleanerIndex: Int</ID>
     <ID>UnusedParameter:CleanerSystem.kt$CleanerSystem$deltaSeconds: Float</ID>
