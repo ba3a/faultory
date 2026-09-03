@@ -173,13 +173,16 @@ class ShopFloorScreen(
 
     override fun show() {
         viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
+        // Snapshots, not the live view: both outlive this call — the context is held by
+        // upgradeFlow, and the placed-object list by the encounter engine — for the whole shift.
+        val placedObjectsSnapshot = shopFloor.placedObjects.toList()
         val ctx = game.buildEvaluationContext(
             levelId = level.id,
-            placedObjects = shopFloor.placedObjects
+            placedObjects = placedObjectsSnapshot
         )
         bankPanel.rebuild(level, ctx)
         bankPanel.layout()
-        game.updateEncounterPlacedObjects(shopFloor.placedObjects)
+        game.updateEncounterPlacedObjects(placedObjectsSnapshot)
         upgradeFlow.evaluationContext = ctx
         if (shiftLifecycle.finalizeIfNeeded()) {
             input.clearInteractionStateForShiftEnd()
@@ -202,7 +205,9 @@ class ShopFloorScreen(
     override fun render(delta: Float) {
         // Capture mode substitutes a fixed timestep so a take is frame-exact and repeatable, and so
         // exported frames are a true fixed-rate video regardless of how slowly PNG writes run.
-        val effectiveDelta = captureRuntime.fixedDeltaSeconds ?: delta
+        // Outside capture, a raw delta is clamped: a hitch (GC pause, alt-tab, a breakpoint) must
+        // not advance the simulation by seconds in one step - it slows down instead of jumping.
+        val effectiveDelta = captureRuntime.fixedDeltaSeconds ?: delta.coerceAtMost(MAX_FRAME_DELTA_SECONDS)
         captureRuntime.tick(effectiveDelta)
         if (captureRuntime.isActive) {
             applyRecordingFramePacing()
@@ -265,5 +270,10 @@ class ShopFloorScreen(
             Gdx.graphics.setVSync(true)
             Gdx.graphics.setForegroundFPS(GameConfig.targetFps)
         }
+    }
+
+    private companion object {
+        /** Largest real-time step the simulation will take in one frame - a ~10 fps floor. */
+        const val MAX_FRAME_DELTA_SECONDS = 0.1f
     }
 }

@@ -102,9 +102,15 @@ class ShopFloor(
     private val pendingShipmentEvents: MutableList<ShipmentEvent>
         get() = state.pendingShipmentEvents
 
+    /**
+     * A live, read-only view of the placed objects, not a snapshot: cheap to read every frame, but
+     * a caller that keeps it past the current tick (a save row, an [com.faultory.core.encounters.EvaluationContext])
+     * must take its own `.toList()` copy.
+     */
     val placedObjects: List<PlacedShopObject>
-        get() = mutablePlacedObjects.toList()
+        get() = mutablePlacedObjects
 
+    /** A live, read-only view; see [placedObjects] for the snapshot caveat. */
     val activeProducts: List<ShopProduct>
         get() = mutableActiveProducts
 

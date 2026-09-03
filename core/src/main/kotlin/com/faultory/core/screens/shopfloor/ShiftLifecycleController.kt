@@ -88,18 +88,20 @@ class ShiftLifecycleController(
     }
 
     fun persist() {
+        // The shop-floor list properties are live views; the save row outlives this call, so it
+        // must hold its own copies rather than aliases that keep mutating with the simulation.
         currentSave = currentSave.copy(
             activeShift = currentSave.activeShift.copy(
                 elapsedSeconds = dayDirector.elapsedSeconds,
                 deliveredGoodProducts = dayDirector.deliveredGoodProducts,
                 deliveredFaultyProducts = dayDirector.deliveredFaultyProducts,
                 productDeliveryStats = dayDirector.productDeliveryStats,
-                placedObjects = shopFloor.placedObjects,
-                activeProducts = shopFloor.activeProducts,
-                machineProductionStates = shopFloor.machineProductionStates,
-                qaInspectionStates = shopFloor.qaInspectionStates,
+                placedObjects = shopFloor.placedObjects.toList(),
+                activeProducts = shopFloor.activeProducts.toList(),
+                machineProductionStates = shopFloor.machineProductionStates.toList(),
+                qaInspectionStates = shopFloor.qaInspectionStates.toList(),
                 cash = shopFloor.cash,
-                machineRecipeStates = shopFloor.machineRecipeStates
+                machineRecipeStates = shopFloor.machineRecipeStates.toList()
             )
         )
         host.saveRepository.save(currentSave)

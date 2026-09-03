@@ -9,7 +9,6 @@ import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.ShipmentEvent
-import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
 
 internal class ConveyorSystem(
@@ -42,12 +41,8 @@ internal class ConveyorSystem(
     }
 
     private fun moveProductOnBelt(tile: TileCoordinate) {
-        val productIndex = mutableActiveProducts.indexOfFirst { it.state == ShopProductState.ON_BELT && it.tile == tile }
-        if (productIndex < 0) {
-            return
-        }
+        val product = state.productAtBeltTile(tile) ?: return
 
-        val product = mutableActiveProducts[productIndex]
         val nextTile = grid.nextBeltTile(tile)
         if (nextTile == null) {
             if (isBeltInputSinkAt(tile)) {
@@ -56,7 +51,7 @@ internal class ConveyorSystem(
             if (!grid.isShippingEdge(tile)) {
                 return
             }
-            mutableActiveProducts.removeAt(productIndex)
+            mutableActiveProducts.removeById(product.id)
             if (!product.isFaulty) {
                 productDefinitionsById[product.productId]?.saleValue?.let { saleValue ->
                     state.creditCash(saleValue, CashFlowReason.PRODUCT_SALE)
@@ -80,7 +75,7 @@ internal class ConveyorSystem(
             return
         }
 
-        mutableActiveProducts[productIndex] = product.copy(tile = nextTile)
+        mutableActiveProducts.replaceById(product.id) { it.copy(tile = nextTile) }
     }
 
     private fun qualityOf(faultReason: ProductFaultReason?): ProductQuality = when (faultReason) {

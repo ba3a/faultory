@@ -22,6 +22,24 @@ class ShopGrid(
         }
     }
 
+    /**
+     * Buildable orthogonal neighbours for every buildable tile, precomputed once. The grid is fixed
+     * for the level's lifetime and this is the inner loop of every path search, so a per-call
+     * `listOf(...).filter { }` was pure allocation on the hot path.
+     */
+    private val neighborsByTile: Map<TileCoordinate, List<TileCoordinate>> = buildMap {
+        val maxTileX = (GameConfig.virtualWidth / GameConfig.tileSize).toInt()
+        val maxTileY = (GameConfig.virtualHeight / GameConfig.tileSize).toInt()
+        for (x in 0..maxTileX) {
+            for (y in 0..maxTileY) {
+                val tile = TileCoordinate(x, y)
+                if (isBuildable(tile)) {
+                    put(tile, computeOrthogonalNeighbors(tile))
+                }
+            }
+        }
+    }
+
     fun tileAt(worldX: Float, worldY: Float): TileCoordinate? {
         if (worldX < 0f || worldX >= GameConfig.virtualWidth) {
             return null
@@ -50,7 +68,10 @@ class ShopGrid(
 
     fun worldYFor(tile: TileCoordinate): Float = tile.y * GameConfig.tileSize
 
-    fun orthogonalNeighbors(tile: TileCoordinate): List<TileCoordinate> {
+    fun orthogonalNeighbors(tile: TileCoordinate): List<TileCoordinate> =
+        neighborsByTile[tile] ?: computeOrthogonalNeighbors(tile)
+
+    private fun computeOrthogonalNeighbors(tile: TileCoordinate): List<TileCoordinate> {
         return listOf(
             TileCoordinate(tile.x - 1, tile.y),
             TileCoordinate(tile.x + 1, tile.y),

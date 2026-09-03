@@ -7,6 +7,7 @@ import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
+import com.faultory.core.shop.TileCoordinate
 
 class ShopFloorGeometry(private val shopFloor: ShopFloor) {
     fun renderPositionFor(placedObject: PlacedShopObject): RenderPosition {
@@ -67,13 +68,25 @@ class ShopFloorGeometry(private val shopFloor: ShopFloor) {
 
     /** The tile-sized box centred on a machine's footprint, where anything it holds is drawn. */
     fun machineCenterFor(machine: PlacedShopObject): RenderPosition {
-        val occupiedTiles = shopFloor.occupiedTilesFor(machine)
-        val centerX = occupiedTiles.map { tile -> shopFloor.grid.worldXFor(tile) + GameConfig.tileSize / 2f }.average().toFloat()
-        val centerY = occupiedTiles.map { tile -> shopFloor.grid.worldYFor(tile) + GameConfig.tileSize / 2f }.average().toFloat()
-        return RenderPosition(
-            worldX = centerX - GameConfig.tileSize / 2f,
-            worldY = centerY - GameConfig.tileSize / 2f
-        )
+        val center = footprintCenter(shopFloor.occupiedTilesFor(machine))
+        val half = GameConfig.tileSize / 2f
+        return RenderPosition(worldX = center.worldX - half, worldY = center.worldY - half)
+    }
+
+    /**
+     * Centroid of the tile centres in [tiles]. A plain sum loop rather than
+     * `tiles.map { }.average()` because this runs per machine, twice, every rendered frame.
+     */
+    private fun footprintCenter(tiles: Set<TileCoordinate>): RenderPosition {
+        if (tiles.isEmpty()) return RenderPosition(0f, 0f)
+        var sumX = 0f
+        var sumY = 0f
+        for (tile in tiles) {
+            sumX += shopFloor.grid.worldXFor(tile)
+            sumY += shopFloor.grid.worldYFor(tile)
+        }
+        val half = GameConfig.tileSize / 2f
+        return RenderPosition(worldX = sumX / tiles.size + half, worldY = sumY / tiles.size + half)
     }
 
     fun orientationMarkerFor(placedObject: PlacedShopObject): OrientationMarker {
@@ -86,9 +99,9 @@ class ShopFloorGeometry(private val shopFloor: ShopFloor) {
             centerY = renderPosition.worldY + GameConfig.tileSize / 2f
             length = 10f
         } else {
-            val occupiedTiles = shopFloor.occupiedTilesFor(placedObject)
-            centerX = occupiedTiles.map { tile -> shopFloor.grid.worldXFor(tile) + GameConfig.tileSize / 2f }.average().toFloat()
-            centerY = occupiedTiles.map { tile -> shopFloor.grid.worldYFor(tile) + GameConfig.tileSize / 2f }.average().toFloat()
+            val center = footprintCenter(shopFloor.occupiedTilesFor(placedObject))
+            centerX = center.worldX
+            centerY = center.worldY
             length = 18f
         }
 

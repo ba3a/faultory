@@ -36,25 +36,27 @@ internal class ShopFloorState(
     var cash: Int = initialCash
         private set
 
+    // Exposed as the concrete type so systems can reach id→index in O(1) (indexOfId / replaceById)
+    // instead of an `indexOfFirst { it.id == … }` scan on the per-frame path.
     private val placedObjectsIndex: IdIndexedMutableList<PlacedShopObject> =
         IdIndexedMutableList(initialPlacements) { it.id }
-    val mutablePlacedObjects: MutableList<PlacedShopObject> = placedObjectsIndex
+    val mutablePlacedObjects: IdIndexedMutableList<PlacedShopObject> = placedObjectsIndex
 
     private val activeProductsIndex: IdIndexedMutableList<ShopProduct> =
         IdIndexedMutableList(initialProducts) { it.id }
-    val mutableActiveProducts: MutableList<ShopProduct> = activeProductsIndex
+    val mutableActiveProducts: IdIndexedMutableList<ShopProduct> = activeProductsIndex
 
     private val machineProductionStatesIndex: IdIndexedMutableList<MachineProductionState> =
         IdIndexedMutableList(initialMachineProductionStates) { it.machineId }
-    val mutableMachineProductionStates: MutableList<MachineProductionState> = machineProductionStatesIndex
+    val mutableMachineProductionStates: IdIndexedMutableList<MachineProductionState> = machineProductionStatesIndex
 
     private val qaInspectionStatesIndex: IdIndexedMutableList<QaInspectionState> =
         IdIndexedMutableList(initialQaInspectionStates) { it.inspectorObjectId }
-    val mutableQaInspectionStates: MutableList<QaInspectionState> = qaInspectionStatesIndex
+    val mutableQaInspectionStates: IdIndexedMutableList<QaInspectionState> = qaInspectionStatesIndex
 
     private val machineRecipeStatesIndex: IdIndexedMutableList<MachineRecipeState> =
         IdIndexedMutableList(initialMachineRecipeStates) { it.machineId }
-    val mutableMachineRecipeStates: MutableList<MachineRecipeState> = machineRecipeStatesIndex
+    val mutableMachineRecipeStates: IdIndexedMutableList<MachineRecipeState> = machineRecipeStatesIndex
 
     val pendingShipmentEvents: MutableList<ShipmentEvent> = mutableListOf()
 
