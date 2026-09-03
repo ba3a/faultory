@@ -34,6 +34,7 @@ import com.faultory.core.screens.shopfloor.PlacementController
 import com.faultory.core.screens.shopfloor.PlacementPreviewRenderer
 import com.faultory.core.screens.shopfloor.PointerState
 import com.faultory.core.screens.shopfloor.ShiftLifecycleController
+import com.faultory.core.screens.shopfloor.ShopFloorFrameFactory
 import com.faultory.core.screens.shopfloor.ShopFloorGeometry
 import com.faultory.core.screens.shopfloor.ShopFloorInput
 import com.faultory.core.screens.shopfloor.ShopFloorRenderContext
@@ -76,6 +77,7 @@ class ShopFloorScreen(
     private val failureBlink = FailureBlinkController()
     private val hoverState = HoverState()
     private val geometry = ShopFloorGeometry(shopFloor)
+    private val frameFactory = ShopFloorFrameFactory(shopFloor, geometry)
     private val atlasProvider: (String) -> TextureAtlas? = game.skinRegistry::atlas
     private val frameLookup = SkinFrameLookup(atlasProvider)
     private val productOrientations = ProductOrientationMemory()
@@ -232,6 +234,7 @@ class ShopFloorScreen(
         game.renderContext.spriteBatch.projectionMatrix = viewport.camera.combined
 
         renderContext.delta = effectiveDelta
+        renderContext.frame = frameFactory.capture()
         view.render(renderContext)
         // Frame export reads the back buffer here, before any operator-only overlay draws, so the
         // exported PNG never contains capture mode's own status text.

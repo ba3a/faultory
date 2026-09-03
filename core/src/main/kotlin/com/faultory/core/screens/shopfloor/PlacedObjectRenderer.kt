@@ -23,29 +23,31 @@ class PlacedObjectRenderer(
 ) : ShopFloorLayer {
     override fun drawFill(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
-        for (placedObject in shopFloor.placedObjects) {
+        val frame = ctx.frame
+        for (placedObject in frame.placedObjects) {
             if (placedObject.id in spriteDrawnIds) continue
-            drawPlacedObjectFill(renderer, placedObject)
+            drawPlacedObjectFill(renderer, frame, placedObject)
         }
-        for (product in shopFloor.activeProducts) {
+        for (product in frame.activeProducts) {
             if (product.id in spriteDrawnProductIds) continue
-            drawProductFill(renderer, product)
+            drawProductFill(renderer, frame, product)
         }
     }
 
     override fun drawLine(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
+        val frame = ctx.frame
         val showOrientationMarkers = chromeVisibility.isVisible(ChromeElement.ORIENTATION_MARKERS)
         val showRecipeIndicators = chromeVisibility.isVisible(ChromeElement.RECIPE_INDICATORS)
-        for (placedObject in shopFloor.placedObjects) {
+        for (placedObject in frame.placedObjects) {
             if (placedObject.id in spriteDrawnIds) continue
-            drawPlacedObjectOutline(renderer, placedObject)
+            drawPlacedObjectOutline(renderer, frame, placedObject)
             if (showOrientationMarkers) drawOrientationMarker(renderer, placedObject)
             if (showRecipeIndicators) drawRecipeIndicators(renderer, placedObject)
         }
-        for (product in shopFloor.activeProducts) {
+        for (product in frame.activeProducts) {
             if (product.id in spriteDrawnProductIds) continue
-            drawProductOutline(renderer, product)
+            drawProductOutline(renderer, frame, product)
         }
         if (chromeVisibility.isVisible(ChromeElement.HOVER_HIGHLIGHTS)) drawAssignmentTargetHover(renderer)
         if (chromeVisibility.isVisible(ChromeElement.FAILURE_BLINK)) drawFailureBlink(renderer)
@@ -95,9 +97,9 @@ class PlacedObjectRenderer(
         }
     }
 
-    private fun drawPlacedObjectFill(renderer: ShapeRenderer, placedObject: PlacedShopObject) {
+    private fun drawPlacedObjectFill(renderer: ShapeRenderer, frame: ShopFloorFrame, placedObject: PlacedShopObject) {
         if (placedObject.kind == PlacedShopObjectKind.WORKER) {
-            val renderPosition = geometry.renderPositionFor(placedObject)
+            val renderPosition = frame.renderPositionOf(placedObject)
             renderer.color = ShopFloorPalette.workerFill(placedObject.workerRole)
             renderer.circle(
                 renderPosition.worldX + GameConfig.tileSize / 2f,
@@ -119,9 +121,13 @@ class PlacedObjectRenderer(
         }
     }
 
-    private fun drawPlacedObjectOutline(renderer: ShapeRenderer, placedObject: PlacedShopObject) {
+    private fun drawPlacedObjectOutline(
+        renderer: ShapeRenderer,
+        frame: ShopFloorFrame,
+        placedObject: PlacedShopObject
+    ) {
         if (placedObject.kind == PlacedShopObjectKind.WORKER) {
-            val renderPosition = geometry.renderPositionFor(placedObject)
+            val renderPosition = frame.renderPositionOf(placedObject)
             renderer.color = WORKER_OUTLINE
             renderer.circle(
                 renderPosition.worldX + GameConfig.tileSize / 2f,
@@ -151,8 +157,8 @@ class PlacedObjectRenderer(
         }
     }
 
-    private fun drawProductFill(renderer: ShapeRenderer, product: ShopProduct) {
-        val renderPosition = geometry.renderPositionFor(product) ?: return
+    private fun drawProductFill(renderer: ShapeRenderer, frame: ShopFloorFrame, product: ShopProduct) {
+        val renderPosition = frame.renderPositionOf(product) ?: return
         renderer.color = ShopFloorPalette.productFill(product.faultReason)
         renderer.rect(
             renderPosition.worldX + 12f,
@@ -162,8 +168,8 @@ class PlacedObjectRenderer(
         )
     }
 
-    private fun drawProductOutline(renderer: ShapeRenderer, product: ShopProduct) {
-        val renderPosition = geometry.renderPositionFor(product) ?: return
+    private fun drawProductOutline(renderer: ShapeRenderer, frame: ShopFloorFrame, product: ShopProduct) {
+        val renderPosition = frame.renderPositionOf(product) ?: return
         renderer.color = when (product.state) {
             ShopProductState.ON_BELT -> PRODUCT_OUTLINE_ON_BELT
             ShopProductState.ON_FLOOR -> PRODUCT_OUTLINE_ON_FLOOR

@@ -62,7 +62,7 @@ class EntitySpriteLayer(
 
         // Groups first: they decide what every participant's fragments sort by, and reading
         // positions is cheap and advances no animation clock.
-        buildRenderGroups()
+        buildRenderGroups(ctx)
         // Placed objects next: a carried product needs its holder's resolved frame to find the
         // hands socket, so the holder has to be resolved before anything can hang off it.
         planPlacedObjects(ctx, skinRegistry, delta)
@@ -79,8 +79,8 @@ class EntitySpriteLayer(
      * Pools the participants of any interaction that authored a layer order into one sort unit.
      * Interactions without one are left alone and sort by the ordinary per-entity rules.
      */
-    private fun buildRenderGroups() {
-        for (placedObject in shopFloor.placedObjects) {
+    private fun buildRenderGroups(ctx: ShopFloorRenderContext) {
+        for (placedObject in ctx.frame.placedObjects) {
             if (placedObject.id in groupsByObjectId) {
                 continue
             }
@@ -98,7 +98,7 @@ class EntitySpriteLayer(
                 recipientId = if (isInitiator) partner.id else placedObject.id,
                 payloadProductId = interaction.payloadProductId,
                 anchor = listOf(placedObject, partner)
-                    .map(geometry::renderPositionFor)
+                    .map { ctx.frame.renderPositionOf(it) }
                     .minWith(compareBy({ it.worldY }, { it.worldX }))
             )
             groupsByObjectId[placedObject.id] = group
@@ -107,7 +107,7 @@ class EntitySpriteLayer(
     }
 
     private fun planPlacedObjects(ctx: ShopFloorRenderContext, skinRegistry: SkinRegistry, delta: Float) {
-        for (placedObject in shopFloor.placedObjects) {
+        for (placedObject in ctx.frame.placedObjects) {
             val definition = skinDefinitionFor(placedObject, skinRegistry) ?: continue
             val frame = ctx.frameLookup.resolveFrame(
                 definition = definition,
@@ -120,7 +120,7 @@ class EntitySpriteLayer(
             // Cached because resolving twice in one frame would advance this entity's clock twice.
             framesByObjectId[placedObject.id] = frame
 
-            val anchor = geometry.renderPositionFor(placedObject)
+            val anchor = ctx.frame.renderPositionOf(placedObject)
             val group = groupsByObjectId[placedObject.id]
             val roleKey = group?.roleKeyFor(placedObject.id)
             val sort = group?.anchor ?: anchor
@@ -173,7 +173,7 @@ class EntitySpriteLayer(
         if (group != null && key != null) group.depthFor(key, fallbackDepth) else fallbackDepth
 
     private fun planProducts(ctx: ShopFloorRenderContext, skinRegistry: SkinRegistry, delta: Float) {
-        for (product in shopFloor.activeProducts) {
+        for (product in ctx.frame.activeProducts) {
             val definition = skinDefinitionFor(product.productId, skinRegistry) ?: continue
             val action = ProductActionResolver.actionFor(shopFloor, product)
             val orientation = ProductActionResolver.orientationFor(shopFloor, product, ctx.productOrientations)
@@ -191,7 +191,7 @@ class EntitySpriteLayer(
             val tint = if (overlayRegion == null) ShopFloorPalette.productFaultTint(product.faultReason) else null
 
             val base = attachedSpriteFor(product, frame, tint)
-                ?: tileSpriteFor(product, frame, tint)
+                ?: tileSpriteFor(ctx, product, frame, tint)
                 ?: continue
 
             planned += base
@@ -284,11 +284,12 @@ class EntitySpriteLayer(
     }
 
     private fun tileSpriteFor(
+        ctx: ShopFloorRenderContext,
         product: ShopProduct,
         frame: SkinFrameLookup.ResolvedFrame,
         tint: Color?
     ): PlannedSprite? {
-        val anchor = geometry.renderPositionFor(product) ?: return null
+        val anchor = ctx.frame.renderPositionOf(product) ?: return null
         return PlannedSprite.standingOnTile(
             region = frame.region,
             tileWorldX = anchor.worldX,
@@ -305,7 +306,7 @@ class EntitySpriteLayer(
      * No fault overlay here on purpose: marking it would reveal defects before QA ever inspects them.
      */
     private fun planInMachineProduction(ctx: ShopFloorRenderContext, skinRegistry: SkinRegistry, delta: Float) {
-        for (productionState in shopFloor.machineProductionStates) {
+        for (productionState in ctx.frame.machineProductionStates) {
             val machine = shopFloor.findObjectById(productionState.machineId) ?: continue
             val definition = skinDefinitionFor(productionState.productId, skinRegistry) ?: continue
             val frame = ctx.frameLookup.resolveFrame(

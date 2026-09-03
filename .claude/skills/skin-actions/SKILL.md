@@ -75,3 +75,9 @@ at authoring time, never while drawing.
 Sprite layers resolve what they will draw in `ShopFloorLayer.prepare`, which runs before every draw
 pass; that is what lets the shape layers suppress themselves for sprite-backed entities in the same
 frame. Do not resolve sprites in `drawSprite`.
+
+Read entity lists and resolved render positions from `ctx.frame` (the per-frame `ShopFloorFrame`,
+captured once in `ShopFloorScreen.render()`), not by iterating `ShopFloor` or calling
+`ShopFloorGeometry.renderPositionFor` again — a read-only layer then needs nothing else injected.
+Sprite-specific geometry (sockets, handover interpolation, machine footprint centres) is not on the
+frame and stays resolved per fragment in `EntitySpriteLayer`.

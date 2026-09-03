@@ -22,7 +22,7 @@ class CaptureDebugLayer(private val shopFloor: ShopFloor) : ShopFloorLayer {
         }
 
         renderer.color = MOVEMENT_PATH
-        for (placedObject in shopFloor.placedObjects) {
+        for (placedObject in ctx.frame.placedObjects) {
             if (placedObject.kind != PlacedShopObjectKind.WORKER || placedObject.movementPath.isEmpty()) continue
             var from = placedObject.position
             for (tile in placedObject.movementPath) {

@@ -20,4 +20,11 @@ class ShopFloorRenderContext(
     val skinRegistry: SkinRegistry? = null,
     val productOrientations: ProductOrientationMemory = ProductOrientationMemory(),
     var delta: Float = 0f
-)
+) {
+    /**
+     * This frame's resolved snapshot of the shop floor. Set at the top of
+     * [com.faultory.core.screens.ShopFloorScreen] render, before any layer runs, exactly as [delta]
+     * is — every reader is a [ShopFloorLayer] and layers only run through [ShopFloorView.render].
+     */
+    lateinit var frame: ShopFloorFrame
+}
