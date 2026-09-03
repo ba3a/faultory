@@ -9,12 +9,12 @@ import com.faultory.core.shop.UnitPhase
 import kotlin.random.Random
 
 internal class UnitPhaseSystem(
-    private val state: ShopFloorState,
+    private val access: UnitPhaseAccess,
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) : SimulationSystem {
-    private val mutablePlacedObjects get() = state.mutablePlacedObjects
-    private val mutableActiveProducts get() = state.mutableActiveProducts
+    private val mutablePlacedObjects get() = access.mutablePlacedObjects
+    private val mutableActiveProducts get() = access.mutableActiveProducts
 
     override val phase = SimulationPhase.ANIMATION
 

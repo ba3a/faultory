@@ -14,20 +14,13 @@ import com.faultory.core.encounters.ProductPlacedOnFloorEvent
 import com.faultory.core.encounters.QaInspectionCompletedEvent
 import com.faultory.core.encounters.QaInspectionStartedEvent
 import com.faultory.core.encounters.ShopFloorEvents
-import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.QaInspectionState
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
-import com.faultory.core.shop.plus
+import com.faultory.core.shop.manhattanDistanceTo
 import kotlin.random.Random
-
-internal data class QaPostCandidate(
-    val postTile: TileCoordinate,
-    val beltTile: TileCoordinate,
-    val orientation: Orientation
-)
 
 private data class QaInspectorConfig(
     val inspectionDurationSeconds: Float,
@@ -42,18 +35,19 @@ private data class QaInspectorConfig(
 }
 
 internal class QaSystem(
-    private val state: ShopFloorState,
+    private val access: QaAccess,
+    private val qaPostLocator: QaPostLocator,
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents(),
     private val chance: ChanceOracle = RandomChanceOracle(random)
 ) : SimulationSystem {
-    private val mutablePlacedObjects get() = state.mutablePlacedObjects
-    private val placedMachines get() = state.placedMachines
-    private val placedWorkers get() = state.placedWorkers
-    private val mutableActiveProducts get() = state.mutableActiveProducts
-    private val mutableQaInspectionStates get() = state.mutableQaInspectionStates
-    private val machineSpecsById get() = state.machineSpecsById
-    private val grid get() = state.grid
+    private val mutablePlacedObjects get() = access.mutablePlacedObjects
+    private val placedMachines get() = access.placedMachines
+    private val placedWorkers get() = access.placedWorkers
+    private val mutableActiveProducts get() = access.mutableActiveProducts
+    private val mutableQaInspectionStates get() = access.mutableQaInspectionStates
+    private val machineSpecsById get() = access.machineSpecsById
+    private val grid get() = access.grid
 
     override val phase = SimulationPhase.QUALITY
 
@@ -70,11 +64,11 @@ internal class QaSystem(
             val currentState = mutableQaInspectionStates[inspectionIndex]
             if (currentState.isComplete) continue
 
-            val inspector = state.findObjectById(currentState.inspectorObjectId) ?: continue
+            val inspector = access.findObjectById(currentState.inspectorObjectId) ?: continue
             val config = qaConfigFor(inspector, workerProfilesById, requireReady = true) ?: continue
-            val product = state.productById(currentState.productId) ?: run {
+            val product = access.productById(currentState.productId) ?: run {
                 mutableQaInspectionStates.removeAt(inspectionIndex)
-                state.clearWorkerHold(inspector.id)
+                access.clearWorkerHold(inspector.id)
                 continue
             }
 
@@ -108,29 +102,6 @@ internal class QaSystem(
         }
     }
 
-    internal fun collectQaPostCandidates(ignoreWorkerId: String? = null): List<QaPostCandidate> {
-        val currentWorkerPosition = ignoreWorkerId?.let { state.findObjectById(it) }?.position
-        return grid.beltTiles
-            .flatMap { beltTile ->
-                grid.orthogonalNeighbors(beltTile)
-                    .filter { postTile ->
-                        postTile !in grid.beltTiles &&
-                            (postTile == currentWorkerPosition || !state.isOccupied(postTile, ignoreObjectId = ignoreWorkerId))
-                    }
-                    .mapNotNull { postTile ->
-                        val orientation = Orientation.between(postTile, beltTile) ?: return@mapNotNull null
-                        QaPostCandidate(postTile = postTile, beltTile = beltTile, orientation = orientation)
-                    }
-            }
-            .distinctBy { it.postTile }
-    }
-
-    internal fun qaInspectionTileForWorker(worker: PlacedShopObject.Worker): TileCoordinate? {
-        val qaPostTile = worker.qaPostTile ?: return null
-        val beltTile = qaPostTile + worker.orientation.step()
-        return beltTile.takeIf { it in grid.beltTiles }
-    }
-
     private fun startQaInspections(workerProfilesById: Map<String, WorkerProfile>) {
         startMachineQaInspections(workerProfilesById)
         startWorkerQaInspections(workerProfilesById)
@@ -145,7 +116,7 @@ internal class QaSystem(
 
             val config = qaConfigFor(machine, workerProfilesById, requireReady = true) ?: continue
             val beltTile = qaInspectionTileForMachine(machine) ?: continue
-            val product = state.productAtBeltTile(beltTile) ?: continue
+            val product = access.productAtBeltTile(beltTile) ?: continue
             if (!config.accepts(product.productId)) continue
             if (machine.id in product.inspectedByObjectIds) continue
 
@@ -162,11 +133,16 @@ internal class QaSystem(
     private fun startWorkerQaInspections(workerProfilesById: Map<String, WorkerProfile>) {
         for (worker in placedWorkers) {
             if (mutableQaInspectionStates.any { it.inspectorObjectId == worker.id }) continue
-            if (worker.carriedProductId != null || worker.qaPostTile == null || !state.isWorkerAtQaPost(worker)) continue
+            if (worker.carriedProductId != null ||
+                worker.qaPostTile == null ||
+                !access.isWorkerAtQaPost(worker)
+            ) {
+                continue
+            }
 
             val config = qaConfigFor(worker, workerProfilesById, requireReady = true) ?: continue
-            val beltTile = qaInspectionTileForWorker(worker) ?: continue
-            val product = state.productAtBeltTile(beltTile) ?: continue
+            val beltTile = qaPostLocator.beltTileInspectedBy(worker) ?: continue
+            val product = access.productAtBeltTile(beltTile) ?: continue
             if (!config.accepts(product.productId)) continue
             if (worker.id in product.inspectedByObjectIds) continue
 
@@ -198,7 +174,7 @@ internal class QaSystem(
         val inspectionIndex = mutableQaInspectionStates.indexOfFirst { it.inspectorObjectId == inspection.inspectorObjectId }
         if (inspectionIndex < 0) return
 
-        val inspector = state.findObjectById(inspection.inspectorObjectId) ?: run {
+        val inspector = access.findObjectById(inspection.inspectorObjectId) ?: run {
             mutableQaInspectionStates.removeAt(inspectionIndex)
             return
         }
@@ -206,8 +182,8 @@ internal class QaSystem(
             mutableQaInspectionStates.removeAt(inspectionIndex)
             return
         }
-        val product = state.productById(inspection.productId) ?: run {
-            state.clearWorkerHold(inspector.id)
+        val product = access.productById(inspection.productId) ?: run {
+            access.clearWorkerHold(inspector.id)
             mutableQaInspectionStates.removeAt(inspectionIndex)
             return
         }
@@ -233,7 +209,7 @@ internal class QaSystem(
         val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
         if (productIndex < 0) return
 
-        val holderWorker = state.findObjectById(holderObjectId) as? PlacedShopObject.Worker
+        val holderWorker = access.findObjectById(holderObjectId) as? PlacedShopObject.Worker
         val product = mutableActiveProducts[productIndex]
         mutableActiveProducts[productIndex] = product.copy(
             state = ShopProductState.CARRIED,
@@ -253,7 +229,7 @@ internal class QaSystem(
         inspectorId: String,
         beltTile: TileCoordinate
     ): Boolean {
-        if (state.isOccupied(beltTile, ignoreProductId = productId)) return false
+        if (access.isOccupied(beltTile, ignoreProductId = productId)) return false
 
         val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
         if (productIndex < 0) return false
@@ -266,7 +242,7 @@ internal class QaSystem(
             reworkTargetMachineId = null
         )
         mutableActiveProducts[productIndex] = returned
-        state.clearWorkerHold(inspectorId)
+        access.clearWorkerHold(inspectorId)
         events.publish {
             ProductPlacedOnBeltEvent(
                 productInstanceId = returned.id,
@@ -321,10 +297,10 @@ internal class QaSystem(
         val targetTile = grid.orthogonalNeighbors(beltTile)
             .filter { candidate ->
                 candidate !in grid.beltTiles &&
-                    !state.isOccupied(candidate, ignoreProductId = productId, ignoreObjectId = inspector.id)
+                    !access.isOccupied(candidate, ignoreProductId = productId, ignoreObjectId = inspector.id)
             }
             .minWithOrNull(
-                compareBy<TileCoordinate> { state.manhattanDistance(it, inspector.position) }
+                compareBy<TileCoordinate> { it.manhattanDistanceTo(inspector.position) }
                     .thenBy { it.x }
                     .thenBy { it.y }
             ) ?: return false
@@ -337,7 +313,7 @@ internal class QaSystem(
             reworkTargetMachineId = null
         )
         mutableActiveProducts[productIndex] = discarded
-        state.clearWorkerHold(inspector.id)
+        access.clearWorkerHold(inspector.id)
         events.publish {
             ProductPlacedOnFloorEvent(
                 productInstanceId = discarded.id,
@@ -375,7 +351,7 @@ internal class QaSystem(
                     movementPath = emptyList(),
                     movementProgress = 0f
                 )
-                state.clearWorkerHold(inspector.id)
+                access.clearWorkerHold(inspector.id)
                 events.publish {
                     ProductHandedOverEvent(
                         objectId = inspector.id,
@@ -400,7 +376,7 @@ internal class QaSystem(
                 )
                 val stored = mutableActiveProducts[productIndex]
                 mutableActiveProducts.removeAt(productIndex)
-                state.clearWorkerHold(inspector.id)
+                access.clearWorkerHold(inspector.id)
                 events.publish {
                     FaultyProductStoredEvent(
                         machineId = automaticProducer.id,
@@ -422,13 +398,13 @@ internal class QaSystem(
             .filter { it.workerRole == WorkerRole.PRODUCER_OPERATOR }
             .filter { it.assignedMachineId != null && it.assignedSlotIndex != null }
             .filter { it.carriedProductId == null && it.movementPath.isEmpty() }
-            .filter(state::isWorkerAtAssignedSlot)
+            .filter(access::isWorkerAtAssignedSlot)
             .filter { worker ->
-                val machine = worker.assignedMachineId?.let { state.findObjectById(it) } ?: return@filter false
+                val machine = worker.assignedMachineId?.let { access.findObjectById(it) } ?: return@filter false
                 val machineSpec = machineSpecsById[machine.catalogId] ?: return@filter false
                 machineSpec.type == MachineType.PRODUCER
             }
-            .minWithOrNull(compareBy<PlacedShopObject> { state.manhattanDistance(it.position, originTile) }.thenBy { it.id })
+            .minWithOrNull(compareBy<PlacedShopObject> { it.position.manhattanDistanceTo(originTile) }.thenBy { it.id })
     }
 
     private fun nearestAutomaticProducerWithCapacity(originTile: TileCoordinate): PlacedShopObject.Machine? {
@@ -442,7 +418,7 @@ internal class QaSystem(
                     recipe.faultyProductCapacity > 0 &&
                     machine.faultyInventoryCount < recipe.faultyProductCapacity
             }
-            .minWithOrNull(compareBy<PlacedShopObject> { state.manhattanDistance(it.position, originTile) }.thenBy { it.id })
+            .minWithOrNull(compareBy<PlacedShopObject> { it.position.manhattanDistanceTo(originTile) }.thenBy { it.id })
     }
 
     private fun qaConfigFor(
@@ -456,8 +432,8 @@ internal class QaSystem(
                 if (machineSpec.type != MachineType.QA) return null
 
                 if (requireReady && machineSpec.manuality == Manuality.HUMAN_OPERATED) {
-                    val operator = state.operatorWorkerForMachine(inspector.id) ?: return null
-                    if (!state.isWorkerAtAssignedSlot(operator) || operator.carriedProductId != null || operator.movementPath.isNotEmpty()) {
+                    val operator = access.operatorWorkerForMachine(inspector.id) ?: return null
+                    if (!access.isWorkerAtAssignedSlot(operator) || operator.carriedProductId != null || operator.movementPath.isNotEmpty()) {
                         return null
                     }
                     val workerProfile = workerProfilesById[operator.catalogId] ?: return null
@@ -478,7 +454,7 @@ internal class QaSystem(
                 val workerProfile = workerProfilesById[inspector.catalogId] ?: return null
                 val qaRoleProfile = workerProfile.profileFor(WorkerRole.QA) ?: return null
                 if (requireReady) {
-                    if (inspector.qaPostTile == null || !state.isWorkerAtQaPost(inspector) || inspector.movementPath.isNotEmpty()) {
+                    if (inspector.qaPostTile == null || !access.isWorkerAtQaPost(inspector) || inspector.movementPath.isNotEmpty()) {
                         return null
                     }
                 }
@@ -497,7 +473,7 @@ internal class QaSystem(
     }
 
     private fun qaInspectionTileForMachine(machine: PlacedShopObject.Machine): TileCoordinate? {
-        return state.slotPositionsFor(machine, MachineSlotType.QA).firstOrNull()?.accessTile
+        return access.slotPositionsFor(machine, MachineSlotType.QA).firstOrNull()?.accessTile
     }
 
     private fun classifyProduct(product: ShopProduct, config: QaInspectorConfig): Boolean {

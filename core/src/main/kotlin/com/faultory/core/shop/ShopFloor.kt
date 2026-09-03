@@ -56,34 +56,39 @@ class ShopFloor(
         events = events
     )
 
-    private val wetTileSystem: WetTileSystem = WetTileSystem(state, events)
+    private val wetFloor: WetFloor = WetFloor()
+    private val qaPostLocator: QaPostLocator =
+        QaPostLocator(world = state, objects = state, occupancy = state)
+    private val wetTileSystem: WetTileSystem = WetTileSystem(wetFloor, events)
     private val unitPhaseSystem: UnitPhaseSystem = UnitPhaseSystem(state, random, events)
     private val securitySystem: SecuritySystem = SecuritySystem(state, movementStrategyResolver, random, events)
     private val workerMovementSystem: WorkerMovementSystem = WorkerMovementSystem(
-        state = state,
+        access = state,
         movementStrategyResolver = movementStrategyResolver,
-        wetTileSystem = wetTileSystem,
+        wetFloor = wetFloor,
         random = random,
         chance = chanceOracle,
         events = events
     )
     private val conveyorSystem: ConveyorSystem = ConveyorSystem(state, events)
-    private val qaSystem: QaSystem = QaSystem(state, random, events, chanceOracle)
+    private val qaSystem: QaSystem = QaSystem(state, qaPostLocator, random, events, chanceOracle)
     private val placementSystem: PlacementSystem = PlacementSystem(state, events)
     private val assignmentSystem: AssignmentSystem =
-        AssignmentSystem(state, qaSystem, movementStrategyResolver, events)
+        AssignmentSystem(state, qaPostLocator, movementStrategyResolver, events)
     private val workerObjectiveSystem: WorkerObjectiveSystem =
-        WorkerObjectiveSystem(state, qaSystem, movementStrategyResolver, random, events)
+        WorkerObjectiveSystem(state, qaPostLocator, movementStrategyResolver, random, events)
     private val productionSystem: ProductionSystem = ProductionSystem(state, random, events, chanceOracle)
     private val cleanerSpawnSystem: CleanerSpawnSystem? = cleanerSpawnGate?.let {
         CleanerSpawnSystem(state, random, events, it)
     }
-    private val interactionSystem: InteractionSystem = InteractionSystem(state, interactionCatalogProvider, events)
+    private val interactionController: InteractionController =
+        InteractionController(state, state, interactionCatalogProvider, events)
+    private val interactionSystem: InteractionSystem = InteractionSystem(interactionController)
     private val cleanerSystem: CleanerSystem = CleanerSystem(
-        state = state,
+        access = state,
         movementStrategyResolver = movementStrategyResolver,
-        wetTileSystem = wetTileSystem,
-        interactionSystem = interactionSystem,
+        wetFloor = wetFloor,
+        interactions = interactionController,
         random = random,
         events = events
     )
@@ -173,7 +178,7 @@ class ShopFloor(
     }
 
     val wetTiles: Map<TileCoordinate, Float>
-        get() = state.mutableWetTiles.toMap()
+        get() = wetFloor.wetTiles.toMap()
 
     fun consumeShipmentEvents(): List<ShipmentEvent> {
         return pendingShipmentEvents.toList().also { pendingShipmentEvents.clear() }

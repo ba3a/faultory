@@ -18,7 +18,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class InteractionSystemTest {
+class InteractionControllerTest {
     @Test
     fun `begin pairs both sides and turns them to face each other`() {
         val fixture = fixture()
@@ -131,7 +131,7 @@ class InteractionSystemTest {
         val fixture = fixture(catalog = null)
         fixture.begin()
 
-        fixture.advance(seconds = InteractionSystem.FALLBACK_DURATION_SECONDS + 0.1f)
+        fixture.advance(seconds = InteractionController.FALLBACK_DURATION_SECONDS + 0.1f)
 
         assertEquals(PRODUCT, fixture.objectById(TAKER).carriedProductId)
         assertNull(fixture.objectById(GIVER).interaction)
@@ -187,24 +187,24 @@ class InteractionSystemTest {
             initialMachineRecipeStates = emptyList(),
             initialCash = 0
         )
-        return Fixture(state, InteractionSystem(state, catalogProvider = { catalog }))
+        return Fixture(state, InteractionController(state, state, catalogProvider = { catalog }))
     }
 
     private class Fixture(
         private val state: ShopFloorState,
-        private val system: InteractionSystem
+        private val controller: InteractionController
     ) {
         fun begin(
             initiator: String = GIVER,
             recipient: String = TAKER,
             payload: String? = PRODUCT
-        ): Boolean = system.begin(InteractionIds.HAND_OFF, initiator, recipient, payload)
+        ): Boolean = controller.begin(InteractionIds.HAND_OFF, initiator, recipient, payload)
 
         /** Ticks in small steps, the way a frame loop would. */
         fun advance(seconds: Float, step: Float = 0.05f) {
             var remaining = seconds
             while (remaining > 0f) {
-                system.update(minOf(step, remaining))
+                controller.advanceAll(minOf(step, remaining))
                 remaining -= step
             }
         }

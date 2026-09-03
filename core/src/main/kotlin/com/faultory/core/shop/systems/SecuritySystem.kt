@@ -12,21 +12,22 @@ import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.TileCoordinate
+import com.faultory.core.shop.manhattanDistanceTo
 import com.faultory.core.shop.pathfinding.MovementStrategyResolver
 import kotlin.random.Random
 
 internal class SecuritySystem(
-    private val state: ShopFloorState,
+    private val access: SecurityAccess,
     private val movementStrategyResolver: MovementStrategyResolver,
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) : SimulationSystem {
-    private val mutablePlacedObjects get() = state.mutablePlacedObjects
-    private val placedWorkers get() = state.placedWorkers
-    private val placedSecurityWorkers get() = state.placedSecurityWorkers
-    private val mutableMachineProductionStates get() = state.mutableMachineProductionStates
-    private val machineSpecsById get() = state.machineSpecsById
-    private val grid get() = state.grid
+    private val mutablePlacedObjects get() = access.mutablePlacedObjects
+    private val placedWorkers get() = access.placedWorkers
+    private val placedSecurityWorkers get() = access.placedSecurityWorkers
+    private val mutableMachineProductionStates get() = access.mutableMachineProductionStates
+    private val machineSpecsById get() = access.machineSpecsById
+    private val grid get() = access.grid
 
     override val phase = SimulationPhase.SECURITY
 
@@ -73,16 +74,16 @@ internal class SecuritySystem(
         return placedWorkers.filter { worker ->
             worker.workerRole == WorkerRole.PRODUCER_OPERATOR &&
                 worker.assignedMachineId in sabotagingMachineIds &&
-                state.isWorkerAtAssignedSlot(worker)
+                access.isWorkerAtAssignedSlot(worker)
         }
     }
 
     private fun isSecurityOnDutyAtCamera(security: PlacedShopObject.Worker): Boolean {
         val machineId = security.assignedMachineId ?: return false
-        val machine = state.findObjectById(machineId) ?: return false
+        val machine = access.findObjectById(machineId) ?: return false
         val machineSpec = machineSpecsById[machine.catalogId] ?: return false
         if (machineSpec.type != MachineType.SECURITY_CAMERA) return false
-        return state.isWorkerAtAssignedSlot(security) && security.movementPath.isEmpty()
+        return access.isWorkerAtAssignedSlot(security) && security.movementPath.isEmpty()
     }
 
     private fun handleSecurityPursuit(
@@ -106,7 +107,7 @@ internal class SecuritySystem(
             return
         }
 
-        if (state.manhattanDistance(security.position, target.position) <= 1) {
+        if (security.position.manhattanDistanceTo(target.position) <= 1) {
             val sabotagedMachineId = target.assignedMachineId ?: return
             cancelSabotage(sabotagedMachineId)
             pursuedSaboteurIds.remove(targetId)
@@ -149,7 +150,7 @@ internal class SecuritySystem(
         if (unattended.isEmpty()) return
 
         val unattendedSorted = unattended.sortedWith(
-            compareBy<PlacedShopObject.Worker> { state.manhattanDistance(it.position, cameraSecurity.position) }
+            compareBy<PlacedShopObject.Worker> { it.position.manhattanDistanceTo(cameraSecurity.position) }
                 .thenBy { it.id }
         )
 
@@ -213,7 +214,7 @@ internal class SecuritySystem(
         return allSecurityWorkers
             .asSequence()
             .filter { it.id != excludeId }
-            .map { state.findObjectById(it.id) as? PlacedShopObject.Worker ?: it }
+            .map { access.findObjectById(it.id) as? PlacedShopObject.Worker ?: it }
             .filter { it.assignedMachineId == null }
             .filter { it.pursuitTargetWorkerId == null }
             .filter { it.carriedProductId == null }
@@ -252,7 +253,7 @@ internal class SecuritySystem(
         val standTiles = grid.orthogonalNeighbors(target.position)
             .filter { tile ->
                 grid.isBuildable(tile) &&
-                    (tile == security.position || !state.isOccupied(tile, ignoreObjectId = security.id))
+                    (tile == security.position || !access.isOccupied(tile, ignoreObjectId = security.id))
             }
             .toSet()
         if (standTiles.isEmpty()) {
@@ -265,19 +266,19 @@ internal class SecuritySystem(
             grid = grid,
             start = security.position,
             goals = standTiles,
-            blockedTiles = state.blockedTilesForPath(ignoreWorkerId = security.id)
+            blockedTiles = access.blockedTilesForPath(ignoreWorkerId = security.id)
         )
     }
 
     private fun planSecurityRoamingPath(security: PlacedShopObject.Worker): List<TileCoordinate> {
         val roamer = movementStrategyResolver.strategyFor(security).roamer ?: return emptyList()
-        val blocked = state.blockedTilesForPath(ignoreWorkerId = security.id)
+        val blocked = access.blockedTilesForPath(ignoreWorkerId = security.id)
         return roamer.nextRoam(grid, security.position, blocked, random)
     }
 
     private fun isPathStillValid(worker: PlacedShopObject.Worker): Boolean {
         return worker.movementPath.none { tile ->
-            state.isOccupied(tile, ignoreObjectId = worker.id, ignoreProductId = worker.carriedProductId)
+            access.isOccupied(tile, ignoreObjectId = worker.id, ignoreProductId = worker.carriedProductId)
         }
     }
 

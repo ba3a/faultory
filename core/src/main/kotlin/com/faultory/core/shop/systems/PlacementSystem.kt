@@ -29,19 +29,19 @@ import com.faultory.core.shop.TileCoordinate
  * hands to [BeltSupplyFeederSystem] as a spawn callback.
  */
 internal class PlacementSystem(
-    private val state: ShopFloorState,
+    private val access: PlacementAccess,
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) {
-    private val grid get() = state.grid
-    private val machineSpecsById get() = state.machineSpecsById
-    private val mutablePlacedObjects get() = state.mutablePlacedObjects
-    private val mutableActiveProducts get() = state.mutableActiveProducts
+    private val grid get() = access.grid
+    private val machineSpecsById get() = access.machineSpecsById
+    private val mutablePlacedObjects get() = access.mutablePlacedObjects
+    private val mutableActiveProducts get() = access.mutableActiveProducts
 
     fun canPlaceObject(
         placedObject: PlacedShopObject,
         ignoreObjectId: String? = null
     ): Boolean {
-        val footprint = state.occupiedTilesFor(placedObject)
+        val footprint = access.occupiedTilesFor(placedObject)
         if (!isPlaceableFootprint(footprint, ignoreObjectId)) return false
         if (placedObject !is PlacedShopObject.Machine) return true
         val machineSpec = machineSpecsById[placedObject.catalogId] ?: return false
@@ -54,7 +54,7 @@ internal class PlacementSystem(
     ): Boolean {
         return footprint.isNotEmpty() &&
             footprint.all { grid.isBuildable(it) } &&
-            footprint.none { state.isOccupied(it, ignoreObjectId = ignoreObjectId) }
+            footprint.none { access.isOccupied(it, ignoreObjectId = ignoreObjectId) }
     }
 
     private fun canPlaceMachine(
@@ -123,11 +123,11 @@ internal class PlacementSystem(
             return false
         }
 
-        val footprint = state.occupiedTilesFor(placedObject)
+        val footprint = access.occupiedTilesFor(placedObject)
         return slotPositions.any { slotPosition ->
             grid.isBuildable(slotPosition.accessTile) &&
                 slotPosition.accessTile !in footprint &&
-                !state.isOccupied(slotPosition.accessTile, ignoreObjectId = ignoreObjectId)
+                !access.isOccupied(slotPosition.accessTile, ignoreObjectId = ignoreObjectId)
         }
     }
 
@@ -142,12 +142,12 @@ internal class PlacementSystem(
             type = MachineSlotType.QA
         ).any { slotPosition ->
             slotPosition.accessTile in grid.beltTiles &&
-                !state.isOccupied(slotPosition.accessTile, ignoreObjectId = ignoreObjectId)
+                !access.isOccupied(slotPosition.accessTile, ignoreObjectId = ignoreObjectId)
         }
     }
 
     fun placeObject(placedObject: PlacedShopObject): Boolean {
-        if (state.findObjectById(placedObject.id) != null) return false
+        if (access.findObjectById(placedObject.id) != null) return false
         if (!canPlaceObject(placedObject)) return false
 
         mutablePlacedObjects += placedObject
@@ -194,9 +194,9 @@ internal class PlacementSystem(
     private fun machineHasNoActiveWork(machineId: String): Boolean {
         return mutablePlacedObjects.filterIsInstance<PlacedShopObject.Worker>()
             .none { it.assignedMachineId == machineId } &&
-            state.mutableMachineProductionStates.none { it.machineId == machineId } &&
-            state.mutableMachineRecipeStates.none { it.machineId == machineId && !it.isEmpty } &&
-            state.mutableQaInspectionStates.none { it.inspectorObjectId == machineId }
+            access.machineProductionStates.none { it.machineId == machineId } &&
+            access.machineRecipeStates.none { it.machineId == machineId && !it.isEmpty } &&
+            access.qaInspectionStates.none { it.inspectorObjectId == machineId }
     }
 
     fun tryUpgradeObject(
@@ -204,12 +204,12 @@ internal class PlacementSystem(
         targetCatalogId: String,
         cost: Int
     ): Boolean {
-        val current = state.findObjectById(objectId) ?: return false
+        val current = access.findObjectById(objectId) ?: return false
         if (current.catalogId == targetCatalogId) return false
         if (current is PlacedShopObject.Machine && !upgradedMachineFits(current, targetCatalogId)) {
             return false
         }
-        if (cost > 0 && !state.tryDeductCash(cost, CashFlowReason.UPGRADE)) return false
+        if (cost > 0 && !access.tryDeductCash(cost, CashFlowReason.UPGRADE)) return false
 
         mutablePlacedObjects.replaceById(objectId) {
             when (it) {
@@ -251,9 +251,9 @@ internal class PlacementSystem(
         faultReason: ProductFaultReason?
     ): Boolean {
         if (beltStartTile !in grid.beltTiles) return false
-        if (state.isOccupied(beltStartTile)) return false
+        if (access.isOccupied(beltStartTile)) return false
 
-        val instanceId = state.createSupplyProductId()
+        val instanceId = access.createSupplyProductId()
         mutableActiveProducts += ShopProduct(
             id = instanceId,
             productId = productId,
@@ -275,5 +275,5 @@ internal class PlacementSystem(
     }
 
     private fun machineById(machineId: String): PlacedShopObject.Machine? =
-        state.findObjectById(machineId) as? PlacedShopObject.Machine
+        access.findObjectById(machineId) as? PlacedShopObject.Machine
 }

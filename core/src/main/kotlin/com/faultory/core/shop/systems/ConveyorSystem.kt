@@ -12,15 +12,14 @@ import com.faultory.core.shop.ShipmentEvent
 import com.faultory.core.shop.TileCoordinate
 
 internal class ConveyorSystem(
-    private val state: ShopFloorState,
+    private val access: ConveyorAccess,
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) : SimulationSystem {
-    private val grid get() = state.grid
-    private val mutableActiveProducts get() = state.mutableActiveProducts
-    private val mutablePlacedObjects get() = state.mutablePlacedObjects
-    private val productDefinitionsById get() = state.productDefinitionsById
-    private val machineSpecsById get() = state.machineSpecsById
-    private val pendingShipmentEvents get() = state.pendingShipmentEvents
+    private val grid get() = access.grid
+    private val mutableActiveProducts get() = access.mutableActiveProducts
+    private val placedObjects get() = access.placedObjects
+    private val productDefinitionsById get() = access.productDefinitionsById
+    private val machineSpecsById get() = access.machineSpecsById
 
     private var conveyorProgress = 0f
 
@@ -45,7 +44,7 @@ internal class ConveyorSystem(
     }
 
     private fun moveProductOnBelt(tile: TileCoordinate) {
-        val product = state.productAtBeltTile(tile) ?: return
+        val product = access.productAtBeltTile(tile) ?: return
 
         val nextTile = grid.nextBeltTile(tile)
         if (nextTile == null) {
@@ -58,12 +57,12 @@ internal class ConveyorSystem(
             mutableActiveProducts.removeById(product.id)
             if (!product.isFaulty) {
                 productDefinitionsById[product.productId]?.saleValue?.let { saleValue ->
-                    state.creditCash(saleValue, CashFlowReason.PRODUCT_SALE)
+                    access.creditCash(saleValue, CashFlowReason.PRODUCT_SALE)
                 }
             }
             // The shipment list is the pull-side feed for the day's tally; the bus gets the same
             // moment pushed, from here rather than from whoever happens to drain the list.
-            pendingShipmentEvents += ShipmentEvent(product.productId, product.faultReason)
+            access.recordShipment(ShipmentEvent(product.productId, product.faultReason))
             events.publish {
                 ProductShippedEvent(
                     productInstanceId = product.id,
@@ -75,7 +74,7 @@ internal class ConveyorSystem(
             return
         }
 
-        if (state.isOccupied(nextTile, ignoreProductId = product.id)) {
+        if (access.isOccupied(nextTile, ignoreProductId = product.id)) {
             return
         }
 
@@ -89,11 +88,11 @@ internal class ConveyorSystem(
     }
 
     private fun isBeltInputSinkAt(tile: TileCoordinate): Boolean {
-        return mutablePlacedObjects.any { placedObject ->
+        return placedObjects.any { placedObject ->
             if (placedObject !is PlacedShopObject.Machine) return@any false
             val machineSpec = machineSpecsById[placedObject.catalogId] ?: return@any false
             if (machineSpec.recipe == null) return@any false
-            state.slotPositionsFor(placedObject, MachineSlotType.BELT_INPUT)
+            access.slotPositionsFor(placedObject, MachineSlotType.BELT_INPUT)
                 .any { it.accessTile == tile }
         }
     }

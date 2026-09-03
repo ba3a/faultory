@@ -25,23 +25,24 @@ import com.faultory.core.shop.QueuedMachineOutput
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
+import com.faultory.core.shop.manhattanDistanceTo
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.random.Random
 
 internal class ProductionSystem(
-    private val state: ShopFloorState,
+    private val access: ProductionAccess,
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents(),
     private val chance: ChanceOracle = RandomChanceOracle(random)
 ) : SimulationSystem {
-    private val grid get() = state.grid
-    private val mutablePlacedObjects get() = state.mutablePlacedObjects
-    private val placedMachines get() = state.placedMachines
-    private val mutableActiveProducts get() = state.mutableActiveProducts
-    private val mutableMachineProductionStates get() = state.mutableMachineProductionStates
-    private val mutableMachineRecipeStates get() = state.mutableMachineRecipeStates
-    private val machineSpecsById get() = state.machineSpecsById
+    private val grid get() = access.grid
+    private val mutablePlacedObjects get() = access.mutablePlacedObjects
+    private val placedMachines get() = access.placedMachines
+    private val mutableActiveProducts get() = access.mutableActiveProducts
+    private val mutableMachineProductionStates get() = access.mutableMachineProductionStates
+    private val mutableMachineRecipeStates get() = access.mutableMachineRecipeStates
+    private val machineSpecsById get() = access.machineSpecsById
 
     /**
      * The recipe tick. Belt intake ([ProductionBeltIntakeSystem]) runs before it and output drain
@@ -94,7 +95,7 @@ internal class ProductionSystem(
             val rolledFault = rollFaultReason(machine, machineSpec, recipe, workerProfilesById)
             val startedState = MachineProductionState(
                 machineId = machine.id,
-                productInstanceId = state.createProductId(),
+                productInstanceId = access.createProductId(),
                 productId = recipe.outputProductId,
                 faultReason = worstFault(inputFault, rolledFault),
                 progressSeconds = 0f,
@@ -113,7 +114,7 @@ internal class ProductionSystem(
             // Only a fault rolled here is an act of sabotage; one inherited from a spoiled input
             // was already reported when it happened upstream.
             if (rolledFault == ProductFaultReason.SABOTAGE) {
-                val saboteurId = state.operatorWorkerForMachine(machine.id)?.id
+                val saboteurId = access.operatorWorkerForMachine(machine.id)?.id
                 if (saboteurId != null) {
                     events.publish {
                         SabotageCommittedEvent(
@@ -204,8 +205,8 @@ internal class ProductionSystem(
         if (machineSpec.manuality == Manuality.AUTOMATIC) {
             return true
         }
-        val operator = state.operatorWorkerForMachine(machine.id) ?: return false
-        if (!state.isWorkerAtAssignedSlot(operator)) return false
+        val operator = access.operatorWorkerForMachine(machine.id) ?: return false
+        if (!access.isWorkerAtAssignedSlot(operator)) return false
         if (operator.carriedProductId != null || operator.movementPath.isNotEmpty()) return false
         val workerProfile = workerProfilesById[operator.catalogId] ?: return false
         return machineSpec.canAcceptOperator(workerProfile, workerProfilesById)
@@ -237,14 +238,14 @@ internal class ProductionSystem(
             val machineSpec = machineSpecsById[machine.catalogId] ?: continue
             if (machineSpec.type != MachineType.PRODUCER) continue
             val recipe = machineSpec.recipe ?: continue
-            val inputSlots = state.slotPositionsFor(machine, MachineSlotType.BELT_INPUT)
+            val inputSlots = access.slotPositionsFor(machine, MachineSlotType.BELT_INPUT)
             if (inputSlots.isEmpty()) continue
 
             for (slot in inputSlots) {
                 val accessTile = slot.accessTile
                 if (accessTile !in grid.beltTiles) continue
                 if (grid.nextBeltTile(accessTile) != null) continue
-                val product = state.productAtBeltTile(accessTile) ?: continue
+                val product = access.productAtBeltTile(accessTile) ?: continue
                 if (product.holderObjectId != null) continue
                 val recipeInput = recipe.inputs.firstOrNull { it.productId == product.productId } ?: continue
                 val recipeState = ensureRecipeState(machine.id)
@@ -282,9 +283,9 @@ internal class ProductionSystem(
         val states = mutableMachineRecipeStates.toList()
         for (recipeState in states) {
             if (recipeState.outputQueue.isEmpty()) continue
-            val machine = state.findObjectById(recipeState.machineId) as? PlacedShopObject.Machine ?: continue
+            val machine = access.findObjectById(recipeState.machineId) as? PlacedShopObject.Machine ?: continue
             val machineSpec = machineSpecsById[machine.catalogId] ?: continue
-            val outputAccess = state.slotPositionsFor(machine, MachineSlotType.BELT_OUTPUT).firstOrNull()?.accessTile
+            val outputAccess = access.slotPositionsFor(machine, MachineSlotType.BELT_OUTPUT).firstOrNull()?.accessTile
 
             val head = recipeState.outputQueue.first()
             val placed = when {
@@ -307,7 +308,7 @@ internal class ProductionSystem(
         accessTile: TileCoordinate
     ): Boolean {
         if (accessTile !in grid.beltTiles) return false
-        if (state.isOccupied(accessTile)) return false
+        if (access.isOccupied(accessTile)) return false
 
         mutableActiveProducts += ShopProduct(
             id = head.productInstanceId,
@@ -333,8 +334,8 @@ internal class ProductionSystem(
         machine: PlacedShopObject.Machine,
         head: QueuedMachineOutput
     ): Boolean {
-        val worker = state.operatorWorkerForMachine(machine.id) ?: return false
-        if (!state.isWorkerAtAssignedSlot(worker) || worker.carriedProductId != null) {
+        val worker = access.operatorWorkerForMachine(machine.id) ?: return false
+        if (!access.isWorkerAtAssignedSlot(worker) || worker.carriedProductId != null) {
             return false
         }
         val workerIndex = mutablePlacedObjects.indexOfFirst { it.id == worker.id }
@@ -373,7 +374,7 @@ internal class ProductionSystem(
         head: QueuedMachineOutput
     ): Boolean {
         val outputTile = preferredAutomaticOutputTile(machine) ?: return false
-        if (state.isOccupied(outputTile)) return false
+        if (access.isOccupied(outputTile)) return false
 
         val ontoBelt = outputTile in grid.beltTiles
         mutableActiveProducts += ShopProduct(
@@ -407,7 +408,7 @@ internal class ProductionSystem(
     }
 
     private fun preferredAutomaticOutputTile(machine: PlacedShopObject.Machine): TileCoordinate? {
-        val machineTiles = state.occupiedTilesFor(machine)
+        val machineTiles = access.occupiedTilesFor(machine)
         return machineTiles
             .flatMap(grid::orthogonalNeighbors)
             .distinct()
@@ -420,7 +421,7 @@ internal class ProductionSystem(
     }
 
     private fun distanceToNearestBeltTile(tile: TileCoordinate): Int {
-        return grid.beltTiles.minOfOrNull { beltTile -> state.manhattanDistance(tile, beltTile) } ?: Int.MAX_VALUE
+        return grid.beltTiles.minOfOrNull { beltTile -> tile.manhattanDistanceTo(beltTile) } ?: Int.MAX_VALUE
     }
 
     private fun rollFaultReason(
@@ -437,7 +438,7 @@ internal class ProductionSystem(
             }
         }
 
-        val operatorWorker = state.operatorWorkerForMachine(machine.id) ?: return null
+        val operatorWorker = access.operatorWorkerForMachine(machine.id) ?: return null
         val workerProfile = workerProfilesById[operatorWorker.catalogId] ?: return null
         val workerRoleProfile = workerProfile.profileFor(WorkerRole.PRODUCER_OPERATOR) ?: return null
         val workerDefectChance = workerRoleProfile.defectChance

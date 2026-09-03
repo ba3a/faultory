@@ -17,15 +17,15 @@ import com.faultory.core.shop.pathfinding.MovementStrategyResolver
 import kotlin.random.Random
 
 internal class WorkerMovementSystem(
-    private val state: ShopFloorState,
+    private val access: WorkerMovementAccess,
     private val movementStrategyResolver: MovementStrategyResolver,
-    private val wetTileSystem: WetTileSystem,
+    private val wetFloor: WetFloorReads,
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents(),
     private val chance: ChanceOracle = RandomChanceOracle(random)
 ) : SimulationSystem {
-    private val mutablePlacedObjects get() = state.mutablePlacedObjects
-    private val grid get() = state.grid
+    private val mutablePlacedObjects get() = access.mutablePlacedObjects
+    private val grid get() = access.grid
 
     override val phase = SimulationPhase.MOVEMENT
 
@@ -62,7 +62,7 @@ internal class WorkerMovementSystem(
 
             while (progress >= 1f && remainingPath.isNotEmpty()) {
                 val nextTile = remainingPath.first()
-                if (state.isOccupied(nextTile, ignoreObjectId = placedObject.id, ignoreProductId = placedObject.carriedProductId)) {
+                if (access.isOccupied(nextTile, ignoreObjectId = placedObject.id, ignoreProductId = placedObject.carriedProductId)) {
                     remainingPath = emptyList()
                     progress = 0f
                     blockedAt = nextTile
@@ -73,7 +73,7 @@ internal class WorkerMovementSystem(
                 remainingPath = remainingPath.drop(1)
                 progress -= 1f
 
-                if (placedObject.workerRole != WorkerRole.CLEANER && wetTileSystem.isWet(currentPosition)) {
+                if (placedObject.workerRole != WorkerRole.CLEANER && wetFloor.isWet(currentPosition)) {
                     if (chance.roll(ChanceKind.WORKER_SLIP, jitteredSlipChance())) {
                         slipped = true
                         break
@@ -158,7 +158,7 @@ internal class WorkerMovementSystem(
 
             BeltRidePhase.RIDING -> {
                 val exitTile = grid.nextBeltTile(worker.position) ?: return
-                if (state.isOccupied(exitTile, ignoreObjectId = worker.id, ignoreProductId = worker.carriedProductId)) {
+                if (access.isOccupied(exitTile, ignoreObjectId = worker.id, ignoreProductId = worker.carriedProductId)) {
                     return
                 }
                 val newProgress = worker.movementProgress + deltaSeconds / GameConfig.beltRideDurationSeconds
@@ -222,9 +222,9 @@ internal class WorkerMovementSystem(
 
     private fun orientationAtAssignedSlot(worker: PlacedShopObject.Worker): Orientation? {
         val machineId = worker.assignedMachineId ?: return null
-        val machine = state.findObjectById(machineId) ?: return null
+        val machine = access.findObjectById(machineId) ?: return null
         val slotIndex = worker.assignedSlotIndex
-        return state.slotPositionsFor(machine, MachineSlotType.OPERATOR)
+        return access.slotPositionsFor(machine, MachineSlotType.OPERATOR)
             .firstOrNull { slotPosition ->
                 slotPosition.slotIndex == slotIndex ||
                     (slotIndex == null && slotPosition.accessTile == worker.position)

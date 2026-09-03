@@ -24,20 +24,20 @@ import com.faultory.core.shop.pathfinding.MovementStrategyResolver
  * through the [com.faultory.core.shop.ShopFloor] facade — **not** a scheduled [SimulationSystem].
  * It has no [SimulationPhase] and never runs on the per-frame tick.
  *
- * Depends on [QaSystem] for the QA-post candidate list, the same way [WorkerObjectiveSystem] does;
- * narrowing that seam is CODE_REVIEW 2.3.
+ * Takes [QaPostLocator] for the QA-post candidate list, the same collaborator [WorkerObjectiveSystem]
+ * uses — neither system reaches into [QaSystem] any more (CODE_REVIEW 2.3).
  */
 internal class AssignmentSystem(
-    private val state: ShopFloorState,
-    private val qaSystem: QaSystem,
+    private val access: AssignmentAccess,
+    private val qaPostLocator: QaPostLocator,
     private val movementStrategyResolver: MovementStrategyResolver,
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) {
-    private val grid get() = state.grid
-    private val machineSpecsById get() = state.machineSpecsById
-    private val mutablePlacedObjects get() = state.mutablePlacedObjects
-    private val mutableActiveProducts get() = state.mutableActiveProducts
-    private val mutableQaInspectionStates get() = state.mutableQaInspectionStates
+    private val grid get() = access.grid
+    private val machineSpecsById get() = access.machineSpecsById
+    private val mutablePlacedObjects get() = access.mutablePlacedObjects
+    private val activeProducts get() = access.activeProducts
+    private val qaInspectionStates get() = access.qaInspectionStates
 
     fun assignWorkerToMachine(
         workerId: String,
@@ -135,7 +135,7 @@ internal class AssignmentSystem(
             return fail(WorkerAssignmentFailureReason.INELIGIBLE_QA)
         }
 
-        val candidatesByPost = qaSystem.collectQaPostCandidates(ignoreWorkerId = worker.id)
+        val candidatesByPost = qaPostLocator.collectPostCandidates(ignoreWorkerId = worker.id)
             .associateBy { it.postTile }
         if (candidatesByPost.isEmpty()) return fail(WorkerAssignmentFailureReason.NO_QA_POST)
 
@@ -173,7 +173,7 @@ internal class AssignmentSystem(
             grid = grid,
             start = worker.position,
             goals = goalsByAccessTile.keys,
-            blockedTiles = state.blockedTilesForPath(ignoreWorkerId = worker.id)
+            blockedTiles = access.blockedTilesForPath(ignoreWorkerId = worker.id)
         ) ?: return fail(WorkerAssignmentFailureReason.NO_PATH)
 
         val destinationTile = path.lastOrNull() ?: worker.position
@@ -193,23 +193,23 @@ internal class AssignmentSystem(
         machine: PlacedShopObject.Machine,
         worker: PlacedShopObject.Worker
     ): List<MachineSlotPosition> {
-        return state.slotPositionsFor(machine, MachineSlotType.OPERATOR).filter { slot ->
+        return access.slotPositionsFor(machine, MachineSlotType.OPERATOR).filter { slot ->
             !isOperatorSlotReserved(machine.id, slot.slotIndex, ignoreWorkerId = worker.id) &&
                 grid.isBuildable(slot.accessTile) &&
                 !isProductBlocking(slot.accessTile) &&
-                (slot.accessTile == worker.position || !state.isOccupied(slot.accessTile, ignoreObjectId = worker.id))
+                (slot.accessTile == worker.position || !access.isOccupied(slot.accessTile, ignoreObjectId = worker.id))
         }
     }
 
     private fun assignableWorker(workerId: String): PlacedShopObject.Worker? =
-        state.findObjectById(workerId) as? PlacedShopObject.Worker
+        access.findObjectById(workerId) as? PlacedShopObject.Worker
 
     private fun machineById(machineId: String): PlacedShopObject.Machine? =
-        state.findObjectById(machineId) as? PlacedShopObject.Machine
+        access.findObjectById(machineId) as? PlacedShopObject.Machine
 
     private fun isWorkerBusy(worker: PlacedShopObject.Worker): Boolean =
         worker.carriedProductId != null ||
-            mutableQaInspectionStates.any { it.inspectorObjectId == worker.id }
+            qaInspectionStates.any { it.inspectorObjectId == worker.id }
 
     private fun isOperatorSlotReserved(
         machineId: String,
@@ -224,7 +224,7 @@ internal class AssignmentSystem(
     }
 
     private fun isProductBlocking(tile: TileCoordinate): Boolean {
-        return mutableActiveProducts.any { it.state != ShopProductState.CARRIED && it.tile == tile }
+        return activeProducts.any { it.state != ShopProductState.CARRIED && it.tile == tile }
     }
 
     private fun fail(reason: WorkerAssignmentFailureReason) = WorkerAssignmentResult.Failure(reason)

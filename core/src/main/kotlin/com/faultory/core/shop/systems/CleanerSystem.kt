@@ -5,6 +5,7 @@ import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.encounters.ProductPickedUpEvent
 import com.faultory.core.encounters.ShopFloorEvents
+import com.faultory.core.encounters.TileWettedEvent
 import com.faultory.core.graphics.InteractionIds
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
@@ -14,16 +15,16 @@ import com.faultory.core.shop.pathfinding.MovementStrategyResolver
 import kotlin.random.Random
 
 internal class CleanerSystem(
-    private val state: ShopFloorState,
+    private val access: CleanerAccess,
     private val movementStrategyResolver: MovementStrategyResolver,
-    private val wetTileSystem: WetTileSystem,
-    private val interactionSystem: InteractionSystem,
+    private val wetFloor: WetFloorWrites,
+    private val interactions: InteractionStarter,
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) : SimulationSystem {
-    private val mutablePlacedObjects get() = state.mutablePlacedObjects
-    private val mutableActiveProducts get() = state.mutableActiveProducts
-    private val grid get() = state.grid
+    private val mutablePlacedObjects get() = access.mutablePlacedObjects
+    private val mutableActiveProducts get() = access.mutableActiveProducts
+    private val grid get() = access.grid
 
     private val previousPositionByCleanerId: HashMap<String, TileCoordinate> = HashMap()
 
@@ -67,7 +68,10 @@ internal class CleanerSystem(
     private fun emitWetTrailIfMoved(cleaner: PlacedShopObject.Worker) {
         val previous = previousPositionByCleanerId[cleaner.id]
         if (previous == null || previous != cleaner.position) {
-            wetTileSystem.mark(cleaner.position, jitteredWetDuration())
+            val tile = cleaner.position
+            if (wetFloor.mark(tile, jitteredWetDuration())) {
+                events.publish { TileWettedEvent(tile = tile, levelId = it) }
+            }
         }
         previousPositionByCleanerId[cleaner.id] = cleaner.position
     }
@@ -135,10 +139,10 @@ internal class CleanerSystem(
 
         if (mutableActiveProducts.none { it.id == productId }) return false
 
-        // The product does not change hands here any more - InteractionSystem moves it partway
+        // The product does not change hands here any more - InteractionController moves it partway
         // through the give/take clip, so both workers get to play their half of the exchange.
         // It also publishes the handover, at the frame the payload actually moves.
-        return interactionSystem.begin(
+        return interactions.begin(
             definitionId = InteractionIds.HAND_OFF,
             initiatorId = cleaner.id,
             recipientId = recipient.id,
@@ -148,7 +152,7 @@ internal class CleanerSystem(
 
     private fun planRoaming(cleanerIndex: Int, cleaner: PlacedShopObject.Worker) {
         val roamer = movementStrategyResolver.strategyFor(cleaner).roamer ?: return
-        val blocked = state.blockedTilesForPath(ignoreWorkerId = cleaner.id)
+        val blocked = access.blockedTilesForPath(ignoreWorkerId = cleaner.id)
         val path = roamer.nextRoam(grid, cleaner.position, blocked, random)
         if (path.isEmpty()) return
         mutablePlacedObjects[cleanerIndex] = cleaner.copy(
@@ -168,7 +172,7 @@ internal class CleanerSystem(
                 if (!grid.isBuildable(stand)) continue
                 if (stand in grid.beltTiles) continue
                 if (stand != cleaner.position &&
-                    state.isOccupied(stand, ignoreObjectId = cleaner.id, ignoreProductId = carriedProductId)
+                    access.isOccupied(stand, ignoreObjectId = cleaner.id, ignoreProductId = carriedProductId)
                 ) continue
                 if (stand !in standTilesByWorker) standTilesByWorker[stand] = worker.id
             }
@@ -176,7 +180,7 @@ internal class CleanerSystem(
         if (standTilesByWorker.isEmpty()) return false
 
         val pathFinder = movementStrategyResolver.strategyFor(cleaner).pathFinder
-        val blocked = state.blockedTilesForPath(
+        val blocked = access.blockedTilesForPath(
             ignoreWorkerId = cleaner.id,
             ignoreCarriedProductId = carriedProductId
         )

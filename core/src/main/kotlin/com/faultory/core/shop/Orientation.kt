@@ -77,3 +77,8 @@ enum class Orientation {
 operator fun TileCoordinate.plus(other: TileCoordinate): TileCoordinate {
     return TileCoordinate(x + other.x, y + other.y)
 }
+
+/** Grid (4-neighbour) distance between two tiles. */
+fun TileCoordinate.manhattanDistanceTo(other: TileCoordinate): Int {
+    return abs(x - other.x) + abs(y - other.y)
+}

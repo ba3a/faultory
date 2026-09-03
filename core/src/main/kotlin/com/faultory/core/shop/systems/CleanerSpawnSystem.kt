@@ -12,7 +12,7 @@ import com.faultory.core.shop.TileCoordinate
 import kotlin.random.Random
 
 internal class CleanerSpawnSystem(
-    private val state: ShopFloorState,
+    private val access: CleanerSpawnAccess,
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents(),
     private val gate: CleanerSpawnGate
@@ -22,8 +22,8 @@ internal class CleanerSpawnSystem(
     override fun step(context: SystemContext) = trySpawnAtShiftStart(context.workerProfilesById)
 
     fun trySpawnAtShiftStart(workerProfilesById: Map<String, WorkerProfile>) {
-        if (state.cleanerSpawnedThisShift) return
-        state.cleanerSpawnedThisShift = true
+        if (access.cleanerSpawnedThisShift) return
+        access.cleanerSpawnedThisShift = true
 
         val cleanerProfile = workerProfilesById.values.firstOrNull { profile ->
             profile.roleProfiles.any { it.role == WorkerRole.CLEANER }
@@ -34,7 +34,7 @@ internal class CleanerSpawnSystem(
         if (!gate.shouldSpawn(spawnChance)) return
 
         val tile = pickEdgeSpawnTile() ?: return
-        val cleanerId = state.createObjectId(PlacedShopObjectKind.WORKER)
+        val cleanerId = access.createObjectId(PlacedShopObjectKind.WORKER)
         val cleaner = PlacedShopObject.Worker(
             id = cleanerId,
             catalogId = cleanerProfile.id,
@@ -42,12 +42,12 @@ internal class CleanerSpawnSystem(
             orientation = Orientation.EAST,
             workerRole = WorkerRole.CLEANER
         )
-        state.mutablePlacedObjects += cleaner
+        access.mutablePlacedObjects += cleaner
         events.publish { CleanerSpawnedEvent(objectId = cleanerId, levelId = it ?: gate.levelId()) }
     }
 
     private fun pickEdgeSpawnTile(): TileCoordinate? {
-        val grid = state.grid
+        val grid = access.grid
         val minBuildableY = (GameConfig.bankHeight / GameConfig.tileSize).toInt()
         val maxBuildableY = ((GameConfig.virtualHeight - GameConfig.hudHeight) / GameConfig.tileSize).toInt() - 1
         val minBuildableX = 0
@@ -60,7 +60,7 @@ internal class CleanerSpawnSystem(
                 val tile = TileCoordinate(x, y)
                 if (!grid.isBuildable(tile)) continue
                 if (tile in grid.beltTiles) continue
-                if (state.isOccupied(tile)) continue
+                if (access.isOccupied(tile)) continue
                 candidates += tile
             }
         }

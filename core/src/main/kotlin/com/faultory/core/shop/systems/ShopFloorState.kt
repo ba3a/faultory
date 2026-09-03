@@ -19,12 +19,17 @@ import com.faultory.core.shop.ShopGrid
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
-import kotlin.math.abs
 
+/**
+ * The whole mutable shop floor plus its secondary indexes. Systems never see this type: each takes
+ * exactly one of the `*Access` interfaces from [ShopFloorAccess] instead, and this class is the sole
+ * implementation of every one of them. [com.faultory.core.shop.ShopFloor] holds the concrete
+ * instance and passes it to each system as its narrow interface.
+ */
 internal class ShopFloorState(
-    val grid: ShopGrid,
-    val machineSpecsById: Map<String, MachineSpec>,
-    val productDefinitionsById: Map<String, ProductDefinition>,
+    override val grid: ShopGrid,
+    override val machineSpecsById: Map<String, MachineSpec>,
+    override val productDefinitionsById: Map<String, ProductDefinition>,
     initialPlacements: List<PlacedShopObject>,
     initialProducts: List<ShopProduct>,
     initialMachineProductionStates: List<MachineProductionState>,
@@ -32,7 +37,17 @@ internal class ShopFloorState(
     initialMachineRecipeStates: List<MachineRecipeState>,
     initialCash: Int,
     private val events: ShopFloorEvents = ShopFloorEvents()
-) {
+) : CleanerSpawnAccess,
+    UnitPhaseAccess,
+    WorkerMovementAccess,
+    ConveyorAccess,
+    ProductionAccess,
+    QaAccess,
+    SecurityAccess,
+    WorkerObjectiveAccess,
+    CleanerAccess,
+    PlacementAccess,
+    AssignmentAccess {
     var cash: Int = initialCash
         private set
 
@@ -40,28 +55,37 @@ internal class ShopFloorState(
     // instead of an `indexOfFirst { it.id == … }` scan on the per-frame path.
     private val placedObjectsIndex: IdIndexedMutableList<PlacedShopObject> =
         IdIndexedMutableList(initialPlacements) { it.id }
-    val mutablePlacedObjects: IdIndexedMutableList<PlacedShopObject> = placedObjectsIndex
+    override val mutablePlacedObjects: IdIndexedMutableList<PlacedShopObject> = placedObjectsIndex
+    override val placedObjects: List<PlacedShopObject> get() = placedObjectsIndex
 
     private val activeProductsIndex: IdIndexedMutableList<ShopProduct> =
         IdIndexedMutableList(initialProducts) { it.id }
-    val mutableActiveProducts: IdIndexedMutableList<ShopProduct> = activeProductsIndex
+    override val mutableActiveProducts: IdIndexedMutableList<ShopProduct> = activeProductsIndex
+    override val activeProducts: List<ShopProduct> get() = activeProductsIndex
 
     private val machineProductionStatesIndex: IdIndexedMutableList<MachineProductionState> =
         IdIndexedMutableList(initialMachineProductionStates) { it.machineId }
-    val mutableMachineProductionStates: IdIndexedMutableList<MachineProductionState> = machineProductionStatesIndex
+    override val mutableMachineProductionStates: IdIndexedMutableList<MachineProductionState> =
+        machineProductionStatesIndex
+    override val machineProductionStates: List<MachineProductionState> get() = machineProductionStatesIndex
 
     private val qaInspectionStatesIndex: IdIndexedMutableList<QaInspectionState> =
         IdIndexedMutableList(initialQaInspectionStates) { it.inspectorObjectId }
-    val mutableQaInspectionStates: IdIndexedMutableList<QaInspectionState> = qaInspectionStatesIndex
+    override val mutableQaInspectionStates: IdIndexedMutableList<QaInspectionState> = qaInspectionStatesIndex
+    override val qaInspectionStates: List<QaInspectionState> get() = qaInspectionStatesIndex
 
     private val machineRecipeStatesIndex: IdIndexedMutableList<MachineRecipeState> =
         IdIndexedMutableList(initialMachineRecipeStates) { it.machineId }
-    val mutableMachineRecipeStates: IdIndexedMutableList<MachineRecipeState> = machineRecipeStatesIndex
+    override val mutableMachineRecipeStates: IdIndexedMutableList<MachineRecipeState> = machineRecipeStatesIndex
+    override val machineRecipeStates: List<MachineRecipeState> get() = machineRecipeStatesIndex
 
     val pendingShipmentEvents: MutableList<ShipmentEvent> = mutableListOf()
 
-    val mutableWetTiles: MutableMap<TileCoordinate, Float> = HashMap()
-    var cleanerSpawnedThisShift: Boolean = false
+    override fun recordShipment(shipment: ShipmentEvent) {
+        pendingShipmentEvents += shipment
+    }
+
+    override var cleanerSpawnedThisShift: Boolean = false
 
     private val operatorWorkerByMachineId: HashMap<String, PlacedShopObject.Worker> = HashMap()
     private val productByBeltTile: HashMap<TileCoordinate, ShopProduct> = HashMap()
@@ -76,9 +100,9 @@ internal class ShopFloorState(
     private val _placedWorkers: MutableList<PlacedShopObject.Worker> = mutableListOf()
     private val _placedSecurityWorkers: MutableList<PlacedShopObject.Worker> = mutableListOf()
 
-    val placedMachines: List<PlacedShopObject.Machine> get() = _placedMachines
-    val placedWorkers: List<PlacedShopObject.Worker> get() = _placedWorkers
-    val placedSecurityWorkers: List<PlacedShopObject.Worker> get() = _placedSecurityWorkers
+    override val placedMachines: List<PlacedShopObject.Machine> get() = _placedMachines
+    override val placedWorkers: List<PlacedShopObject.Worker> get() = _placedWorkers
+    override val placedSecurityWorkers: List<PlacedShopObject.Worker> get() = _placedSecurityWorkers
 
     init {
         placedObjectsIndex.addMutationListener { old, new ->
@@ -225,7 +249,7 @@ internal class ShopFloorState(
     }.maxOrNull()?.plus(1) ?: 1
 
     /** The one place money leaves the bank, and so the one place a spend is published. */
-    fun tryDeductCash(amount: Int, reason: CashFlowReason): Boolean {
+    override fun tryDeductCash(amount: Int, reason: CashFlowReason): Boolean {
         if (amount < 0 || cash < amount) {
             return false
         }
@@ -235,29 +259,29 @@ internal class ShopFloorState(
     }
 
     /** The one place money enters the bank, and so the one place an earning is published. */
-    fun creditCash(amount: Int, reason: CashFlowReason) {
+    override fun creditCash(amount: Int, reason: CashFlowReason) {
         if (amount <= 0) return
         cash += amount
         events.publish { CashEarnedEvent(amount = amount, reason = reason, levelId = it) }
     }
 
-    fun findObjectById(objectId: String): PlacedShopObject? {
+    override fun findObjectById(objectId: String): PlacedShopObject? {
         return placedObjectsIndex.byId(objectId)
     }
 
-    fun productById(productId: String?): ShopProduct? {
+    override fun productById(productId: String?): ShopProduct? {
         if (productId == null) return null
         return activeProductsIndex.byId(productId)
     }
 
-    fun productAtBeltTile(tile: TileCoordinate): ShopProduct? {
+    override fun productAtBeltTile(tile: TileCoordinate): ShopProduct? {
         return productByBeltTile[tile]
     }
 
-    fun machineProductionStateFor(machineId: String): MachineProductionState? =
+    override fun machineProductionStateFor(machineId: String): MachineProductionState? =
         machineProductionStatesIndex.byId(machineId)
 
-    fun machineRecipeStateFor(machineId: String): MachineRecipeState? =
+    override fun machineRecipeStateFor(machineId: String): MachineRecipeState? =
         machineRecipeStatesIndex.byId(machineId)
 
     fun objectAtTile(tile: TileCoordinate): PlacedShopObject? {
@@ -266,7 +290,7 @@ internal class ShopFloorState(
         return placedObjectsIndex.byId(id)
     }
 
-    fun occupiedTilesFor(placedObject: PlacedShopObject): Set<TileCoordinate> {
+    override fun occupiedTilesFor(placedObject: PlacedShopObject): Set<TileCoordinate> {
         if (placedObjectsIndex.byId(placedObject.id) != null) {
             return occupiedTilesByObjectId.getOrPut(placedObject.id) {
                 computeOccupiedTiles(placedObject)
@@ -286,9 +310,9 @@ internal class ShopFloorState(
         }
     }
 
-    fun slotPositionsFor(
+    override fun slotPositionsFor(
         placedObject: PlacedShopObject,
-        type: MachineSlotType? = null
+        type: MachineSlotType?
     ): List<MachineSlotPosition> {
         if (placedObject !is PlacedShopObject.Machine) {
             return emptyList()
@@ -304,10 +328,10 @@ internal class ShopFloorState(
         return machineSpec.slotPositions(placedObject.position, placedObject.orientation, type)
     }
 
-    fun isOccupied(
+    override fun isOccupied(
         tile: TileCoordinate,
-        ignoreObjectId: String? = null,
-        ignoreProductId: String? = null
+        ignoreObjectId: String?,
+        ignoreProductId: String?
     ): Boolean {
         ensureTileOccupancyIndex()
         val occupyingObjectId = placedObjectIdByTile[tile]
@@ -321,9 +345,9 @@ internal class ShopFloorState(
         return false
     }
 
-    fun blockedTilesForPath(
-        ignoreWorkerId: String? = null,
-        ignoreCarriedProductId: String? = null
+    override fun blockedTilesForPath(
+        ignoreWorkerId: String?,
+        ignoreCarriedProductId: String?
     ): Set<TileCoordinate> {
         ensureTileOccupancyIndex()
         return buildSet {
@@ -336,17 +360,17 @@ internal class ShopFloorState(
         }
     }
 
-    fun isWorkerAtAssignedSlot(worker: PlacedShopObject.Worker): Boolean {
+    override fun isWorkerAtAssignedSlot(worker: PlacedShopObject.Worker): Boolean {
         val slot = assignedSlotFor(worker) ?: return false
         return worker.position == slot.accessTile
     }
 
-    fun isWorkerAtQaPost(worker: PlacedShopObject.Worker): Boolean {
+    override fun isWorkerAtQaPost(worker: PlacedShopObject.Worker): Boolean {
         val qaPostTile = worker.qaPostTile ?: return false
         return worker.position == qaPostTile
     }
 
-    fun assignedSlotFor(worker: PlacedShopObject.Worker): MachineSlotPosition? {
+    override fun assignedSlotFor(worker: PlacedShopObject.Worker): MachineSlotPosition? {
         val machineId = worker.assignedMachineId ?: return null
         val slotIndex = worker.assignedSlotIndex ?: return null
         val machine = findObjectById(machineId) ?: return null
@@ -354,11 +378,11 @@ internal class ShopFloorState(
             .firstOrNull { it.slotIndex == slotIndex }
     }
 
-    fun operatorWorkerForMachine(machineId: String): PlacedShopObject.Worker? {
+    override fun operatorWorkerForMachine(machineId: String): PlacedShopObject.Worker? {
         return operatorWorkerByMachineId[machineId]
     }
 
-    fun clearWorkerHold(workerId: String) {
+    override fun clearWorkerHold(workerId: String) {
         val workerIndex = mutablePlacedObjects.indexOfFirst { it.id == workerId }
         val worker = workerIndex.takeIf { it >= 0 }
             ?.let { mutablePlacedObjects[it] as? PlacedShopObject.Worker }
@@ -374,19 +398,19 @@ internal class ShopFloorState(
         )
     }
 
-    fun createProductId(): String {
+    override fun createProductId(): String {
         val productId = "product-$nextProductSequence"
         nextProductSequence += 1
         return productId
     }
 
-    fun createSupplyProductId(): String {
+    override fun createSupplyProductId(): String {
         val instanceId = "supply-$nextProductSequence"
         nextProductSequence += 1
         return instanceId
     }
 
-    fun createObjectId(kind: PlacedShopObjectKind): String {
+    override fun createObjectId(kind: PlacedShopObjectKind): String {
         val prefix = when (kind) {
             PlacedShopObjectKind.WORKER -> "worker"
             PlacedShopObjectKind.MACHINE -> "machine"
@@ -394,10 +418,6 @@ internal class ShopFloorState(
         val objectId = "$prefix-$nextObjectSequence"
         nextObjectSequence += 1
         return objectId
-    }
-
-    fun manhattanDistance(first: TileCoordinate, second: TileCoordinate): Int {
-        return abs(first.x - second.x) + abs(first.y - second.y)
     }
 
     private fun sequenceOf(identifier: String): Int? {
