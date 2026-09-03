@@ -63,7 +63,7 @@ internal class ShopFloorState(
     val mutableWetTiles: MutableMap<TileCoordinate, Float> = HashMap()
     var cleanerSpawnedThisShift: Boolean = false
 
-    private val operatorWorkerByMachineId: HashMap<String, PlacedShopObject> = HashMap()
+    private val operatorWorkerByMachineId: HashMap<String, PlacedShopObject.Worker> = HashMap()
     private val productByBeltTile: HashMap<TileCoordinate, ShopProduct> = HashMap()
 
     private var tileOccupancyDirty: Boolean = true
@@ -72,19 +72,19 @@ internal class ShopFloorState(
     private val occupiedTilesByObjectId: HashMap<String, Set<TileCoordinate>> = HashMap()
     private val slotPositionsByObjectId: HashMap<String, HashMap<MachineSlotType?, List<MachineSlotPosition>>> = HashMap()
 
-    private val _placedMachines: MutableList<PlacedShopObject> = mutableListOf()
-    private val _placedWorkers: MutableList<PlacedShopObject> = mutableListOf()
-    private val _placedSecurityWorkers: MutableList<PlacedShopObject> = mutableListOf()
+    private val _placedMachines: MutableList<PlacedShopObject.Machine> = mutableListOf()
+    private val _placedWorkers: MutableList<PlacedShopObject.Worker> = mutableListOf()
+    private val _placedSecurityWorkers: MutableList<PlacedShopObject.Worker> = mutableListOf()
 
-    val placedMachines: List<PlacedShopObject> get() = _placedMachines
-    val placedWorkers: List<PlacedShopObject> get() = _placedWorkers
-    val placedSecurityWorkers: List<PlacedShopObject> get() = _placedSecurityWorkers
+    val placedMachines: List<PlacedShopObject.Machine> get() = _placedMachines
+    val placedWorkers: List<PlacedShopObject.Worker> get() = _placedWorkers
+    val placedSecurityWorkers: List<PlacedShopObject.Worker> get() = _placedSecurityWorkers
 
     init {
         placedObjectsIndex.addMutationListener { old, new ->
             tileOccupancyDirty = true
             if (old != null) occupiedTilesByObjectId.remove(old.id)
-            if (old != null && old.kind == PlacedShopObjectKind.MACHINE) {
+            if (old is PlacedShopObject.Machine) {
                 slotPositionsByObjectId.remove(old.id)
                 if (new == null) machineRecipeStatesIndex.removeAll { it.machineId == old.id }
             }
@@ -99,43 +99,53 @@ internal class ShopFloorState(
     }
 
     private fun updateKindIndex(old: PlacedShopObject?, new: PlacedShopObject?) {
-        val list = when (old?.kind ?: new?.kind) {
-            PlacedShopObjectKind.MACHINE -> _placedMachines
-            PlacedShopObjectKind.WORKER -> _placedWorkers
-            null -> return
-        }
         when {
-            old == null -> {
-                list += new!!
-                if (new.workerRole == WorkerRole.SECURITY) _placedSecurityWorkers += new
-            }
-            new == null -> {
-                val idx = list.indexOfFirst { it.id == old.id }
-                if (idx >= 0) list.removeAt(idx)
-                if (old.workerRole == WorkerRole.SECURITY) {
-                    val sidx = _placedSecurityWorkers.indexOfFirst { it.id == old.id }
-                    if (sidx >= 0) _placedSecurityWorkers.removeAt(sidx)
-                }
+            old is PlacedShopObject.Machine && new is PlacedShopObject.Machine ->
+                replaceById(_placedMachines, new)
+            old is PlacedShopObject.Worker && new is PlacedShopObject.Worker -> {
+                replaceById(_placedWorkers, new)
+                if (new.workerRole == WorkerRole.SECURITY) replaceById(_placedSecurityWorkers, new)
             }
             else -> {
-                val idx = list.indexOfFirst { it.id == old.id }
-                if (idx >= 0) list[idx] = new
-                if (new.workerRole == WorkerRole.SECURITY) {
-                    val sidx = _placedSecurityWorkers.indexOfFirst { it.id == new.id }
-                    if (sidx >= 0) _placedSecurityWorkers[sidx] = new else _placedSecurityWorkers += new
+                when (old) {
+                    is PlacedShopObject.Machine -> removeById(_placedMachines, old.id)
+                    is PlacedShopObject.Worker -> {
+                        removeById(_placedWorkers, old.id)
+                        removeById(_placedSecurityWorkers, old.id)
+                    }
+                    null -> Unit
+                }
+                when (new) {
+                    is PlacedShopObject.Machine -> _placedMachines += new
+                    is PlacedShopObject.Worker -> {
+                        _placedWorkers += new
+                        if (new.workerRole == WorkerRole.SECURITY) _placedSecurityWorkers += new
+                    }
+                    null -> Unit
                 }
             }
         }
     }
 
+    private fun <T : PlacedShopObject> removeById(list: MutableList<T>, id: String) {
+        val idx = list.indexOfFirst { it.id == id }
+        if (idx >= 0) list.removeAt(idx)
+    }
+
+    /** In-place replace by id, preserving list order; appends only when the id is new to the list. */
+    private fun <T : PlacedShopObject> replaceById(list: MutableList<T>, element: T) {
+        val idx = list.indexOfFirst { it.id == element.id }
+        if (idx >= 0) list[idx] = element else list += element
+    }
+
     private fun updateOperatorWorkerIndex(old: PlacedShopObject?, new: PlacedShopObject?) {
-        if (old != null && old.kind == PlacedShopObjectKind.WORKER) {
+        if (old is PlacedShopObject.Worker) {
             val machineId = old.assignedMachineId
             if (machineId != null && operatorWorkerByMachineId[machineId]?.id == old.id) {
                 operatorWorkerByMachineId.remove(machineId)
             }
         }
-        if (new != null && new.kind == PlacedShopObjectKind.WORKER) {
+        if (new is PlacedShopObject.Worker) {
             val machineId = new.assignedMachineId
             if (machineId != null && new.assignedSlotIndex != null) {
                 operatorWorkerByMachineId[machineId] = new
@@ -160,9 +170,9 @@ internal class ShopFloorState(
         _placedWorkers.clear()
         _placedSecurityWorkers.clear()
         for (placed in placedObjectsIndex) {
-            when (placed.kind) {
-                PlacedShopObjectKind.MACHINE -> _placedMachines += placed
-                PlacedShopObjectKind.WORKER -> {
+            when (placed) {
+                is PlacedShopObject.Machine -> _placedMachines += placed
+                is PlacedShopObject.Worker -> {
                     _placedWorkers += placed
                     if (placed.workerRole == WorkerRole.SECURITY) _placedSecurityWorkers += placed
                     val machineId = placed.assignedMachineId
@@ -266,9 +276,9 @@ internal class ShopFloorState(
     }
 
     private fun computeOccupiedTiles(placedObject: PlacedShopObject): Set<TileCoordinate> {
-        return when (placedObject.kind) {
-            PlacedShopObjectKind.WORKER -> setOf(placedObject.position)
-            PlacedShopObjectKind.MACHINE -> {
+        return when (placedObject) {
+            is PlacedShopObject.Worker -> setOf(placedObject.position)
+            is PlacedShopObject.Machine -> {
                 val machineSpec = machineSpecsById[placedObject.catalogId]
                     ?: return setOf(placedObject.position)
                 machineSpec.occupiedTiles(placedObject.position, placedObject.orientation)
@@ -280,7 +290,7 @@ internal class ShopFloorState(
         placedObject: PlacedShopObject,
         type: MachineSlotType? = null
     ): List<MachineSlotPosition> {
-        if (placedObject.kind != PlacedShopObjectKind.MACHINE) {
+        if (placedObject !is PlacedShopObject.Machine) {
             return emptyList()
         }
 
@@ -326,17 +336,17 @@ internal class ShopFloorState(
         }
     }
 
-    fun isWorkerAtAssignedSlot(worker: PlacedShopObject): Boolean {
+    fun isWorkerAtAssignedSlot(worker: PlacedShopObject.Worker): Boolean {
         val slot = assignedSlotFor(worker) ?: return false
         return worker.position == slot.accessTile
     }
 
-    fun isWorkerAtQaPost(worker: PlacedShopObject): Boolean {
+    fun isWorkerAtQaPost(worker: PlacedShopObject.Worker): Boolean {
         val qaPostTile = worker.qaPostTile ?: return false
         return worker.position == qaPostTile
     }
 
-    fun assignedSlotFor(worker: PlacedShopObject): MachineSlotPosition? {
+    fun assignedSlotFor(worker: PlacedShopObject.Worker): MachineSlotPosition? {
         val machineId = worker.assignedMachineId ?: return null
         val slotIndex = worker.assignedSlotIndex ?: return null
         val machine = findObjectById(machineId) ?: return null
@@ -344,17 +354,15 @@ internal class ShopFloorState(
             .firstOrNull { it.slotIndex == slotIndex }
     }
 
-    fun operatorWorkerForMachine(machineId: String): PlacedShopObject? {
+    fun operatorWorkerForMachine(machineId: String): PlacedShopObject.Worker? {
         return operatorWorkerByMachineId[machineId]
     }
 
     fun clearWorkerHold(workerId: String) {
-        val workerIndex = mutablePlacedObjects.indexOfFirst { it.id == workerId && it.kind == PlacedShopObjectKind.WORKER }
-        if (workerIndex < 0) {
-            return
-        }
-
-        val worker = mutablePlacedObjects[workerIndex]
+        val workerIndex = mutablePlacedObjects.indexOfFirst { it.id == workerId }
+        val worker = workerIndex.takeIf { it >= 0 }
+            ?.let { mutablePlacedObjects[it] as? PlacedShopObject.Worker }
+            ?: return
         if (worker.carriedProductId == null) {
             return
         }

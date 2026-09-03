@@ -11,7 +11,7 @@ import com.faultory.core.shop.PlacedShopObject
  * touching call sites.
  */
 fun interface MovementStrategyResolver {
-    fun strategyFor(worker: PlacedShopObject): MovementStrategy
+    fun strategyFor(worker: PlacedShopObject.Worker): MovementStrategy
 }
 
 /**
@@ -19,7 +19,7 @@ fun interface MovementStrategyResolver {
  * [MovementStrategies.Worker].
  */
 object DefaultMovementStrategyResolver : MovementStrategyResolver {
-    override fun strategyFor(worker: PlacedShopObject): MovementStrategy =
+    override fun strategyFor(worker: PlacedShopObject.Worker): MovementStrategy =
         when (worker.workerRole) {
             WorkerRole.SECURITY -> MovementStrategies.Security
             WorkerRole.CLEANER -> MovementStrategies.Cleaner

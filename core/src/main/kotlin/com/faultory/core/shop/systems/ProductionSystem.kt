@@ -65,7 +65,7 @@ internal class ProductionSystem(
     }
 
     private fun tickRecipeMachine(
-        machine: PlacedShopObject,
+        machine: PlacedShopObject.Machine,
         machineSpec: MachineSpec,
         recipe: MachineRecipe,
         deltaSeconds: Float,
@@ -193,7 +193,7 @@ internal class ProductionSystem(
     }
 
     private fun canStartRecipeProduction(
-        machine: PlacedShopObject,
+        machine: PlacedShopObject.Machine,
         machineSpec: MachineSpec,
         workerProfilesById: Map<String, WorkerProfile>
     ): Boolean {
@@ -282,7 +282,7 @@ internal class ProductionSystem(
         val states = mutableMachineRecipeStates.toList()
         for (recipeState in states) {
             if (recipeState.outputQueue.isEmpty()) continue
-            val machine = state.findObjectById(recipeState.machineId) ?: continue
+            val machine = state.findObjectById(recipeState.machineId) as? PlacedShopObject.Machine ?: continue
             val machineSpec = machineSpecsById[machine.catalogId] ?: continue
             val outputAccess = state.slotPositionsFor(machine, MachineSlotType.BELT_OUTPUT).firstOrNull()?.accessTile
 
@@ -302,7 +302,7 @@ internal class ProductionSystem(
     }
 
     private fun tryPlaceQueuedOnBelt(
-        machine: PlacedShopObject,
+        machine: PlacedShopObject.Machine,
         head: QueuedMachineOutput,
         accessTile: TileCoordinate
     ): Boolean {
@@ -330,7 +330,7 @@ internal class ProductionSystem(
     }
 
     private fun tryHandQueuedToWorker(
-        machine: PlacedShopObject,
+        machine: PlacedShopObject.Machine,
         head: QueuedMachineOutput
     ): Boolean {
         val worker = state.operatorWorkerForMachine(machine.id) ?: return false
@@ -369,7 +369,7 @@ internal class ProductionSystem(
     }
 
     private fun tryDispenseQueuedToFloor(
-        machine: PlacedShopObject,
+        machine: PlacedShopObject.Machine,
         head: QueuedMachineOutput
     ): Boolean {
         val outputTile = preferredAutomaticOutputTile(machine) ?: return false
@@ -406,7 +406,7 @@ internal class ProductionSystem(
         return true
     }
 
-    private fun preferredAutomaticOutputTile(machine: PlacedShopObject): TileCoordinate? {
+    private fun preferredAutomaticOutputTile(machine: PlacedShopObject.Machine): TileCoordinate? {
         val machineTiles = state.occupiedTilesFor(machine)
         return machineTiles
             .flatMap(grid::orthogonalNeighbors)
@@ -424,7 +424,7 @@ internal class ProductionSystem(
     }
 
     private fun rollFaultReason(
-        machine: PlacedShopObject,
+        machine: PlacedShopObject.Machine,
         machineSpec: MachineSpec,
         recipe: MachineRecipe,
         workerProfilesById: Map<String, WorkerProfile>

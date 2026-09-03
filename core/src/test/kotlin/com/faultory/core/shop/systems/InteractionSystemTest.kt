@@ -6,7 +6,6 @@ import com.faultory.core.graphics.InteractionDefinition
 import com.faultory.core.graphics.InteractionIds
 import com.faultory.core.shop.InteractionRole
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopGrid
 import com.faultory.core.shop.ShopProduct
@@ -210,15 +209,19 @@ class InteractionSystemTest {
             }
         }
 
-        fun objectById(id: String): PlacedShopObject =
-            assertNotNull(state.mutablePlacedObjects.firstOrNull { it.id == id }, "no object $id")
+        fun objectById(id: String): PlacedShopObject.Worker =
+            assertNotNull(
+                state.mutablePlacedObjects.filterIsInstance<PlacedShopObject.Worker>().firstOrNull { it.id == id },
+                "no worker $id"
+            )
 
         fun productById(id: String): ShopProduct? =
             state.mutableActiveProducts.firstOrNull { it.id == id }
 
         fun setCarried(id: String, productId: String?) {
             val index = state.mutablePlacedObjects.indexOfFirst { it.id == id }
-            state.mutablePlacedObjects[index] = state.mutablePlacedObjects[index].copy(carriedProductId = productId)
+            state.mutablePlacedObjects[index] =
+                (state.mutablePlacedObjects[index] as PlacedShopObject.Worker).copy(carriedProductId = productId)
         }
 
         fun remove(id: String) {
@@ -230,10 +233,9 @@ class InteractionSystemTest {
         id: String,
         position: TileCoordinate,
         carriedProductId: String? = null
-    ): PlacedShopObject = PlacedShopObject(
+    ): PlacedShopObject.Worker = PlacedShopObject.Worker(
         id = id,
         catalogId = "line-inspector",
-        kind = PlacedShopObjectKind.WORKER,
         position = position,
         workerRole = WorkerRole.QA,
         carriedProductId = carriedProductId

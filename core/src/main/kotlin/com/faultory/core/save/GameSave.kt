@@ -21,7 +21,7 @@ data class GameSave(
     val lastCompletedRun: CompletedRunStats? = null
 ) {
     companion object {
-        const val CURRENT_VERSION = 12
+        const val CURRENT_VERSION = 13
 
         fun forLevel(
             slotId: String,

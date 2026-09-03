@@ -2,7 +2,6 @@ package com.faultory.core.graphics
 
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
@@ -39,9 +38,9 @@ object ProductActionResolver {
     }
 
     private fun carriedActionFor(shopFloor: ShopFloor, product: ShopProduct): String {
-        val holder = holderFor(shopFloor, product)
+        val holderWorker = holderFor(shopFloor, product) as? PlacedShopObject.Worker
         return when {
-            holder?.unitPhase == UnitPhase.DESTROYING_PRODUCT -> SpriteAction.DESTROYING.id
+            holderWorker?.unitPhase == UnitPhase.DESTROYING_PRODUCT -> SpriteAction.DESTROYING.id
             shopFloor.qaInspectionStates.any { it.productId == product.id } -> SpriteAction.INSPECTED.id
             else -> SpriteAction.CARRIED.id
         }
@@ -53,9 +52,9 @@ object ProductActionResolver {
         return Orientation.between(tile, nextTile)
     }
 
-    private fun holderOrientationFor(holder: PlacedShopObject): Orientation = when (holder.kind) {
-        PlacedShopObjectKind.WORKER -> WorkerActionResolver.orientationFor(holder)
-        PlacedShopObjectKind.MACHINE -> holder.orientation
+    private fun holderOrientationFor(holder: PlacedShopObject): Orientation = when (holder) {
+        is PlacedShopObject.Worker -> WorkerActionResolver.orientationFor(holder)
+        is PlacedShopObject.Machine -> holder.orientation
     }
 
     private fun holderFor(shopFloor: ShopFloor, product: ShopProduct): PlacedShopObject? =

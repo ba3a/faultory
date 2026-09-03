@@ -1,7 +1,7 @@
 package com.faultory.core.screens.shopfloor
 
 import com.faultory.core.shop.Orientation
-import com.faultory.core.shop.PlacedShopObjectKind
+import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.TileCoordinate
 
@@ -22,9 +22,7 @@ class MachineDragController(
         get() = dragState != null
 
     fun tryStart(hoveredTile: TileCoordinate?, worldX: Float, worldY: Float): Boolean {
-        val machine = hoveredTile
-            ?.let(shopFloor::objectAt)
-            ?.takeIf { it.kind == PlacedShopObjectKind.MACHINE }
+        val machine = hoveredTile?.let(shopFloor::objectAt) as? PlacedShopObject.Machine
             ?: return false
 
         dragState = DragState(machine.id, worldX, worldY)

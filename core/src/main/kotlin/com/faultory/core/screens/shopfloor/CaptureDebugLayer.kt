@@ -2,7 +2,7 @@ package com.faultory.core.screens.shopfloor
 
 import com.badlogic.gdx.graphics.Color
 import com.faultory.core.config.GameConfig
-import com.faultory.core.shop.PlacedShopObjectKind
+import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.TileCoordinate
 
@@ -23,7 +23,7 @@ class CaptureDebugLayer(private val shopFloor: ShopFloor) : ShopFloorLayer {
 
         renderer.color = MOVEMENT_PATH
         for (placedObject in ctx.frame.placedObjects) {
-            if (placedObject.kind != PlacedShopObjectKind.WORKER || placedObject.movementPath.isEmpty()) continue
+            if (placedObject !is PlacedShopObject.Worker || placedObject.movementPath.isEmpty()) continue
             var from = placedObject.position
             for (tile in placedObject.movementPath) {
                 drawSegment(ctx, from, tile)

@@ -16,7 +16,6 @@ import com.faultory.core.encounters.QaInspectionStartedEvent
 import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.QaInspectionState
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
@@ -126,7 +125,7 @@ internal class QaSystem(
             .distinctBy { it.postTile }
     }
 
-    internal fun qaInspectionTileForWorker(worker: PlacedShopObject): TileCoordinate? {
+    internal fun qaInspectionTileForWorker(worker: PlacedShopObject.Worker): TileCoordinate? {
         val qaPostTile = worker.qaPostTile ?: return null
         val beltTile = qaPostTile + worker.orientation.step()
         return beltTile.takeIf { it in grid.beltTiles }
@@ -234,22 +233,18 @@ internal class QaSystem(
         val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
         if (productIndex < 0) return
 
-        val holder = state.findObjectById(holderObjectId)
-        val workerIndex = mutablePlacedObjects.indexOfFirst { it.id == holderObjectId && it.kind == PlacedShopObjectKind.WORKER }
+        val holderWorker = state.findObjectById(holderObjectId) as? PlacedShopObject.Worker
         val product = mutableActiveProducts[productIndex]
         mutableActiveProducts[productIndex] = product.copy(
             state = ShopProductState.CARRIED,
             tile = null,
-            carrierWorkerId = if (holder?.kind == PlacedShopObjectKind.WORKER) holderObjectId else null,
+            carrierWorkerId = if (holderWorker != null) holderObjectId else null,
             holderObjectId = holderObjectId
         )
-        if (workerIndex >= 0) {
-            val worker = mutablePlacedObjects[workerIndex]
-            mutablePlacedObjects[workerIndex] = worker.copy(
-                carriedProductId = productId,
-                movementPath = emptyList(),
-                movementProgress = 0f
-            )
+        if (holderWorker != null) {
+            mutablePlacedObjects.replaceById(holderWorker.id) {
+                holderWorker.copy(carriedProductId = productId, movementPath = emptyList(), movementProgress = 0f)
+            }
         }
     }
 
@@ -288,9 +283,8 @@ internal class QaSystem(
         val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
         if (productIndex < 0) return false
 
-        val inspectorIndex = mutablePlacedObjects.indexOfFirst {
-            it.id == inspectorId && it.kind == PlacedShopObjectKind.WORKER
-        }
+        val inspectorIndex = mutablePlacedObjects.indexOfFirst { it.id == inspectorId }
+            .takeIf { it >= 0 && mutablePlacedObjects[it] is PlacedShopObject.Worker } ?: -1
         if (inspectorIndex < 0) {
             // Machine inspector — destroy instantly.
             val destroyed = mutableActiveProducts[productIndex]
@@ -307,7 +301,7 @@ internal class QaSystem(
             return true
         }
 
-        val inspector = mutablePlacedObjects[inspectorIndex]
+        val inspector = mutablePlacedObjects[inspectorIndex] as PlacedShopObject.Worker
         if (inspector.unitPhase == com.faultory.core.shop.UnitPhase.DESTROYING_PRODUCT) {
             // Phase already running for this product — nothing to start.
             return false
@@ -385,7 +379,7 @@ internal class QaSystem(
                 events.publish {
                     ProductHandedOverEvent(
                         objectId = inspector.id,
-                        giverRole = inspector.workerRole,
+                        giverRole = (inspector as? PlacedShopObject.Worker)?.workerRole,
                         recipientObjectId = targetWorker.id,
                         recipientRole = targetWorker.workerRole,
                         productInstanceId = handed.id,
@@ -422,7 +416,7 @@ internal class QaSystem(
         return false
     }
 
-    private fun nearestAvailableProducerWorker(originTile: TileCoordinate): PlacedShopObject? {
+    private fun nearestAvailableProducerWorker(originTile: TileCoordinate): PlacedShopObject.Worker? {
         return placedWorkers
             .asSequence()
             .filter { it.workerRole == WorkerRole.PRODUCER_OPERATOR }
@@ -437,7 +431,7 @@ internal class QaSystem(
             .minWithOrNull(compareBy<PlacedShopObject> { state.manhattanDistance(it.position, originTile) }.thenBy { it.id })
     }
 
-    private fun nearestAutomaticProducerWithCapacity(originTile: TileCoordinate): PlacedShopObject? {
+    private fun nearestAutomaticProducerWithCapacity(originTile: TileCoordinate): PlacedShopObject.Machine? {
         return placedMachines
             .asSequence()
             .filter { machine ->
@@ -456,8 +450,8 @@ internal class QaSystem(
         workerProfilesById: Map<String, WorkerProfile>,
         requireReady: Boolean
     ): QaInspectorConfig? {
-        return when (inspector.kind) {
-            PlacedShopObjectKind.MACHINE -> {
+        return when (inspector) {
+            is PlacedShopObject.Machine -> {
                 val machineSpec = machineSpecsById[inspector.catalogId] ?: return null
                 if (machineSpec.type != MachineType.QA) return null
 
@@ -480,7 +474,7 @@ internal class QaSystem(
                 )
             }
 
-            PlacedShopObjectKind.WORKER -> {
+            is PlacedShopObject.Worker -> {
                 val workerProfile = workerProfilesById[inspector.catalogId] ?: return null
                 val qaRoleProfile = workerProfile.profileFor(WorkerRole.QA) ?: return null
                 if (requireReady) {
@@ -502,7 +496,7 @@ internal class QaSystem(
         }
     }
 
-    private fun qaInspectionTileForMachine(machine: PlacedShopObject): TileCoordinate? {
+    private fun qaInspectionTileForMachine(machine: PlacedShopObject.Machine): TileCoordinate? {
         return state.slotPositionsFor(machine, MachineSlotType.QA).firstOrNull()?.accessTile
     }
 

@@ -35,14 +35,14 @@ class ShopFloorCleanerTest {
         )
 
         shopFloor.update(0.05f, mapOf(cleanerProfile.id to cleanerProfile))
-        val cleanersAfterFirstTick = shopFloor.placedObjects.filter { it.workerRole == WorkerRole.CLEANER }
+        val cleanersAfterFirstTick = shopFloor.cleaners()
         assertEquals(1, cleanersAfterFirstTick.size)
         val spawnedTile = cleanersAfterFirstTick.first().position
         val maxX = (GameConfig.virtualWidth / GameConfig.tileSize).toInt() - 1
         assertTrue(spawnedTile.x == 0 || spawnedTile.x == maxX, "spawn tile must be on a side edge, got $spawnedTile")
 
         repeat(5) { shopFloor.update(0.05f, mapOf(cleanerProfile.id to cleanerProfile)) }
-        assertEquals(1, shopFloor.placedObjects.count { it.workerRole == WorkerRole.CLEANER })
+        assertEquals(1, shopFloor.cleaners().size)
 
         assertEquals(1, events.captured.count { it is CleanerSpawnedEvent })
     }
@@ -59,7 +59,7 @@ class ShopFloorCleanerTest {
 
         shopFloor.update(0.05f, mapOf(cleanerProfile.id to cleanerProfile))
 
-        assertEquals(0, shopFloor.placedObjects.count { it.workerRole == WorkerRole.CLEANER })
+        assertEquals(0, shopFloor.cleaners().size)
     }
 
     @Test
@@ -114,7 +114,7 @@ class ShopFloorCleanerTest {
 
         shopFloor.update(0.05f, mapOf(cleanerProfile.id to cleanerProfile))
 
-        val cleanerAfter = assertNotNull(shopFloor.findObjectById("cleaner-1"))
+        val cleanerAfter = assertNotNull(shopFloor.findObjectById("cleaner-1") as? PlacedShopObject.Worker)
         assertEquals("product-1", cleanerAfter.carriedProductId)
         assertTrue(events.captured.any { it is ProductPickedUpEvent })
     }
@@ -161,8 +161,8 @@ class ShopFloorCleanerTest {
 
         // The exchange now runs over a clip rather than completing inside one frame, so both
         // workers can play their half of it. The product is still with the cleaner at this point.
-        val cleanerAtStart = assertNotNull(shopFloor.findObjectById("cleaner-1"))
-        val recipientAtStart = assertNotNull(shopFloor.findObjectById("worker-1"))
+        val cleanerAtStart = assertNotNull(shopFloor.findObjectById("cleaner-1") as? PlacedShopObject.Worker)
+        val recipientAtStart = assertNotNull(shopFloor.findObjectById("worker-1") as? PlacedShopObject.Worker)
         assertEquals("product-1", cleanerAtStart.carriedProductId)
         assertNull(recipientAtStart.carriedProductId)
         assertNotNull(cleanerAtStart.interaction)
@@ -179,8 +179,8 @@ class ShopFloorCleanerTest {
         assertEquals("worker-1", handover.recipientObjectId)
         assertEquals("product-1", handover.productInstanceId)
 
-        val cleanerAfter = assertNotNull(shopFloor.findObjectById("cleaner-1"))
-        val recipientAfter = assertNotNull(shopFloor.findObjectById("worker-1"))
+        val cleanerAfter = assertNotNull(shopFloor.findObjectById("cleaner-1") as? PlacedShopObject.Worker)
+        val recipientAfter = assertNotNull(shopFloor.findObjectById("worker-1") as? PlacedShopObject.Worker)
         assertNull(cleanerAfter.carriedProductId)
         assertEquals("product-1", recipientAfter.carriedProductId)
         assertNull(cleanerAfter.interaction)
@@ -225,13 +225,13 @@ class ShopFloorCleanerTest {
 
         // One tick to enter the destroying phase.
         shopFloor.update(0.05f, mapOf(cleanerProfile.id to cleanerProfile))
-        val cleanerInPhase = assertNotNull(shopFloor.findObjectById("cleaner-1"))
+        val cleanerInPhase = assertNotNull(shopFloor.findObjectById("cleaner-1") as? PlacedShopObject.Worker)
         assertEquals(UnitPhase.DESTROYING_PRODUCT, cleanerInPhase.unitPhase)
 
         // Advance enough seconds for the destroy phase to complete.
         repeat(40) { shopFloor.update(0.1f, mapOf(cleanerProfile.id to cleanerProfile)) }
 
-        val cleanerAfter = assertNotNull(shopFloor.findObjectById("cleaner-1"))
+        val cleanerAfter = assertNotNull(shopFloor.findObjectById("cleaner-1") as? PlacedShopObject.Worker)
         assertNull(cleanerAfter.carriedProductId)
         assertNull(cleanerAfter.unitPhase)
         assertTrue(shopFloor.activeProducts.none { it.id == "product-1" })
@@ -244,10 +244,9 @@ class ShopFloorCleanerTest {
         val workerStart = TileCoordinate(10, 8)
         // Path the worker will take into the wet tile at (11,8)
         val wetTile = TileCoordinate(11, 8)
-        val worker = PlacedShopObject(
+        val worker = PlacedShopObject.Worker(
             id = "worker-1",
             catalogId = workerProfile.id,
-            kind = PlacedShopObjectKind.WORKER,
             position = workerStart,
             workerRole = WorkerRole.PRODUCER_OPERATOR,
             movementPath = listOf(wetTile),
@@ -275,10 +274,9 @@ class ShopFloorCleanerTest {
         // Re-do: use a fresh floor with the cleaner pre-wetting (12,8).
         val cleanerProfile = cleanerProfile(spawnChance = 1f)
         val wetTile2 = TileCoordinate(12, 8)
-        val worker2 = PlacedShopObject(
+        val worker2 = PlacedShopObject.Worker(
             id = "worker-1",
             catalogId = workerProfile.id,
-            kind = PlacedShopObjectKind.WORKER,
             position = TileCoordinate(11, 8),
             workerRole = WorkerRole.PRODUCER_OPERATOR,
             movementPath = listOf(wetTile2),
@@ -316,10 +314,9 @@ class ShopFloorCleanerTest {
     fun `unit phase progresses FALLING then LYING then STANDING and clears`() {
         val workerProfile = recipientProfile()
         val workerStart = TileCoordinate(10, 8)
-        val faller = PlacedShopObject(
+        val faller = PlacedShopObject.Worker(
             id = "worker-1",
             catalogId = workerProfile.id,
-            kind = PlacedShopObjectKind.WORKER,
             position = workerStart,
             workerRole = WorkerRole.PRODUCER_OPERATOR,
             unitPhase = UnitPhase.FALLING,
@@ -336,7 +333,7 @@ class ShopFloorCleanerTest {
 
         // Tick past FALLING -> LYING.
         repeat(20) { shopFloor.update(0.05f, mapOf(workerProfile.id to workerProfile)) }
-        val midPhase = assertNotNull(shopFloor.findObjectById("worker-1")).unitPhase
+        val midPhase = assertNotNull(shopFloor.findObjectById("worker-1") as? PlacedShopObject.Worker).unitPhase
         assertTrue(
             midPhase == UnitPhase.LYING ||
                 midPhase == UnitPhase.STANDING ||
@@ -346,7 +343,7 @@ class ShopFloorCleanerTest {
 
         // Tick well past every remaining phase so the worker is fully recovered.
         repeat(100) { shopFloor.update(0.1f, mapOf(workerProfile.id to workerProfile)) }
-        val recovered = assertNotNull(shopFloor.findObjectById("worker-1"))
+        val recovered = assertNotNull(shopFloor.findObjectById("worker-1") as? PlacedShopObject.Worker)
         assertNull(recovered.unitPhase)
     }
 
@@ -381,10 +378,9 @@ class ShopFloorCleanerTest {
         catalogId: String,
         position: TileCoordinate,
         carriedProductId: String? = null
-    ): PlacedShopObject = PlacedShopObject(
+    ): PlacedShopObject.Worker = PlacedShopObject.Worker(
         id = id,
         catalogId = catalogId,
-        kind = PlacedShopObjectKind.WORKER,
         position = position,
         orientation = Orientation.EAST,
         workerRole = WorkerRole.CLEANER,
@@ -395,10 +391,9 @@ class ShopFloorCleanerTest {
         id: String,
         catalogId: String,
         position: TileCoordinate
-    ): PlacedShopObject = PlacedShopObject(
+    ): PlacedShopObject.Worker = PlacedShopObject.Worker(
         id = id,
         catalogId = catalogId,
-        kind = PlacedShopObjectKind.WORKER,
         position = position,
         orientation = Orientation.SOUTH,
         workerRole = WorkerRole.PRODUCER_OPERATOR
@@ -422,4 +417,7 @@ class ShopFloorCleanerTest {
             bus.subscribe { captured += it }
         }
     }
+
+    private fun ShopFloor.cleaners(): List<PlacedShopObject.Worker> =
+        placedObjects.filterIsInstance<PlacedShopObject.Worker>().filter { it.workerRole == WorkerRole.CLEANER }
 }

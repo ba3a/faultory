@@ -37,36 +37,38 @@ internal class InteractionSystem(
     override fun step(context: SystemContext) = update(context.deltaSeconds)
 
     fun update(deltaSeconds: Float) {
-        if (mutablePlacedObjects.none { it.interaction != null }) {
+        if (mutablePlacedObjects.none { it is PlacedShopObject.Worker && it.interaction != null }) {
             return
         }
 
         for (index in mutablePlacedObjects.indices) {
-            val placed = mutablePlacedObjects[index]
+            val placed = mutablePlacedObjects[index] as? PlacedShopObject.Worker ?: continue
             val interaction = placed.interaction ?: continue
-
             // The partner drives release: if it vanished mid-shift - removed between shifts, or
             // destroyed - the survivor would otherwise hold a payload nobody can take.
             if (state.findObjectById(interaction.partnerObjectId) == null) {
-                mutablePlacedObjects[index] = placed.copy(interaction = null)
-                events.publish {
-                    InteractionAbandonedEvent(
-                        definitionId = interaction.definitionId,
-                        objectId = placed.id,
-                        partnerObjectId = interaction.partnerObjectId,
-                        levelId = it
-                    )
-                }
-                continue
+                releaseAbandoned(index, placed, interaction)
+            } else {
+                advance(index, placed, interaction, deltaSeconds)
             }
+        }
+    }
 
-            advance(index, placed, interaction, deltaSeconds)
+    private fun releaseAbandoned(index: Int, placed: PlacedShopObject.Worker, interaction: ActiveInteraction) {
+        mutablePlacedObjects[index] = placed.copy(interaction = null)
+        events.publish {
+            InteractionAbandonedEvent(
+                definitionId = interaction.definitionId,
+                objectId = placed.id,
+                partnerObjectId = interaction.partnerObjectId,
+                levelId = it
+            )
         }
     }
 
     private fun advance(
         index: Int,
-        placed: PlacedShopObject,
+        placed: PlacedShopObject.Worker,
         interaction: ActiveInteraction,
         deltaSeconds: Float
     ) {
@@ -81,10 +83,11 @@ internal class InteractionSystem(
             ticked.payloadTransferred
         }
 
+        val current = mutablePlacedObjects[index] as PlacedShopObject.Worker
         mutablePlacedObjects[index] = if (ticked.isComplete) {
-            mutablePlacedObjects[index].copy(interaction = null)
+            current.copy(interaction = null)
         } else {
-            mutablePlacedObjects[index].copy(interaction = ticked.copy(payloadTransferred = transferred))
+            current.copy(interaction = ticked.copy(payloadTransferred = transferred))
         }
 
         // Both sides tick their own clock, so - as with the transfer above - only the giver
@@ -101,7 +104,7 @@ internal class InteractionSystem(
         }
     }
 
-    private fun transferPayload(giver: PlacedShopObject, interaction: ActiveInteraction) {
+    private fun transferPayload(giver: PlacedShopObject.Worker, interaction: ActiveInteraction) {
         val productId = interaction.payloadProductId ?: return
         val takerIndex = mutablePlacedObjects.indexOfFirst { it.id == interaction.partnerObjectId }
         if (takerIndex < 0) {
@@ -122,9 +125,10 @@ internal class InteractionSystem(
             )
         }
 
-        val taker = mutablePlacedObjects[takerIndex]
+        val taker = mutablePlacedObjects[takerIndex] as? PlacedShopObject.Worker ?: return
         mutablePlacedObjects[takerIndex] = taker.copy(carriedProductId = productId)
-        mutablePlacedObjects[giverIndex] = mutablePlacedObjects[giverIndex].copy(carriedProductId = null)
+        mutablePlacedObjects[giverIndex] = (mutablePlacedObjects[giverIndex] as PlacedShopObject.Worker)
+            .copy(carriedProductId = null)
 
         // Reported here rather than where the interaction was requested: this is the frame the
         // product actually changes hands, partway through the clip.
@@ -161,8 +165,8 @@ internal class InteractionSystem(
         if (initiatorIndex < 0 || recipientIndex < 0 || initiatorIndex == recipientIndex) {
             return false
         }
-        val initiator = mutablePlacedObjects[initiatorIndex]
-        val recipient = mutablePlacedObjects[recipientIndex]
+        val initiator = mutablePlacedObjects[initiatorIndex] as? PlacedShopObject.Worker ?: return false
+        val recipient = mutablePlacedObjects[recipientIndex] as? PlacedShopObject.Worker ?: return false
         if (initiator.interaction != null || recipient.interaction != null) {
             return false
         }

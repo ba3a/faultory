@@ -43,10 +43,9 @@ class ShopFloorEventFeedTest {
             blueprint = beltBlueprint(),
             machineSpecsById = mapOf(machineSpec.id to machineSpec),
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "machine-1",
                     catalogId = machineSpec.id,
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(5, 9),
                     orientation = Orientation.NORTH
                 )
@@ -94,10 +93,9 @@ class ShopFloorEventFeedTest {
         assertTrue(shopFloor.tryDeductCash(50, CashFlowReason.PLACEMENT))
         assertTrue(
             shopFloor.placeObject(
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "machine-1",
                     catalogId = machineSpec.id,
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(5, 9),
                     orientation = Orientation.NORTH
                 )

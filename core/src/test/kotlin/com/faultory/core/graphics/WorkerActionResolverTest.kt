@@ -5,7 +5,6 @@ import com.faultory.core.shop.BeltRidePhase
 import com.faultory.core.shop.InteractionRole
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.TileCoordinate
 import com.faultory.core.shop.UnitPhase
 import kotlin.test.Test
@@ -68,11 +67,10 @@ class WorkerActionResolverTest {
         orientation: Orientation = Orientation.SOUTH,
         movementPath: List<TileCoordinate>,
         movementProgress: Float = 0f
-    ): PlacedShopObject {
-        return PlacedShopObject(
+    ): PlacedShopObject.Worker {
+        return PlacedShopObject.Worker(
             id = "worker-1",
             catalogId = "line-inspector",
-            kind = PlacedShopObjectKind.WORKER,
             position = TileCoordinate(5, 5),
             orientation = orientation,
             movementPath = movementPath,

@@ -18,7 +18,6 @@ import com.faultory.core.save.GameSave
 import com.faultory.core.save.SaveRepository
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.TileCoordinate
@@ -257,11 +256,10 @@ class WorkerAssignmentControllerTest {
         assertTrue(bounds.y >= 12f)
     }
 
-    private fun workerObject(catalogId: String, tile: TileCoordinate): PlacedShopObject {
-        return PlacedShopObject(
+    private fun workerObject(catalogId: String, tile: TileCoordinate): PlacedShopObject.Worker {
+        return PlacedShopObject.Worker(
             id = "worker-1",
             catalogId = catalogId,
-            kind = PlacedShopObjectKind.WORKER,
             position = tile,
             orientation = Orientation.SOUTH,
             workerRole = WorkerRole.PRODUCER_OPERATOR

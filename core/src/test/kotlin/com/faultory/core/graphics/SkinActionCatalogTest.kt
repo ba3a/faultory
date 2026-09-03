@@ -8,7 +8,6 @@ import com.faultory.core.shop.InteractionRole
 import com.faultory.core.shop.ActiveInteraction
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.QaInspectionState
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopFloor
@@ -102,10 +101,9 @@ class SkinActionCatalogTest {
 
     @Test
     fun `every machine action a resolver can return is authorable`() {
-        val machine = PlacedShopObject(
+        val machine = PlacedShopObject.Machine(
             id = "machine-1",
             catalogId = "camera-gate",
-            kind = PlacedShopObjectKind.MACHINE,
             position = TileCoordinate(5, 4),
             orientation = Orientation.NORTH
         )
@@ -190,10 +188,9 @@ class SkinActionCatalogTest {
         }
     }
 
-    private fun worker() = PlacedShopObject(
+    private fun worker() = PlacedShopObject.Worker(
         id = "worker-1",
         catalogId = "line-inspector",
-        kind = PlacedShopObjectKind.WORKER,
         position = TileCoordinate(5, 5),
         orientation = Orientation.SOUTH
     )

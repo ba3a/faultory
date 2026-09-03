@@ -3,7 +3,6 @@ package com.faultory.core.screens.shopfloor
 import com.faultory.core.config.GameConfig
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
@@ -13,7 +12,7 @@ class ShopFloorGeometry(private val shopFloor: ShopFloor) {
     fun renderPositionFor(placedObject: PlacedShopObject): RenderPosition {
         val startX = shopFloor.grid.worldXFor(placedObject.position)
         val startY = shopFloor.grid.worldYFor(placedObject.position)
-        if (placedObject.kind != PlacedShopObjectKind.WORKER || placedObject.movementPath.isEmpty()) {
+        if (placedObject !is PlacedShopObject.Worker || placedObject.movementPath.isEmpty()) {
             return RenderPosition(startX, startY)
         }
 
@@ -32,15 +31,15 @@ class ShopFloorGeometry(private val shopFloor: ShopFloor) {
             ShopProductState.CARRIED -> {
                 val holder = holderFor(product) ?: return null
                 val anchor = holderAnchorFor(holder)
-                when (holder.kind) {
+                when (holder) {
                     // Sprite rendering places this on the holder's `hands` socket instead; the nudge
                     // is only so the shape fallback does not draw the product squarely on the body.
-                    PlacedShopObjectKind.WORKER -> RenderPosition(
+                    is PlacedShopObject.Worker -> RenderPosition(
                         worldX = anchor.worldX + CARRIED_SHAPE_OFFSET,
                         worldY = anchor.worldY + CARRIED_SHAPE_OFFSET
                     )
 
-                    PlacedShopObjectKind.MACHINE -> anchor
+                    is PlacedShopObject.Machine -> anchor
                 }
             }
 
@@ -61,9 +60,9 @@ class ShopFloorGeometry(private val shopFloor: ShopFloor) {
      * The tile-space origin anything a holder carries is measured from, before its socket is applied.
      * A worker's tracks their interpolated walk; a machine's is the centre of its footprint.
      */
-    fun holderAnchorFor(holder: PlacedShopObject): RenderPosition = when (holder.kind) {
-        PlacedShopObjectKind.WORKER -> renderPositionFor(holder)
-        PlacedShopObjectKind.MACHINE -> machineCenterFor(holder)
+    fun holderAnchorFor(holder: PlacedShopObject): RenderPosition = when (holder) {
+        is PlacedShopObject.Worker -> renderPositionFor(holder)
+        is PlacedShopObject.Machine -> machineCenterFor(holder)
     }
 
     /** The tile-sized box centred on a machine's footprint, where anything it holds is drawn. */
@@ -93,7 +92,7 @@ class ShopFloorGeometry(private val shopFloor: ShopFloor) {
         val centerX: Float
         val centerY: Float
         val length: Float
-        if (placedObject.kind == PlacedShopObjectKind.WORKER) {
+        if (placedObject is PlacedShopObject.Worker) {
             val renderPosition = renderPositionFor(placedObject)
             centerX = renderPosition.worldX + GameConfig.tileSize / 2f
             centerY = renderPosition.worldY + GameConfig.tileSize / 2f

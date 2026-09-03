@@ -12,7 +12,6 @@ import com.faultory.core.encounters.WorkerPathBlockedEvent
 import com.faultory.core.shop.BeltRidePhase
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.TileCoordinate
 import com.faultory.core.shop.pathfinding.MovementStrategyResolver
 import kotlin.random.Random
@@ -37,10 +36,7 @@ internal class WorkerMovementSystem(
         workerProfilesById: Map<String, WorkerProfile>
     ) {
         for (index in mutablePlacedObjects.indices) {
-            val placedObject = mutablePlacedObjects[index]
-            if (placedObject.kind != PlacedShopObjectKind.WORKER) {
-                continue
-            }
+            val placedObject = mutablePlacedObjects[index] as? PlacedShopObject.Worker ?: continue
             if (placedObject.isBusy) {
                 continue
             }
@@ -145,7 +141,7 @@ internal class WorkerMovementSystem(
         }
     }
 
-    private fun handleBeltPhase(index: Int, worker: PlacedShopObject, deltaSeconds: Float) {
+    private fun handleBeltPhase(index: Int, worker: PlacedShopObject.Worker, deltaSeconds: Float) {
         when (worker.beltRidePhase) {
             BeltRidePhase.ENTERING -> {
                 val newTimer = worker.beltRideTimer + deltaSeconds
@@ -224,7 +220,7 @@ internal class WorkerMovementSystem(
         return (GameConfig.cleanerSlipBaseChance + jitter).coerceIn(0f, 1f)
     }
 
-    private fun orientationAtAssignedSlot(worker: PlacedShopObject): Orientation? {
+    private fun orientationAtAssignedSlot(worker: PlacedShopObject.Worker): Orientation? {
         val machineId = worker.assignedMachineId ?: return null
         val machine = state.findObjectById(machineId) ?: return null
         val slotIndex = worker.assignedSlotIndex
@@ -237,7 +233,7 @@ internal class WorkerMovementSystem(
             ?.opposite()
     }
 
-    private fun orientationAtQaPost(worker: PlacedShopObject): Orientation? {
+    private fun orientationAtQaPost(worker: PlacedShopObject.Worker): Orientation? {
         val qaPostTile = worker.qaPostTile ?: return null
         val beltTile = grid.orthogonalNeighbors(qaPostTile).firstOrNull { it in grid.beltTiles }
         return beltTile?.let { Orientation.between(qaPostTile, it) }

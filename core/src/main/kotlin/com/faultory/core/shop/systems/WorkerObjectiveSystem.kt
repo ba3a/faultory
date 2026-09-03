@@ -10,7 +10,6 @@ import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.shop.MachineRecipeState
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
@@ -40,10 +39,7 @@ internal class WorkerObjectiveSystem(
 
     private fun resolveWorkerObjectives() {
         for (index in mutablePlacedObjects.indices) {
-            val worker = mutablePlacedObjects[index]
-            if (worker.kind != PlacedShopObjectKind.WORKER) {
-                continue
-            }
+            val worker = mutablePlacedObjects[index] as? PlacedShopObject.Worker ?: continue
             if (worker.isBusy) {
                 continue
             }
@@ -86,7 +82,7 @@ internal class WorkerObjectiveSystem(
 
     private fun tryHandleRecipeIngredientFetch(
         workerIndex: Int,
-        worker: PlacedShopObject
+        worker: PlacedShopObject.Worker
     ): Boolean {
         val machineId = worker.assignedMachineId ?: return false
         val machine = state.findObjectById(machineId) ?: return false
@@ -124,7 +120,7 @@ internal class WorkerObjectiveSystem(
 
     private fun tryGrabAdjacentRecipeIngredient(
         workerIndex: Int,
-        worker: PlacedShopObject,
+        worker: PlacedShopObject.Worker,
         machineId: String,
         needed: Set<String>
     ): Boolean {
@@ -171,7 +167,7 @@ internal class WorkerObjectiveSystem(
 
     private fun tryPlanRecipeIngredientFetch(
         workerIndex: Int,
-        worker: PlacedShopObject,
+        worker: PlacedShopObject.Worker,
         needed: Set<String>
     ): Boolean {
         val candidates = mutableActiveProducts.filter { product ->
@@ -234,7 +230,7 @@ internal class WorkerObjectiveSystem(
 
     private fun tryDeliverProductToProducer(
         workerIndex: Int,
-        worker: PlacedShopObject,
+        worker: PlacedShopObject.Worker,
         carriedProduct: ShopProduct
     ): Boolean {
         val targetMachineId = carriedProduct.reworkTargetMachineId ?: return false
@@ -312,7 +308,7 @@ internal class WorkerObjectiveSystem(
 
     private fun tryDropCarriedProduct(
         workerIndex: Int,
-        worker: PlacedShopObject,
+        worker: PlacedShopObject.Worker,
         carriedProduct: ShopProduct
     ): Boolean {
         val targetBeltTile = grid.orthogonalNeighbors(worker.position)
@@ -348,7 +344,7 @@ internal class WorkerObjectiveSystem(
             )
         }
 
-        val updatedWorker = mutablePlacedObjects[workerIndex]
+        val updatedWorker = mutablePlacedObjects[workerIndex] as? PlacedShopObject.Worker ?: return true
         if (updatedWorker.assignedMachineId != null && !state.isWorkerAtAssignedSlot(updatedWorker)) {
             planWorkerReturnToMachine(workerIndex, updatedWorker)
         } else if (updatedWorker.qaPostTile != null && !state.isWorkerAtQaPost(updatedWorker)) {
@@ -359,7 +355,7 @@ internal class WorkerObjectiveSystem(
 
     private fun planWorkerDelivery(
         workerIndex: Int,
-        worker: PlacedShopObject
+        worker: PlacedShopObject.Worker
     ) {
         val deliveryPlan = chooseDeliveryPlan(worker) ?: return
         mutablePlacedObjects[workerIndex] = worker.copy(
@@ -372,7 +368,7 @@ internal class WorkerObjectiveSystem(
         )
     }
 
-    private fun chooseDeliveryPlan(worker: PlacedShopObject): DeliveryPlan? {
+    private fun chooseDeliveryPlan(worker: PlacedShopObject.Worker): DeliveryPlan? {
         val blockedTiles = state.blockedTilesForPath(
             ignoreWorkerId = worker.id,
             ignoreCarriedProductId = worker.carriedProductId
@@ -402,7 +398,7 @@ internal class WorkerObjectiveSystem(
 
     private fun planWorkerReturnToMachine(
         workerIndex: Int,
-        worker: PlacedShopObject
+        worker: PlacedShopObject.Worker
     ) {
         val assignedSlot = state.assignedSlotFor(worker) ?: return
         if (assignedSlot.accessTile == worker.position) {
@@ -430,7 +426,7 @@ internal class WorkerObjectiveSystem(
 
     private fun planWorkerReturnToQaPost(
         workerIndex: Int,
-        worker: PlacedShopObject
+        worker: PlacedShopObject.Worker
     ) {
         val qaPostTile = worker.qaPostTile ?: return
         if (qaPostTile == worker.position) {

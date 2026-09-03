@@ -77,8 +77,8 @@ class UpgradeFlowController(
 
     private fun upgradeOptionsFor(obj: PlacedShopObject): List<UpgradeOption> {
         val ctx = evaluationContext
-        return when (obj.kind) {
-            PlacedShopObjectKind.WORKER -> {
+        return when (obj) {
+            is PlacedShopObject.Worker -> {
                 val profile = catalogLookup.workerProfilesById[obj.catalogId] ?: return emptyList()
                 profile.upgradeTree?.upgradeIds().orEmpty().mapNotNull { upgradeId ->
                     val upgraded = catalogLookup.workerProfilesById[upgradeId] ?: return@mapNotNull null
@@ -91,7 +91,7 @@ class UpgradeFlowController(
                 }
             }
 
-            PlacedShopObjectKind.MACHINE -> {
+            is PlacedShopObject.Machine -> {
                 val spec = catalogLookup.machineSpecsById[obj.catalogId] ?: return emptyList()
                 spec.upgradeTree?.upgradeIds().orEmpty().mapNotNull { upgradeId ->
                     val upgraded = catalogLookup.machineSpecsById[upgradeId] ?: return@mapNotNull null

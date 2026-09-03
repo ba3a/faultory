@@ -5,7 +5,6 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.faultory.core.config.GameConfig
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
 
 class PlacementPreviewRenderer(
@@ -37,7 +36,10 @@ class PlacementPreviewRenderer(
 
     private fun drawOrientationMarker(renderer: ShapeRenderer, placedObject: PlacedShopObject) {
         val marker = geometry.orientationMarkerFor(placedObject)
-        renderer.color = if (placedObject.kind == PlacedShopObjectKind.WORKER) ORIENTATION_MARKER_WORKER else ORIENTATION_MARKER_MACHINE
+        renderer.color = when (placedObject) {
+            is PlacedShopObject.Worker -> ORIENTATION_MARKER_WORKER
+            is PlacedShopObject.Machine -> ORIENTATION_MARKER_MACHINE
+        }
         renderer.line(marker.centerX, marker.centerY, marker.tipX, marker.tipY)
 
         val wingLength = 4f

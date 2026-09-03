@@ -5,6 +5,7 @@ import com.faultory.core.config.GameConfig
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.i18n.Messages
 import com.faultory.core.i18n.UiMessageKey
+import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.TileCoordinate
@@ -90,9 +91,7 @@ class WorkerAssignmentController(
 
     fun handleAssignmentClick(hoveredTile: TileCoordinate?): Boolean {
         val workerId = assignmentPendingWorkerId ?: return false
-        val machine = hoveredTile
-            ?.let(shopFloor::objectAt)
-            ?.takeIf { it.kind == PlacedShopObjectKind.MACHINE }
+        val machine = hoveredTile?.let(shopFloor::objectAt) as? PlacedShopObject.Machine
 
         if (machine == null) {
             assignmentPendingWorkerId = null
@@ -123,7 +122,7 @@ class WorkerAssignmentController(
 
     fun openContextMenuForWorker(workerId: String, worldX: Float, worldY: Float) {
         val worker = shopFloor.findObjectById(workerId) ?: return
-        if (worker.kind != PlacedShopObjectKind.WORKER) return
+        if (worker !is PlacedShopObject.Worker) return
         val workerProfile = catalogLookup.workerProfilesById[worker.catalogId] ?: return
         val actions = buildList {
             add(ObjectContextAction.ASSIGN_TO_MACHINE)
@@ -141,7 +140,7 @@ class WorkerAssignmentController(
 
     fun openContextMenuForMachine(machineId: String, worldX: Float, worldY: Float) {
         val machine = shopFloor.findObjectById(machineId) ?: return
-        if (machine.kind != PlacedShopObjectKind.MACHINE) return
+        if (machine !is PlacedShopObject.Machine) return
         if (!upgradeFlow.hasUpgradesFor(machineId)) return
         val actions = listOf(ObjectContextAction.UPGRADE)
         contextMenu = buildMenu(machineId, PlacedShopObjectKind.MACHINE, actions, worldX, worldY)

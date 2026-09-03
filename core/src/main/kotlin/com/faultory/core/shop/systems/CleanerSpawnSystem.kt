@@ -35,10 +35,9 @@ internal class CleanerSpawnSystem(
 
         val tile = pickEdgeSpawnTile() ?: return
         val cleanerId = state.createObjectId(PlacedShopObjectKind.WORKER)
-        val cleaner = PlacedShopObject(
+        val cleaner = PlacedShopObject.Worker(
             id = cleanerId,
             catalogId = cleanerProfile.id,
-            kind = PlacedShopObjectKind.WORKER,
             position = tile,
             orientation = Orientation.EAST,
             workerRole = WorkerRole.CLEANER

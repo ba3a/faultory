@@ -10,7 +10,6 @@ import com.faultory.core.save.GameSave
 import com.faultory.core.save.SaveRepository
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.TileCoordinate
@@ -52,10 +51,9 @@ class MachineDragControllerTest {
             blueprint = blueprint,
             machineSpecsById = mapOf(machineSpec.id to machineSpec),
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "machine-1",
                     catalogId = machineSpec.id,
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(5, 5),
                     orientation = orientation
                 )

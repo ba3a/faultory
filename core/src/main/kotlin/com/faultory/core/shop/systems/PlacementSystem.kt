@@ -11,7 +11,6 @@ import com.faultory.core.encounters.ProductSuppliedEvent
 import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
@@ -44,7 +43,7 @@ internal class PlacementSystem(
     ): Boolean {
         val footprint = state.occupiedTilesFor(placedObject)
         if (!isPlaceableFootprint(footprint, ignoreObjectId)) return false
-        if (placedObject.kind == PlacedShopObjectKind.WORKER) return true
+        if (placedObject !is PlacedShopObject.Machine) return true
         val machineSpec = machineSpecsById[placedObject.catalogId] ?: return false
         return canPlaceMachine(placedObject, machineSpec, footprint, ignoreObjectId)
     }
@@ -193,9 +192,8 @@ internal class PlacementSystem(
      * would strand state that was computed against the old facing.
      */
     private fun machineHasNoActiveWork(machineId: String): Boolean {
-        return mutablePlacedObjects.none {
-            it.kind == PlacedShopObjectKind.WORKER && it.assignedMachineId == machineId
-        } &&
+        return mutablePlacedObjects.filterIsInstance<PlacedShopObject.Worker>()
+            .none { it.assignedMachineId == machineId } &&
             state.mutableMachineProductionStates.none { it.machineId == machineId } &&
             state.mutableMachineRecipeStates.none { it.machineId == machineId && !it.isEmpty } &&
             state.mutableQaInspectionStates.none { it.inspectorObjectId == machineId }
@@ -208,12 +206,17 @@ internal class PlacementSystem(
     ): Boolean {
         val current = state.findObjectById(objectId) ?: return false
         if (current.catalogId == targetCatalogId) return false
-        if (current.kind == PlacedShopObjectKind.MACHINE && !upgradedMachineFits(current, targetCatalogId)) {
+        if (current is PlacedShopObject.Machine && !upgradedMachineFits(current, targetCatalogId)) {
             return false
         }
         if (cost > 0 && !state.tryDeductCash(cost, CashFlowReason.UPGRADE)) return false
 
-        mutablePlacedObjects.replaceById(objectId) { it.copy(catalogId = targetCatalogId) }
+        mutablePlacedObjects.replaceById(objectId) {
+            when (it) {
+                is PlacedShopObject.Worker -> it.copy(catalogId = targetCatalogId)
+                is PlacedShopObject.Machine -> it.copy(catalogId = targetCatalogId)
+            }
+        }
         events.publish {
             ObjectUpgradedEvent(
                 objectId = current.id,
@@ -229,7 +232,7 @@ internal class PlacementSystem(
 
     /** The upgraded machine keeps its tile and orientation, so its new shape still has to fit. */
     private fun upgradedMachineFits(
-        current: PlacedShopObject,
+        current: PlacedShopObject.Machine,
         targetCatalogId: String
     ): Boolean {
         val upgradedSpec = machineSpecsById[targetCatalogId] ?: return false
@@ -271,6 +274,6 @@ internal class PlacementSystem(
         return true
     }
 
-    private fun machineById(machineId: String): PlacedShopObject? =
-        state.findObjectById(machineId)?.takeIf { it.kind == PlacedShopObjectKind.MACHINE }
+    private fun machineById(machineId: String): PlacedShopObject.Machine? =
+        state.findObjectById(machineId) as? PlacedShopObject.Machine
 }

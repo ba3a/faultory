@@ -6,7 +6,7 @@ import com.faultory.core.encounters.CashFlowReason
 import com.faultory.core.encounters.ProductQuality
 import com.faultory.core.encounters.ProductShippedEvent
 import com.faultory.core.encounters.ShopFloorEvents
-import com.faultory.core.shop.PlacedShopObjectKind
+import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.ShipmentEvent
 import com.faultory.core.shop.TileCoordinate
@@ -90,7 +90,7 @@ internal class ConveyorSystem(
 
     private fun isBeltInputSinkAt(tile: TileCoordinate): Boolean {
         return mutablePlacedObjects.any { placedObject ->
-            if (placedObject.kind != PlacedShopObjectKind.MACHINE) return@any false
+            if (placedObject !is PlacedShopObject.Machine) return@any false
             val machineSpec = machineSpecsById[placedObject.catalogId] ?: return@any false
             if (machineSpec.recipe == null) return@any false
             state.slotPositionsFor(placedObject, MachineSlotType.BELT_INPUT)

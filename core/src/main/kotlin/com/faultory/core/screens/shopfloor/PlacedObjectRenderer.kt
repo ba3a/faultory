@@ -5,7 +5,6 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.faultory.core.config.GameConfig
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
@@ -54,7 +53,7 @@ class PlacedObjectRenderer(
     }
 
     private fun drawRecipeIndicators(renderer: ShapeRenderer, placedObject: PlacedShopObject) {
-        if (placedObject.kind != PlacedShopObjectKind.MACHINE) return
+        if (placedObject !is PlacedShopObject.Machine) return
         val recipeState = shopFloor.machineRecipeStateFor(placedObject.id) ?: return
         if (recipeState.isEmpty) return
 
@@ -82,9 +81,7 @@ class PlacedObjectRenderer(
     private fun drawAssignmentTargetHover(renderer: ShapeRenderer) {
         if (!workerAssignment.hasPendingAssignment) return
 
-        val machine = hoverState.hoveredObject
-            ?.takeIf { it.kind == PlacedShopObjectKind.MACHINE }
-            ?: return
+        val machine = hoverState.hoveredObject as? PlacedShopObject.Machine ?: return
 
         renderer.color = ASSIGNMENT_HOVER
         for (tile in shopFloor.occupiedTilesFor(machine)) {
@@ -98,7 +95,7 @@ class PlacedObjectRenderer(
     }
 
     private fun drawPlacedObjectFill(renderer: ShapeRenderer, frame: ShopFloorFrame, placedObject: PlacedShopObject) {
-        if (placedObject.kind == PlacedShopObjectKind.WORKER) {
+        if (placedObject is PlacedShopObject.Worker) {
             val renderPosition = frame.renderPositionOf(placedObject)
             renderer.color = ShopFloorPalette.workerFill(placedObject.workerRole)
             renderer.circle(
@@ -126,7 +123,7 @@ class PlacedObjectRenderer(
         frame: ShopFloorFrame,
         placedObject: PlacedShopObject
     ) {
-        if (placedObject.kind == PlacedShopObjectKind.WORKER) {
+        if (placedObject is PlacedShopObject.Worker) {
             val renderPosition = frame.renderPositionOf(placedObject)
             renderer.color = WORKER_OUTLINE
             renderer.circle(
@@ -185,7 +182,10 @@ class PlacedObjectRenderer(
 
     private fun drawOrientationMarker(renderer: ShapeRenderer, placedObject: PlacedShopObject) {
         val marker = geometry.orientationMarkerFor(placedObject)
-        renderer.color = if (placedObject.kind == PlacedShopObjectKind.WORKER) ORIENTATION_MARKER_WORKER else ORIENTATION_MARKER_MACHINE
+        renderer.color = when (placedObject) {
+            is PlacedShopObject.Worker -> ORIENTATION_MARKER_WORKER
+            is PlacedShopObject.Machine -> ORIENTATION_MARKER_MACHINE
+        }
         renderer.line(marker.centerX, marker.centerY, marker.tipX, marker.tipY)
 
         val wingLength = 4f

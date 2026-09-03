@@ -77,10 +77,9 @@ class PlacementController(
             PlacedShopObjectKind.WORKER -> {
                 val worker = catalogLookup.workerProfilesById[key.catalogId] ?: return emptyList()
                 listOf(
-                    PlacedShopObject(
+                    PlacedShopObject.Worker(
                         id = objectId,
                         catalogId = worker.id,
-                        kind = PlacedShopObjectKind.WORKER,
                         position = tile,
                         orientation = Orientation.SOUTH,
                         workerRole = defaultRoleFor(worker)
@@ -96,10 +95,9 @@ class PlacementController(
                     listOf(Orientation.NORTH)
                 }
                 orientations.map { orientation ->
-                    PlacedShopObject(
+                    PlacedShopObject.Machine(
                         id = objectId,
                         catalogId = machine.id,
-                        kind = PlacedShopObjectKind.MACHINE,
                         position = tile,
                         orientation = orientation
                     )

@@ -7,7 +7,7 @@ package com.faultory.core.shop
  */
 sealed interface WorkerAssignmentResult {
     data class Success(
-        val worker: PlacedShopObject
+        val worker: PlacedShopObject.Worker
     ) : WorkerAssignmentResult
 
     data class Failure(

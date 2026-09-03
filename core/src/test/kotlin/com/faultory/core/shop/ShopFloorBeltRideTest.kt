@@ -50,10 +50,9 @@ class ShopFloorBeltRideTest {
         id: String = "worker-1",
         position: TileCoordinate,
         movementPath: List<TileCoordinate> = emptyList()
-    ) = PlacedShopObject(
+    ) = PlacedShopObject.Worker(
         id = id,
         catalogId = "test-worker",
-        kind = PlacedShopObjectKind.WORKER,
         position = position,
         movementPath = movementPath
     )
@@ -72,7 +71,7 @@ class ShopFloorBeltRideTest {
         // One tile at walkSpeed 200/40=5 t/s → needs 0.2 s; use 0.25 s to ensure arrival
         shopFloor.update(0.25f, mapOf(profile.id to profile))
 
-        val w = shopFloor.findObjectById("worker-1")!!
+        val w = (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker)
         assertEquals(TileCoordinate(5, 5), w.position)
         assertEquals(BeltRidePhase.ENTERING, w.beltRidePhase)
     }
@@ -90,11 +89,17 @@ class ShopFloorBeltRideTest {
 
         // Arrive at belt tile
         shopFloor.update(0.25f, mapOf(profile.id to profile))
-        assertEquals(BeltRidePhase.ENTERING, shopFloor.findObjectById("worker-1")!!.beltRidePhase)
+        assertEquals(
+            BeltRidePhase.ENTERING,
+            (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker).beltRidePhase
+        )
 
         // Wait for ENTERING duration
         shopFloor.update(GameConfig.beltEnterDurationSeconds, mapOf(profile.id to profile))
-        assertEquals(BeltRidePhase.RIDING, shopFloor.findObjectById("worker-1")!!.beltRidePhase)
+        assertEquals(
+            BeltRidePhase.RIDING,
+            (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker).beltRidePhase
+        )
     }
 
     @Test
@@ -112,7 +117,7 @@ class ShopFloorBeltRideTest {
         shopFloor.update(GameConfig.beltEnterDurationSeconds, mapOf(profile.id to profile))  // ENTERING → RIDING
         shopFloor.update(GameConfig.beltRideDurationSeconds, mapOf(profile.id to profile))   // RIDING → EXITING
 
-        val w = shopFloor.findObjectById("worker-1")!!
+        val w = (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker)
         assertEquals(TileCoordinate(6, 5), w.position)
         assertEquals(BeltRidePhase.EXITING, w.beltRidePhase)
     }
@@ -133,7 +138,7 @@ class ShopFloorBeltRideTest {
         shopFloor.update(GameConfig.beltRideDurationSeconds, mapOf(profile.id to profile))
         shopFloor.update(GameConfig.beltExitDurationSeconds, mapOf(profile.id to profile))
 
-        val w = shopFloor.findObjectById("worker-1")!!
+        val w = (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker)
         assertEquals(TileCoordinate(6, 5), w.position)
         assertNull(w.beltRidePhase)
     }
@@ -190,7 +195,7 @@ class ShopFloorBeltRideTest {
         shopFloor.update(GameConfig.beltEnterDurationSeconds, mapOf(profile.id to profile)) // ENTERING → RIDING
         shopFloor.update(GameConfig.beltRideDurationSeconds, mapOf(profile.id to profile))  // RIDING → EXITING
 
-        val w = shopFloor.findObjectById("worker-1")!!
+        val w = (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker)
         assertEquals(TileCoordinate(6, 5), w.position)
         assertEquals(BeltRidePhase.EXITING, w.beltRidePhase, "non-security worker rides exactly one tile then exits")
     }
@@ -202,10 +207,9 @@ class ShopFloorBeltRideTest {
             blueprint = longBeltBlueprint(),
             machineSpecsById = emptyMap(),
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Worker(
                     id = "security-1",
                     catalogId = profile.id,
-                    kind = PlacedShopObjectKind.WORKER,
                     position = TileCoordinate(4, 5),
                     workerRole = WorkerRole.SECURITY,
                     movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5), TileCoordinate(7, 5))
@@ -217,7 +221,7 @@ class ShopFloorBeltRideTest {
         shopFloor.update(GameConfig.beltEnterDurationSeconds, mapOf(profile.id to profile)) // ENTERING → RIDING
         shopFloor.update(GameConfig.beltRideDurationSeconds, mapOf(profile.id to profile))  // RIDING ends at (6,5); chain to ENTERING for next belt tile
 
-        val s = shopFloor.findObjectById("security-1")!!
+        val s = (shopFloor.findObjectById("security-1") as PlacedShopObject.Worker)
         assertEquals(TileCoordinate(6, 5), s.position)
         assertEquals(BeltRidePhase.ENTERING, s.beltRidePhase, "security keeps riding when the exit tile continues the belt")
     }
@@ -238,12 +242,15 @@ class ShopFloorBeltRideTest {
         // Advance worker-1 to belt, through ENTERING, into RIDING
         shopFloor.update(0.25f, mapOf(profile.id to profile))
         shopFloor.update(GameConfig.beltEnterDurationSeconds, mapOf(profile.id to profile))
-        assertEquals(BeltRidePhase.RIDING, shopFloor.findObjectById("worker-1")!!.beltRidePhase)
+        assertEquals(
+            BeltRidePhase.RIDING,
+            (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker).beltRidePhase
+        )
 
         // Give ample time for RIDING to complete — blocker still in the way
         shopFloor.update(GameConfig.beltRideDurationSeconds * 2, mapOf(profile.id to profile))
 
-        val w = shopFloor.findObjectById("worker-1")!!
+        val w = (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker)
         assertEquals(BeltRidePhase.RIDING, w.beltRidePhase, "should still be RIDING while exit is blocked")
         assertEquals(TileCoordinate(5, 5), w.position, "should not have moved to exit tile")
     }

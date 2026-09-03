@@ -4,7 +4,7 @@ import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputAdapter
 import com.faultory.core.config.DebugFlags
 import com.faultory.core.i18n.LocaleManager
-import com.faultory.core.shop.PlacedShopObjectKind
+import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ShopFloor
 
 class ShopFloorInput(
@@ -155,9 +155,11 @@ class ShopFloorInput(
         bankPanel.clearSelection()
         workerAssignment.cancelPendingAssignment()
         machineDrag.cancel()
-        when (target.kind) {
-            PlacedShopObjectKind.WORKER -> workerAssignment.openContextMenuForWorker(target.id, pointerState.worldX, pointerState.worldY)
-            PlacedShopObjectKind.MACHINE -> workerAssignment.openContextMenuForMachine(target.id, pointerState.worldX, pointerState.worldY)
+        when (target) {
+            is PlacedShopObject.Worker ->
+                workerAssignment.openContextMenuForWorker(target.id, pointerState.worldX, pointerState.worldY)
+            is PlacedShopObject.Machine ->
+                workerAssignment.openContextMenuForMachine(target.id, pointerState.worldX, pointerState.worldY)
         }
         return true
     }

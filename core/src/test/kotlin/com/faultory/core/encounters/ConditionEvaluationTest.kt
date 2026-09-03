@@ -139,13 +139,14 @@ class ConditionEvaluationTest {
         placedObjects = placedObjects
     )
 
-    private fun placed(kind: PlacedShopObjectKind, catalogId: String) = PlacedShopObject(
-        id = catalogId,
-        kind = kind,
-        catalogId = catalogId,
-        position = TileCoordinate(0, 0),
-        orientation = Orientation.NORTH
-    )
+    private fun placed(kind: PlacedShopObjectKind, catalogId: String): PlacedShopObject = when (kind) {
+        PlacedShopObjectKind.WORKER -> PlacedShopObject.Worker(
+            id = catalogId, catalogId = catalogId, position = TileCoordinate(0, 0), orientation = Orientation.NORTH
+        )
+        PlacedShopObjectKind.MACHINE -> PlacedShopObject.Machine(
+            id = catalogId, catalogId = catalogId, position = TileCoordinate(0, 0), orientation = Orientation.NORTH
+        )
+    }
 }
 
 private class StubSaveRepo(private val starsFor: Map<String, Int>) : SaveRepository {

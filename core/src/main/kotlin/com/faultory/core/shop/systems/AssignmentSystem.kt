@@ -10,7 +10,6 @@ import com.faultory.core.encounters.WorkerAssignmentKind
 import com.faultory.core.encounters.WorkerAssignmentRejectedEvent
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
 import com.faultory.core.shop.WorkerAssignmentFailureReason
@@ -165,10 +164,10 @@ internal class AssignmentSystem(
      * [assign] receives `(worker, target, path, facing orientation)` and returns the updated worker.
      */
     private fun <T> routeWorkerTo(
-        worker: PlacedShopObject,
+        worker: PlacedShopObject.Worker,
         goalsByAccessTile: Map<TileCoordinate, T>,
         fallbackOrientation: (T) -> Orientation,
-        assign: (PlacedShopObject, T, List<TileCoordinate>, Orientation) -> PlacedShopObject
+        assign: (PlacedShopObject.Worker, T, List<TileCoordinate>, Orientation) -> PlacedShopObject.Worker
     ): WorkerAssignmentResult {
         val path = movementStrategyResolver.strategyFor(worker).pathFinder.findPath(
             grid = grid,
@@ -191,8 +190,8 @@ internal class AssignmentSystem(
     }
 
     private fun freeOperatorSlots(
-        machine: PlacedShopObject,
-        worker: PlacedShopObject
+        machine: PlacedShopObject.Machine,
+        worker: PlacedShopObject.Worker
     ): List<MachineSlotPosition> {
         return state.slotPositionsFor(machine, MachineSlotType.OPERATOR).filter { slot ->
             !isOperatorSlotReserved(machine.id, slot.slotIndex, ignoreWorkerId = worker.id) &&
@@ -202,13 +201,13 @@ internal class AssignmentSystem(
         }
     }
 
-    private fun assignableWorker(workerId: String): PlacedShopObject? =
-        state.findObjectById(workerId)?.takeIf { it.kind == PlacedShopObjectKind.WORKER }
+    private fun assignableWorker(workerId: String): PlacedShopObject.Worker? =
+        state.findObjectById(workerId) as? PlacedShopObject.Worker
 
-    private fun machineById(machineId: String): PlacedShopObject? =
-        state.findObjectById(machineId)?.takeIf { it.kind == PlacedShopObjectKind.MACHINE }
+    private fun machineById(machineId: String): PlacedShopObject.Machine? =
+        state.findObjectById(machineId) as? PlacedShopObject.Machine
 
-    private fun isWorkerBusy(worker: PlacedShopObject): Boolean =
+    private fun isWorkerBusy(worker: PlacedShopObject.Worker): Boolean =
         worker.carriedProductId != null ||
             mutableQaInspectionStates.any { it.inspectorObjectId == worker.id }
 
@@ -217,9 +216,8 @@ internal class AssignmentSystem(
         slotIndex: Int,
         ignoreWorkerId: String? = null
     ): Boolean {
-        return mutablePlacedObjects.any { placedObject ->
-            placedObject.kind == PlacedShopObjectKind.WORKER &&
-                placedObject.id != ignoreWorkerId &&
+        return mutablePlacedObjects.filterIsInstance<PlacedShopObject.Worker>().any { placedObject ->
+            placedObject.id != ignoreWorkerId &&
                 placedObject.assignedMachineId == machineId &&
                 placedObject.assignedSlotIndex == slotIndex
         }

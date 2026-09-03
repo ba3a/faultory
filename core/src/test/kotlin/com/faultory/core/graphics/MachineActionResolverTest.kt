@@ -9,7 +9,6 @@ import com.faultory.core.shop.MachineRecipeState
 import com.faultory.core.shop.QueuedMachineOutput
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.QaInspectionState
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopFloor
@@ -165,11 +164,10 @@ class MachineActionResolverTest {
         assertEquals(SpriteAction.IDLE.id, MachineActionResolver.actionFor(shopFloor, machine("machine-1")))
     }
 
-    private fun machine(id: String): PlacedShopObject {
-        return PlacedShopObject(
+    private fun machine(id: String): PlacedShopObject.Machine {
+        return PlacedShopObject.Machine(
             id = id,
             catalogId = "bench-assembler",
-            kind = PlacedShopObjectKind.MACHINE,
             position = com.faultory.core.shop.TileCoordinate(5, 8),
             orientation = Orientation.NORTH
         )

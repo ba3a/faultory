@@ -8,7 +8,6 @@ import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.graphics.InteractionIds
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
 import com.faultory.core.shop.pathfinding.MovementStrategyResolver
@@ -33,9 +32,8 @@ internal class CleanerSystem(
     override fun step(context: SystemContext) = update(context.deltaSeconds, context.workerProfilesById)
 
     fun update(deltaSeconds: Float, workerProfilesById: Map<String, WorkerProfile>) {
-        val cleaners = mutablePlacedObjects.filter {
-            it.kind == PlacedShopObjectKind.WORKER && it.workerRole == WorkerRole.CLEANER
-        }
+        val cleaners = mutablePlacedObjects.filterIsInstance<PlacedShopObject.Worker>()
+            .filter { it.workerRole == WorkerRole.CLEANER }
         if (cleaners.isEmpty()) {
             previousPositionByCleanerId.clear()
             return
@@ -44,7 +42,7 @@ internal class CleanerSystem(
         for (cleaner in cleaners) {
             val freshIndex = mutablePlacedObjects.indexOfFirst { it.id == cleaner.id }
             if (freshIndex < 0) continue
-            val current = mutablePlacedObjects[freshIndex]
+            val current = mutablePlacedObjects[freshIndex] as? PlacedShopObject.Worker ?: continue
 
             emitWetTrailIfMoved(current)
 
@@ -66,7 +64,7 @@ internal class CleanerSystem(
         }
     }
 
-    private fun emitWetTrailIfMoved(cleaner: PlacedShopObject) {
+    private fun emitWetTrailIfMoved(cleaner: PlacedShopObject.Worker) {
         val previous = previousPositionByCleanerId[cleaner.id]
         if (previous == null || previous != cleaner.position) {
             wetTileSystem.mark(cleaner.position, jitteredWetDuration())
@@ -83,7 +81,7 @@ internal class CleanerSystem(
         return (GameConfig.cleanerWetTileBaseSeconds + jitter).coerceAtLeast(0.1f)
     }
 
-    private fun tryPickUpAdjacentProduct(cleanerIndex: Int, cleaner: PlacedShopObject): Boolean {
+    private fun tryPickUpAdjacentProduct(cleanerIndex: Int, cleaner: PlacedShopObject.Worker): Boolean {
         val neighborTiles = grid.orthogonalNeighbors(cleaner.position).toSet()
         val candidate = mutableActiveProducts.firstOrNull { product ->
             product.holderObjectId == null &&
@@ -124,12 +122,11 @@ internal class CleanerSystem(
         return true
     }
 
-    private fun tryHandProductToAdjacentWorker(cleanerIndex: Int, cleaner: PlacedShopObject): Boolean {
+    private fun tryHandProductToAdjacentWorker(cleanerIndex: Int, cleaner: PlacedShopObject.Worker): Boolean {
         val productId = cleaner.carriedProductId ?: return false
         val neighborTiles = grid.orthogonalNeighbors(cleaner.position).toSet()
-        val recipient = mutablePlacedObjects.firstOrNull { other ->
-            other.kind == PlacedShopObjectKind.WORKER &&
-                other.id != cleaner.id &&
+        val recipient = mutablePlacedObjects.filterIsInstance<PlacedShopObject.Worker>().firstOrNull { other ->
+            other.id != cleaner.id &&
                 other.workerRole != WorkerRole.CLEANER &&
                 !other.isBusy &&
                 other.carriedProductId == null &&
@@ -149,7 +146,7 @@ internal class CleanerSystem(
         )
     }
 
-    private fun planRoaming(cleanerIndex: Int, cleaner: PlacedShopObject) {
+    private fun planRoaming(cleanerIndex: Int, cleaner: PlacedShopObject.Worker) {
         val roamer = movementStrategyResolver.strategyFor(cleaner).roamer ?: return
         val blocked = state.blockedTilesForPath(ignoreWorkerId = cleaner.id)
         val path = roamer.nextRoam(grid, cleaner.position, blocked, random)
@@ -161,11 +158,10 @@ internal class CleanerSystem(
         )
     }
 
-    private fun planDeliveryToNearestWorker(cleanerIndex: Int, cleaner: PlacedShopObject): Boolean {
+    private fun planDeliveryToNearestWorker(cleanerIndex: Int, cleaner: PlacedShopObject.Worker): Boolean {
         val carriedProductId = cleaner.carriedProductId
         val standTilesByWorker = mutableMapOf<TileCoordinate, String>()
-        for (worker in mutablePlacedObjects) {
-            if (worker.kind != PlacedShopObjectKind.WORKER) continue
+        for (worker in mutablePlacedObjects.filterIsInstance<PlacedShopObject.Worker>()) {
             if (worker.id == cleaner.id) continue
             if (worker.workerRole == WorkerRole.CLEANER) continue
             for (stand in grid.orthogonalNeighbors(worker.position)) {
@@ -196,7 +192,7 @@ internal class CleanerSystem(
         return true
     }
 
-    private fun startDestroyingHeldProduct(cleanerIndex: Int, cleaner: PlacedShopObject) {
+    private fun startDestroyingHeldProduct(cleanerIndex: Int, cleaner: PlacedShopObject.Worker) {
         mutablePlacedObjects[cleanerIndex] = UnitPhaseSystem.startDestroyProduct(cleaner)
     }
 }

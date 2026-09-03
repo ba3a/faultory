@@ -15,7 +15,6 @@ import com.faultory.core.graphics.WorkerActionResolver
 import com.faultory.core.shop.InteractionRole
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
@@ -84,7 +83,7 @@ class EntitySpriteLayer(
             if (placedObject.id in groupsByObjectId) {
                 continue
             }
-            val interaction = placedObject.interaction ?: continue
+            val interaction = (placedObject as? PlacedShopObject.Worker)?.interaction ?: continue
             val definition = shopFloor.interactionDefinitionFor(interaction.definitionId) ?: continue
             if (definition.layerOrder.isEmpty()) {
                 continue
@@ -250,7 +249,8 @@ class EntitySpriteLayer(
         frame: SkinFrameLookup.ResolvedFrame,
         held: SpritePlacement
     ): SpritePlacement {
-        val interaction = holder.interaction?.takeIf { it.payloadProductId == product.id } ?: return held
+        val interaction = (holder as? PlacedShopObject.Worker)?.interaction
+            ?.takeIf { it.payloadProductId == product.id } ?: return held
         val fraction = handoverFraction(
             elapsedSeconds = interaction.elapsedSeconds,
             transferSeconds = interaction.transferSeconds,
@@ -355,20 +355,20 @@ class EntitySpriteLayer(
         )
     }
 
-    private fun actionFor(placedObject: PlacedShopObject): String = when (placedObject.kind) {
-        PlacedShopObjectKind.MACHINE -> MachineActionResolver.actionFor(shopFloor, placedObject)
-        PlacedShopObjectKind.WORKER -> WorkerActionResolver.actionFor(placedObject, shopFloor::interactionDefinitionFor)
+    private fun actionFor(placedObject: PlacedShopObject): String = when (placedObject) {
+        is PlacedShopObject.Machine -> MachineActionResolver.actionFor(shopFloor, placedObject)
+        is PlacedShopObject.Worker -> WorkerActionResolver.actionFor(placedObject, shopFloor::interactionDefinitionFor)
     }
 
-    private fun orientationFor(placedObject: PlacedShopObject): Orientation = when (placedObject.kind) {
-        PlacedShopObjectKind.MACHINE -> placedObject.orientation
-        PlacedShopObjectKind.WORKER -> WorkerActionResolver.orientationFor(placedObject)
+    private fun orientationFor(placedObject: PlacedShopObject): Orientation = when (placedObject) {
+        is PlacedShopObject.Machine -> placedObject.orientation
+        is PlacedShopObject.Worker -> WorkerActionResolver.orientationFor(placedObject)
     }
 
     private fun skinDefinitionFor(placedObject: PlacedShopObject, skinRegistry: SkinRegistry): SkinDefinition? {
-        val skinId = when (placedObject.kind) {
-            PlacedShopObjectKind.WORKER -> catalogLookup.workerProfilesById[placedObject.catalogId]?.skin
-            PlacedShopObjectKind.MACHINE -> catalogLookup.machineSpecsById[placedObject.catalogId]?.skin
+        val skinId = when (placedObject) {
+            is PlacedShopObject.Worker -> catalogLookup.workerProfilesById[placedObject.catalogId]?.skin
+            is PlacedShopObject.Machine -> catalogLookup.machineSpecsById[placedObject.catalogId]?.skin
         } ?: return null
 
         return skinRegistry.get(skinId)

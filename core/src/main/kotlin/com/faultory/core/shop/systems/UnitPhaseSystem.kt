@@ -5,7 +5,6 @@ import com.faultory.core.encounters.ProductDestroyedEvent
 import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.encounters.UnitStoodUpEvent
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.UnitPhase
 import kotlin.random.Random
 
@@ -23,14 +22,13 @@ internal class UnitPhaseSystem(
 
     fun update(deltaSeconds: Float) {
         for (index in mutablePlacedObjects.indices) {
-            val placed = mutablePlacedObjects[index]
-            if (placed.kind != PlacedShopObjectKind.WORKER) continue
+            val placed = mutablePlacedObjects[index] as? PlacedShopObject.Worker ?: continue
             val phase = placed.unitPhase ?: continue
             advance(index, placed, phase, deltaSeconds)
         }
     }
 
-    private fun advance(index: Int, placed: PlacedShopObject, phase: UnitPhase, deltaSeconds: Float) {
+    private fun advance(index: Int, placed: PlacedShopObject.Worker, phase: UnitPhase, deltaSeconds: Float) {
         val newTimer = placed.unitPhaseTimer + deltaSeconds
         if (newTimer < placed.unitPhaseDurationSeconds) {
             mutablePlacedObjects[index] = placed.copy(unitPhaseTimer = newTimer)
@@ -59,7 +57,7 @@ internal class UnitPhaseSystem(
         }
     }
 
-    private fun completeDestroyProduct(index: Int, placed: PlacedShopObject) {
+    private fun completeDestroyProduct(index: Int, placed: PlacedShopObject.Worker) {
         val productId = placed.carriedProductId
         if (productId != null) {
             val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
@@ -95,7 +93,7 @@ internal class UnitPhaseSystem(
     }
 
     companion object {
-        fun startFalling(placed: PlacedShopObject): PlacedShopObject = placed.copy(
+        fun startFalling(placed: PlacedShopObject.Worker): PlacedShopObject.Worker = placed.copy(
             movementPath = emptyList(),
             movementProgress = 0f,
             unitPhase = UnitPhase.FALLING,
@@ -103,7 +101,7 @@ internal class UnitPhaseSystem(
             unitPhaseDurationSeconds = GameConfig.unitFallSeconds
         )
 
-        fun startDestroyProduct(placed: PlacedShopObject): PlacedShopObject = placed.copy(
+        fun startDestroyProduct(placed: PlacedShopObject.Worker): PlacedShopObject.Worker = placed.copy(
             movementPath = emptyList(),
             movementProgress = 0f,
             unitPhase = UnitPhase.DESTROYING_PRODUCT,

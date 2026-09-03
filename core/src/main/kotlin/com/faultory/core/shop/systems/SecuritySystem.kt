@@ -45,7 +45,7 @@ internal class SecuritySystem(
         for (security in securityWorkers) {
             val freshIndex = mutablePlacedObjects.indexOfFirst { it.id == security.id }
             if (freshIndex < 0) continue
-            val current = mutablePlacedObjects[freshIndex]
+            val current = mutablePlacedObjects[freshIndex] as PlacedShopObject.Worker
             val profile = workerProfilesById[current.catalogId] ?: continue
             val roleProfile = profile.profileFor(WorkerRole.SECURITY) ?: continue
 
@@ -63,7 +63,7 @@ internal class SecuritySystem(
         }
     }
 
-    private fun activeSaboteurs(): List<PlacedShopObject> {
+    private fun activeSaboteurs(): List<PlacedShopObject.Worker> {
         val sabotagingMachineIds = mutableMachineProductionStates
             .asSequence()
             .filter { !it.isComplete && it.faultReason == ProductFaultReason.SABOTAGE }
@@ -77,7 +77,7 @@ internal class SecuritySystem(
         }
     }
 
-    private fun isSecurityOnDutyAtCamera(security: PlacedShopObject): Boolean {
+    private fun isSecurityOnDutyAtCamera(security: PlacedShopObject.Worker): Boolean {
         val machineId = security.assignedMachineId ?: return false
         val machine = state.findObjectById(machineId) ?: return false
         val machineSpec = machineSpecsById[machine.catalogId] ?: return false
@@ -87,8 +87,8 @@ internal class SecuritySystem(
 
     private fun handleSecurityPursuit(
         securityIndex: Int,
-        security: PlacedShopObject,
-        saboteursById: Map<String, PlacedShopObject>,
+        security: PlacedShopObject.Worker,
+        saboteursById: Map<String, PlacedShopObject.Worker>,
         pursuedSaboteurIds: MutableSet<String>
     ) {
         val targetId = security.pursuitTargetWorkerId ?: return
@@ -140,16 +140,17 @@ internal class SecuritySystem(
     }
 
     private fun dispatchFromCamera(
-        cameraSecurity: PlacedShopObject,
-        allSecurityWorkers: List<PlacedShopObject>,
-        saboteursById: Map<String, PlacedShopObject>,
+        cameraSecurity: PlacedShopObject.Worker,
+        allSecurityWorkers: List<PlacedShopObject.Worker>,
+        saboteursById: Map<String, PlacedShopObject.Worker>,
         pursuedSaboteurIds: MutableSet<String>
     ) {
         val unattended = saboteursById.values.filter { it.id !in pursuedSaboteurIds }
         if (unattended.isEmpty()) return
 
         val unattendedSorted = unattended.sortedWith(
-            compareBy<PlacedShopObject> { state.manhattanDistance(it.position, cameraSecurity.position) }.thenBy { it.id }
+            compareBy<PlacedShopObject.Worker> { state.manhattanDistance(it.position, cameraSecurity.position) }
+                .thenBy { it.id }
         )
 
         for (saboteur in unattendedSorted) {
@@ -170,10 +171,10 @@ internal class SecuritySystem(
 
     private fun handleRoamingSecurity(
         securityIndex: Int,
-        security: PlacedShopObject,
+        security: PlacedShopObject.Worker,
         profile: WorkerProfile,
         roleProfile: WorkerRoleProfile,
-        saboteursById: Map<String, PlacedShopObject>,
+        saboteursById: Map<String, PlacedShopObject.Worker>,
         pursuedSaboteurIds: MutableSet<String>
     ) {
         val eyesightRadius = roleProfile.eyesightRadius
@@ -182,7 +183,8 @@ internal class SecuritySystem(
                 .filter { it.id !in pursuedSaboteurIds }
                 .filter { euclideanDistance(security.position, it.position) <= eyesightRadius }
                 .sortedWith(
-                    compareBy<PlacedShopObject> { euclideanDistance(security.position, it.position) }.thenBy { it.id }
+                    compareBy<PlacedShopObject.Worker> { euclideanDistance(security.position, it.position) }
+                        .thenBy { it.id }
                 )
             val target = visible.firstOrNull()
             if (target != null) {
@@ -205,13 +207,13 @@ internal class SecuritySystem(
     }
 
     private fun freeOnFootSecurity(
-        allSecurityWorkers: List<PlacedShopObject>,
+        allSecurityWorkers: List<PlacedShopObject.Worker>,
         excludeId: String
-    ): PlacedShopObject? {
+    ): PlacedShopObject.Worker? {
         return allSecurityWorkers
             .asSequence()
             .filter { it.id != excludeId }
-            .map { state.findObjectById(it.id) ?: it }
+            .map { state.findObjectById(it.id) as? PlacedShopObject.Worker ?: it }
             .filter { it.assignedMachineId == null }
             .filter { it.pursuitTargetWorkerId == null }
             .filter { it.carriedProductId == null }
@@ -219,10 +221,10 @@ internal class SecuritySystem(
     }
 
     /** The single place a saboteur becomes someone's target, whether spotted on foot or on camera. */
-    private fun assignPursuer(pursuer: PlacedShopObject, target: PlacedShopObject) {
+    private fun assignPursuer(pursuer: PlacedShopObject.Worker, target: PlacedShopObject.Worker) {
         val pursuerIndex = mutablePlacedObjects.indexOfFirst { it.id == pursuer.id }
         if (pursuerIndex < 0) return
-        val current = mutablePlacedObjects[pursuerIndex]
+        val current = mutablePlacedObjects[pursuerIndex] as PlacedShopObject.Worker
         val path = planSecurityPursuit(current, target)
         mutablePlacedObjects[pursuerIndex] = current.copy(
             pursuitTargetWorkerId = target.id,
@@ -244,8 +246,8 @@ internal class SecuritySystem(
     }
 
     private fun planSecurityPursuit(
-        security: PlacedShopObject,
-        target: PlacedShopObject
+        security: PlacedShopObject.Worker,
+        target: PlacedShopObject.Worker
     ): List<TileCoordinate>? {
         val standTiles = grid.orthogonalNeighbors(target.position)
             .filter { tile ->
@@ -267,13 +269,13 @@ internal class SecuritySystem(
         )
     }
 
-    private fun planSecurityRoamingPath(security: PlacedShopObject): List<TileCoordinate> {
+    private fun planSecurityRoamingPath(security: PlacedShopObject.Worker): List<TileCoordinate> {
         val roamer = movementStrategyResolver.strategyFor(security).roamer ?: return emptyList()
         val blocked = state.blockedTilesForPath(ignoreWorkerId = security.id)
         return roamer.nextRoam(grid, security.position, blocked, random)
     }
 
-    private fun isPathStillValid(worker: PlacedShopObject): Boolean {
+    private fun isPathStillValid(worker: PlacedShopObject.Worker): Boolean {
         return worker.movementPath.none { tile ->
             state.isOccupied(tile, ignoreObjectId = worker.id, ignoreProductId = worker.carriedProductId)
         }

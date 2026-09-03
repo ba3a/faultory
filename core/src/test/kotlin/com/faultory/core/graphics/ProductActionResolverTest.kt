@@ -4,7 +4,6 @@ import com.faultory.core.shop.BeltNode
 import com.faultory.core.shop.ConveyorBelt
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.QaInspectionState
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopFloor
@@ -136,10 +135,9 @@ class ProductActionResolverTest {
         beltTile = TileCoordinate(5, 5)
     )
 
-    private fun worker(orientation: Orientation) = PlacedShopObject(
+    private fun worker(orientation: Orientation) = PlacedShopObject.Worker(
         id = "worker-1",
         catalogId = "line-inspector",
-        kind = PlacedShopObjectKind.WORKER,
         position = TileCoordinate(5, 4),
         orientation = orientation
     )

@@ -7,7 +7,6 @@ import com.faultory.core.shop.BeltNode
 import com.faultory.core.shop.ConveyorBelt
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.ShopProduct
@@ -98,18 +97,16 @@ class ShopFloorFrameFactoryTest {
         initialProducts = products
     )
 
-    private fun worker(id: String, tile: TileCoordinate): PlacedShopObject = PlacedShopObject(
+    private fun worker(id: String, tile: TileCoordinate): PlacedShopObject.Worker = PlacedShopObject.Worker(
         id = id,
         catalogId = "line-inspector",
-        kind = PlacedShopObjectKind.WORKER,
         position = tile,
         orientation = Orientation.NORTH
     )
 
-    private fun machine(id: String, tile: TileCoordinate): PlacedShopObject = PlacedShopObject(
+    private fun machine(id: String, tile: TileCoordinate): PlacedShopObject.Machine = PlacedShopObject.Machine(
         id = id,
         catalogId = cameraSpec.id,
-        kind = PlacedShopObjectKind.MACHINE,
         position = tile,
         orientation = Orientation.NORTH
     )

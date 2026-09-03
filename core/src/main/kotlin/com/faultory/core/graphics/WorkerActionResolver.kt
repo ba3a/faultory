@@ -4,7 +4,6 @@ import com.faultory.core.shop.BeltRidePhase
 import com.faultory.core.shop.InteractionRole
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.UnitPhase
 
 object WorkerActionResolver {
@@ -14,13 +13,9 @@ object WorkerActionResolver {
      * states, so a missing presentation asset never stalls a worker.
      */
     fun actionFor(
-        placedObject: PlacedShopObject,
+        placedObject: PlacedShopObject.Worker,
         catalogLookup: (String) -> InteractionDefinition? = { null }
     ): String {
-        if (placedObject.kind != PlacedShopObjectKind.WORKER) {
-            return SpriteAction.IDLE.id
-        }
-
         // A unit phase outranks everything: it is involuntary and the worker is off its feet, so
         // no other state it was in still describes what it is doing.
         placedObject.unitPhase?.let { return actionFor(it) }
@@ -45,7 +40,7 @@ object WorkerActionResolver {
         }
     }
 
-    private fun isMoving(placedObject: PlacedShopObject): Boolean =
+    private fun isMoving(placedObject: PlacedShopObject.Worker): Boolean =
         placedObject.movementPath.isNotEmpty() && placedObject.movementProgress < 1f
 
     fun actionFor(unitPhase: UnitPhase): String = when (unitPhase) {
@@ -60,11 +55,7 @@ object WorkerActionResolver {
         InteractionRole.RECIPIENT -> definition.recipientAction
     }
 
-    fun orientationFor(placedObject: PlacedShopObject): Orientation {
-        if (placedObject.kind != PlacedShopObjectKind.WORKER) {
-            return placedObject.orientation
-        }
-
+    fun orientationFor(placedObject: PlacedShopObject.Worker): Orientation {
         // Interacting workers were turned to face each other when the pairing began, and hold
         // still, so the placed orientation is already the right one.
         if (placedObject.interaction != null) {

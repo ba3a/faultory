@@ -2,15 +2,10 @@ package com.faultory.core.graphics
 
 import com.faultory.core.config.GameConfig
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
 
 object MachineActionResolver {
-    fun actionFor(shopFloor: ShopFloor, placedObject: PlacedShopObject): String {
-        if (placedObject.kind != PlacedShopObjectKind.MACHINE) {
-            return SpriteAction.IDLE.id
-        }
-
+    fun actionFor(shopFloor: ShopFloor, placedObject: PlacedShopObject.Machine): String {
         if (shopFloor.machineProductionStateFor(placedObject.id) != null) {
             return SpriteAction.WORKING.id
         }

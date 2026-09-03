@@ -24,10 +24,9 @@ class ShopFloorRecipeTest {
             blueprint = chainedBeltBlueprint(),
             machineSpecsById = mapOf(recipeMachine.id to recipeMachine),
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "blender-1",
                     catalogId = recipeMachine.id,
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(10, 10),
                     orientation = Orientation.NORTH
                 )
@@ -66,10 +65,9 @@ class ShopFloorRecipeTest {
             blueprint = chainedBeltBlueprint(),
             machineSpecsById = mapOf(recipeMachine.id to recipeMachine),
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "blender-1",
                     catalogId = recipeMachine.id,
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(10, 10),
                     orientation = Orientation.NORTH
                 )
@@ -106,10 +104,9 @@ class ShopFloorRecipeTest {
             blueprint = chainedBeltBlueprint(),
             machineSpecsById = mapOf(recipeMachine.id to recipeMachine),
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "blender-1",
                     catalogId = recipeMachine.id,
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(10, 10),
                     orientation = Orientation.NORTH
                 )
@@ -147,10 +144,9 @@ class ShopFloorRecipeTest {
             blueprint = chainedBeltBlueprint(),
             machineSpecsById = mapOf(recipeMachine.id to recipeMachine),
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "blender-1",
                     catalogId = recipeMachine.id,
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(10, 10),
                     orientation = Orientation.NORTH
                 )
@@ -211,10 +207,9 @@ class ShopFloorRecipeTest {
             machineSpecsById = mapOf(recipeMachine.id to recipeMachine)
         )
 
-        val invalidPlacement = PlacedShopObject(
+        val invalidPlacement = PlacedShopObject.Machine(
             id = "bad",
             catalogId = recipeMachine.id,
-            kind = PlacedShopObjectKind.MACHINE,
             position = TileCoordinate(20, 10),
             orientation = Orientation.NORTH
         )

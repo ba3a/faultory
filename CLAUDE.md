@@ -186,6 +186,11 @@ Modifying a `@Serializable` model: update the data class → update matching JSO
 - Do not add code to `desktop` beyond launcher concerns.
 - Do not revive `core.world` — active domain packages are `core.shop`, `core.content`, `core.systems`, `core.save`.
 - Do not rename JSON fields or asset paths casually — they are part of the save/content format.
+- `PlacedShopObject` is a `@Serializable sealed interface` (`Worker` / `Machine`, polymorphic
+  `"type"` discriminator). A field lives on the subtype that owns it — do not add a nullable
+  field to both. Branch on the subtype (`is PlacedShopObject.Worker`), not `.kind` (that member
+  is for the event / display boundary only). `@Transient` animation state (`beltRidePhase`,
+  `unitPhase`, `interaction`) still rides `Worker`.
 - Do not introduce new dependencies without strong justification; add via `gradle/libs.versions.toml` and the relevant `build.gradle.kts`.
 - Do not introduce Spring, Ktor, Hibernate, or any backend framework speculatively.
 - Tests live in the module they exercise: `core/src/test/kotlin/com/faultory/core/...` for runtime

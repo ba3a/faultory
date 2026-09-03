@@ -31,18 +31,16 @@ class ShopFloorAssignmentTest {
             blueprint = simpleBlueprint(),
             machineSpecsById = machinesById,
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Worker(
                     id = "worker-1",
                     catalogId = "line-inspector",
-                    kind = PlacedShopObjectKind.WORKER,
                     position = TileCoordinate(4, 10),
                     workerRole = WorkerRole.QA,
                     orientation = Orientation.SOUTH
                 ),
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "machine-1",
                     catalogId = "bench-assembler",
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(8, 10),
                     orientation = Orientation.WEST
                 )
@@ -62,7 +60,7 @@ class ShopFloorAssignmentTest {
         assertEquals(TileCoordinate(7, 10), success.worker.movementPath.last())
 
         shopFloor.update(deltaSeconds = 1f, workerProfilesById = workerProfilesById)
-        val updatedWorker = shopFloor.findObjectById("worker-1")
+        val updatedWorker = shopFloor.findObjectById("worker-1") as? PlacedShopObject.Worker
         assertEquals(TileCoordinate(7, 10), updatedWorker?.position)
         assertEquals(Orientation.EAST, updatedWorker?.orientation)
         assertTrue(updatedWorker?.movementPath?.isEmpty() == true)
@@ -80,24 +78,21 @@ class ShopFloorAssignmentTest {
             blueprint = simpleBlueprint(),
             machineSpecsById = machinesById,
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Worker(
                     id = "worker-1",
                     catalogId = "line-inspector",
-                    kind = PlacedShopObjectKind.WORKER,
                     position = TileCoordinate(4, 10),
                     workerRole = WorkerRole.QA
                 ),
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "machine-1",
                     catalogId = "bench-assembler",
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(8, 10),
                     orientation = Orientation.WEST
                 ),
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "blocker-1",
                     catalogId = "bench-assembler",
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(7, 10)
                 )
             )
@@ -125,27 +120,24 @@ class ShopFloorAssignmentTest {
             blueprint = simpleBlueprint(),
             machineSpecsById = machinesById,
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Worker(
                     id = "worker-1",
                     catalogId = "line-inspector",
-                    kind = PlacedShopObjectKind.WORKER,
                     position = TileCoordinate(4, 10),
                     workerRole = WorkerRole.QA
                 ),
-                PlacedShopObject(
+                PlacedShopObject.Worker(
                     id = "worker-2",
                     catalogId = "line-inspector",
-                    kind = PlacedShopObjectKind.WORKER,
                     position = TileCoordinate(2, 10),
                     workerRole = WorkerRole.PRODUCER_OPERATOR,
                     assignedMachineId = "machine-1",
                     assignedSlotIndex = 0,
                     movementPath = listOf(TileCoordinate(6, 10), TileCoordinate(7, 10))
                 ),
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "machine-1",
                     catalogId = "bench-assembler",
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(8, 10),
                     orientation = Orientation.WEST
                 )
@@ -170,10 +162,9 @@ class ShopFloorAssignmentTest {
             machineSpecsById = mapOf(qaMachine.id to qaMachine)
         )
 
-        val validPlacement = PlacedShopObject(
+        val validPlacement = PlacedShopObject.Machine(
             id = "machine-1",
             catalogId = qaMachine.id,
-            kind = PlacedShopObjectKind.MACHINE,
             position = TileCoordinate(5, 4),
             orientation = Orientation.NORTH
         )
@@ -190,10 +181,9 @@ class ShopFloorAssignmentTest {
             blueprint = qaBlueprint(),
             machineSpecsById = mapOf(qaMachine.id to qaMachine),
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "machine-1",
                     catalogId = qaMachine.id,
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(5, 4),
                     orientation = Orientation.NORTH
                 )
@@ -213,10 +203,9 @@ class ShopFloorAssignmentTest {
             blueprint = qaBlueprint(),
             machineSpecsById = emptyMap(),
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Worker(
                     id = "worker-1",
                     catalogId = "line-inspector",
-                    kind = PlacedShopObjectKind.WORKER,
                     position = TileCoordinate(2, 4),
                     workerRole = WorkerRole.PRODUCER_OPERATOR
                 )
@@ -249,17 +238,15 @@ class ShopFloorAssignmentTest {
             blueprint = qaBlueprint(),
             machineSpecsById = machinesById,
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Worker(
                     id = "worker-1",
                     catalogId = "line-inspector",
-                    kind = PlacedShopObjectKind.WORKER,
                     position = TileCoordinate(2, 4),
                     workerRole = WorkerRole.QA
                 ),
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "machine-1",
                     catalogId = "human-qa-station",
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(5, 6),
                     orientation = Orientation.SOUTH
                 )

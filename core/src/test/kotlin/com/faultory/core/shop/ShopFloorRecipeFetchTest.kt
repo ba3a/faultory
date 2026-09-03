@@ -149,17 +149,15 @@ class ShopFloorRecipeFetchTest {
             blueprint = singleBeltBlueprint(),
             machineSpecsById = mapOf(machineSpec.id to machineSpec),
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "press-1",
                     catalogId = machineSpec.id,
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(10, 9),
                     orientation = Orientation.NORTH
                 ),
-                PlacedShopObject(
+                PlacedShopObject.Worker(
                     id = "worker-1",
                     catalogId = workerProfile.id,
-                    kind = PlacedShopObjectKind.WORKER,
                     position = TileCoordinate(11, 9),
                     orientation = Orientation.WEST,
                     workerRole = WorkerRole.PRODUCER_OPERATOR,
@@ -175,7 +173,7 @@ class ShopFloorRecipeFetchTest {
         val output = assertNotNull(shopFloor.activeProducts.firstOrNull { it.productId == "ceramic-mug" })
         assertEquals(ShopProductState.ON_BELT, output.state)
         assertEquals(TileCoordinate(10, 10), output.tile)
-        val worker = assertNotNull(shopFloor.findObjectById("worker-1"))
+        val worker = assertNotNull(shopFloor.findObjectById("worker-1") as? PlacedShopObject.Worker)
         assertNull(worker.carriedProductId)
         assertEquals(TileCoordinate(11, 9), worker.position)
     }
@@ -207,17 +205,15 @@ class ShopFloorRecipeFetchTest {
             blueprint = singleBeltBlueprint(),
             machineSpecsById = mapOf(machineSpec.id to machineSpec),
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "blender-1",
                     catalogId = machineSpec.id,
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(10, 9),
                     orientation = Orientation.NORTH
                 ),
-                PlacedShopObject(
+                PlacedShopObject.Worker(
                     id = "worker-1",
                     catalogId = workerProfile.id,
-                    kind = PlacedShopObjectKind.WORKER,
                     position = TileCoordinate(11, 9),
                     orientation = Orientation.WEST,
                     workerRole = WorkerRole.PRODUCER_OPERATOR,
@@ -239,7 +235,7 @@ class ShopFloorRecipeFetchTest {
         val output = assertNotNull(shopFloor.activeProducts.firstOrNull { it.productId == "tea-kettle" })
         assertEquals(ShopProductState.ON_BELT, output.state)
         assertEquals(TileCoordinate(10, 10), output.tile)
-        val worker = assertNotNull(shopFloor.findObjectById("worker-1"))
+        val worker = assertNotNull(shopFloor.findObjectById("worker-1") as? PlacedShopObject.Worker)
         assertNull(worker.carriedProductId)
         assertEquals(TileCoordinate(11, 9), worker.position)
     }
@@ -266,21 +262,19 @@ class ShopFloorRecipeFetchTest {
         )
     }
 
-    private fun machinePlacement(catalogId: String): PlacedShopObject {
-        return PlacedShopObject(
+    private fun machinePlacement(catalogId: String): PlacedShopObject.Machine {
+        return PlacedShopObject.Machine(
             id = "blender-1",
             catalogId = catalogId,
-            kind = PlacedShopObjectKind.MACHINE,
             position = TileCoordinate(10, 8),
             orientation = Orientation.NORTH
         )
     }
 
-    private fun workerAtOperatorSlot(catalogId: String): PlacedShopObject {
-        return PlacedShopObject(
+    private fun workerAtOperatorSlot(catalogId: String): PlacedShopObject.Worker {
+        return PlacedShopObject.Worker(
             id = "worker-1",
             catalogId = catalogId,
-            kind = PlacedShopObjectKind.WORKER,
             position = TileCoordinate(10, 9),
             orientation = Orientation.SOUTH,
             workerRole = WorkerRole.PRODUCER_OPERATOR,

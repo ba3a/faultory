@@ -29,10 +29,9 @@ class ShopFloorQaTest {
             blueprint = qaBlueprint(),
             machineSpecsById = mapOf(qaMachine.id to qaMachine),
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "machine-1",
                     catalogId = qaMachine.id,
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(5, 4),
                     orientation = Orientation.NORTH
                 )
@@ -62,10 +61,9 @@ class ShopFloorQaTest {
             blueprint = qaBlueprint(),
             machineSpecsById = emptyMap(),
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Worker(
                     id = "worker-1",
                     catalogId = worker.id,
-                    kind = PlacedShopObjectKind.WORKER,
                     position = TileCoordinate(5, 4),
                     orientation = Orientation.NORTH,
                     workerRole = WorkerRole.QA,
@@ -89,7 +87,7 @@ class ShopFloorQaTest {
         assertEquals(ShopProductState.ON_BELT, returnedProduct.state)
         assertEquals(TileCoordinate(5, 5), returnedProduct.tile)
         assertTrue(shopFloor.qaInspectionStates.isEmpty())
-        assertNull(shopFloor.findObjectById("worker-1")?.carriedProductId)
+        assertNull((shopFloor.findObjectById("worker-1") as? PlacedShopObject.Worker)?.carriedProductId)
     }
 
     @Test
@@ -112,17 +110,15 @@ class ShopFloorQaTest {
                 automaticProducer.id to automaticProducer
             ),
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "qa-machine",
                     catalogId = qaMachine.id,
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(5, 4),
                     orientation = Orientation.NORTH
                 ),
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "producer-1",
                     catalogId = automaticProducer.id,
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(8, 7),
                     orientation = Orientation.NORTH
                 )
@@ -141,7 +137,7 @@ class ShopFloorQaTest {
 
         shopFloor.update(0.2f, emptyMap())
 
-        val updatedProducer = assertNotNull(shopFloor.findObjectById("producer-1"))
+        val updatedProducer = assertNotNull(shopFloor.findObjectById("producer-1") as? PlacedShopObject.Machine)
         assertEquals(1, updatedProducer.faultyInventoryCount)
         assertTrue(shopFloor.activeProducts.none { it.id == "product-1" })
     }
@@ -157,10 +153,9 @@ class ShopFloorQaTest {
             blueprint = qaBlueprint(),
             machineSpecsById = mapOf(automaticProducer.id to automaticProducer),
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "producer-1",
                     catalogId = automaticProducer.id,
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(8, 7),
                     orientation = Orientation.NORTH,
                     faultyInventoryCount = 1

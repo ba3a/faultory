@@ -32,17 +32,15 @@ class ShopFloorProductionTest {
             blueprint = beltBlueprint(),
             machineSpecsById = mapOf(machineSpec.id to machineSpec),
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "machine-1",
                     catalogId = machineSpec.id,
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(5, 8),
                     orientation = Orientation.NORTH
                 ),
-                PlacedShopObject(
+                PlacedShopObject.Worker(
                     id = "worker-1",
                     catalogId = workerProfile.id,
-                    kind = PlacedShopObjectKind.WORKER,
                     position = TileCoordinate(5, 9),
                     orientation = Orientation.NORTH,
                     workerRole = WorkerRole.PRODUCER_OPERATOR,
@@ -63,7 +61,7 @@ class ShopFloorProductionTest {
         assertEquals(TileCoordinate(5, 10), produced.tile)
         assertTrue(shopFloor.machineProductionStates.isEmpty())
 
-        val worker = assertNotNull(shopFloor.findObjectById("worker-1"))
+        val worker = assertNotNull(shopFloor.findObjectById("worker-1") as? PlacedShopObject.Worker)
         assertNull(worker.carriedProductId)
         assertEquals(TileCoordinate(5, 9), worker.position)
     }
@@ -80,10 +78,9 @@ class ShopFloorProductionTest {
             blueprint = beltBlueprint(),
             machineSpecsById = mapOf(machineSpec.id to machineSpec),
             initialPlacements = listOf(
-                PlacedShopObject(
+                PlacedShopObject.Machine(
                     id = "machine-1",
                     catalogId = machineSpec.id,
-                    kind = PlacedShopObjectKind.MACHINE,
                     position = TileCoordinate(5, 7),
                     orientation = Orientation.NORTH
                 )

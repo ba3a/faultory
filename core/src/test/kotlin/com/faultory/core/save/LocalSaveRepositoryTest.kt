@@ -7,7 +7,6 @@ import com.faultory.core.shop.QaInspectionState
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
@@ -138,10 +137,9 @@ class LocalSaveRepositoryTest {
                         )
                     ),
                     placedObjects = listOf(
-                        PlacedShopObject(
+                        PlacedShopObject.Worker(
                             id = "worker-1",
                             catalogId = "line-inspector",
-                            kind = PlacedShopObjectKind.WORKER,
                             position = TileCoordinate(6, 9),
                             orientation = Orientation.EAST,
                             workerRole = WorkerRole.QA,
@@ -214,10 +212,9 @@ class LocalSaveRepositoryTest {
                 ).activeShift.copy(
                     elapsedSeconds = 41f,
                     placedObjects = listOf(
-                        PlacedShopObject(
+                        PlacedShopObject.Machine(
                             id = "machine-7",
                             catalogId = "bench-assembler",
-                            kind = PlacedShopObjectKind.MACHINE,
                             position = TileCoordinate(12, 11),
                             orientation = Orientation.WEST,
                             faultyInventoryCount = 2
@@ -241,12 +238,13 @@ class LocalSaveRepositoryTest {
             assertEquals(1, loadedMorningShift.activeShift.productDeliveryStats.size)
             assertEquals(2, loadedMorningShift.activeShift.productDeliveryStats.single().goodCount)
             assertEquals(1, loadedMorningShift.activeShift.placedObjects.size)
-            assertEquals(TileCoordinate(6, 9), loadedMorningShift.activeShift.placedObjects.single().position)
-            assertEquals("machine-7", loadedMorningShift.activeShift.placedObjects.single().assignedMachineId)
-            assertEquals(0, loadedMorningShift.activeShift.placedObjects.single().assignedSlotIndex)
-            assertEquals(TileCoordinate(6, 9), loadedMorningShift.activeShift.placedObjects.single().qaPostTile)
-            assertEquals("product-3", loadedMorningShift.activeShift.placedObjects.single().carriedProductId)
-            assertEquals(0.35f, loadedMorningShift.activeShift.placedObjects.single().movementProgress)
+            val loadedWorker = loadedMorningShift.activeShift.placedObjects.single() as PlacedShopObject.Worker
+            assertEquals(TileCoordinate(6, 9), loadedWorker.position)
+            assertEquals("machine-7", loadedWorker.assignedMachineId)
+            assertEquals(0, loadedWorker.assignedSlotIndex)
+            assertEquals(TileCoordinate(6, 9), loadedWorker.qaPostTile)
+            assertEquals("product-3", loadedWorker.carriedProductId)
+            assertEquals(0.35f, loadedWorker.movementProgress)
             assertEquals(1, loadedMorningShift.activeShift.activeProducts.size)
             assertEquals(ProductFaultReason.SABOTAGE, loadedMorningShift.activeShift.activeProducts.single().faultReason)
             assertEquals("worker-1", loadedMorningShift.activeShift.activeProducts.single().holderObjectId)
@@ -262,9 +260,10 @@ class LocalSaveRepositoryTest {
             assertEquals("tutorial-shop", loadedEveningShift.activeShift.shopId)
             assertEquals(41f, loadedEveningShift.activeShift.elapsedSeconds)
             assertEquals(1, loadedEveningShift.activeShift.placedObjects.size)
-            assertEquals("bench-assembler", loadedEveningShift.activeShift.placedObjects.single().catalogId)
-            assertEquals(Orientation.WEST, loadedEveningShift.activeShift.placedObjects.single().orientation)
-            assertEquals(2, loadedEveningShift.activeShift.placedObjects.single().faultyInventoryCount)
+            val loadedMachine = loadedEveningShift.activeShift.placedObjects.single() as PlacedShopObject.Machine
+            assertEquals("bench-assembler", loadedMachine.catalogId)
+            assertEquals(Orientation.WEST, loadedMachine.orientation)
+            assertEquals(2, loadedMachine.faultyInventoryCount)
         } finally {
             tempRoot.toFile().deleteRecursively()
         }

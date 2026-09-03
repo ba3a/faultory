@@ -47,7 +47,7 @@ class ShopFloorSecurityTest {
         val productionState = shopFloor.machineProductionStateFor("machine-1")
         assertNotNull(productionState)
         assertEquals(ProductFaultReason.SABOTAGE, productionState.faultReason)
-        val securityAfterPlan = assertNotNull(shopFloor.findObjectById("security-1"))
+        val securityAfterPlan = assertNotNull(shopFloor.findObjectById("security-1") as? PlacedShopObject.Worker)
         assertEquals("operator-1", securityAfterPlan.pursuitTargetWorkerId)
 
         repeat(20) { shopFloor.update(0.1f, workersById) }
@@ -56,7 +56,7 @@ class ShopFloorSecurityTest {
         assertNotNull(updatedState)
         assertNull(updatedState.faultReason)
 
-        val securityAfter = assertNotNull(shopFloor.findObjectById("security-1"))
+        val securityAfter = assertNotNull(shopFloor.findObjectById("security-1") as? PlacedShopObject.Worker)
         assertNull(securityAfter.pursuitTargetWorkerId)
     }
 
@@ -89,7 +89,7 @@ class ShopFloorSecurityTest {
         val state = shopFloor.machineProductionStateFor("machine-1")
         assertNotNull(state)
         assertEquals(ProductFaultReason.SABOTAGE, state.faultReason)
-        val security = assertNotNull(shopFloor.findObjectById("security-1"))
+        val security = assertNotNull(shopFloor.findObjectById("security-1") as? PlacedShopObject.Worker)
         assertNull(security.pursuitTargetWorkerId)
     }
 
@@ -112,7 +112,7 @@ class ShopFloorSecurityTest {
 
         shopFloor.update(0.0f, workersById)
 
-        val security = assertNotNull(shopFloor.findObjectById("security-1"))
+        val security = assertNotNull(shopFloor.findObjectById("security-1") as? PlacedShopObject.Worker)
         assertTrue(
             security.movementPath.isNotEmpty(),
             "expected roaming security to have planned a path"
@@ -153,8 +153,8 @@ class ShopFloorSecurityTest {
 
         repeat(2) { shopFloor.update(0.05f, workersById) }
 
-        val watcher = assertNotNull(shopFloor.findObjectById("watcher-1"))
-        val patrol = assertNotNull(shopFloor.findObjectById("patrol-1"))
+        val watcher = assertNotNull(shopFloor.findObjectById("watcher-1") as? PlacedShopObject.Worker)
+        val patrol = assertNotNull(shopFloor.findObjectById("patrol-1") as? PlacedShopObject.Worker)
         assertNull(watcher.pursuitTargetWorkerId)
         assertEquals("operator-1", patrol.pursuitTargetWorkerId)
     }
@@ -188,7 +188,7 @@ class ShopFloorSecurityTest {
 
         repeat(2) { shopFloor.update(0.05f, workersById) }
 
-        val watcher = assertNotNull(shopFloor.findObjectById("watcher-1"))
+        val watcher = assertNotNull(shopFloor.findObjectById("watcher-1") as? PlacedShopObject.Worker)
         assertEquals("operator-1", watcher.pursuitTargetWorkerId)
     }
 
@@ -280,11 +280,10 @@ class ShopFloorSecurityTest {
         )
     }
 
-    private fun machine(id: String, catalogId: String, position: TileCoordinate): PlacedShopObject {
-        return PlacedShopObject(
+    private fun machine(id: String, catalogId: String, position: TileCoordinate): PlacedShopObject.Machine {
+        return PlacedShopObject.Machine(
             id = id,
             catalogId = catalogId,
-            kind = PlacedShopObjectKind.MACHINE,
             position = position,
             orientation = Orientation.NORTH
         )
@@ -295,11 +294,10 @@ class ShopFloorSecurityTest {
         catalogId: String,
         position: TileCoordinate,
         assignedMachineId: String
-    ): PlacedShopObject {
-        return PlacedShopObject(
+    ): PlacedShopObject.Worker {
+        return PlacedShopObject.Worker(
             id = id,
             catalogId = catalogId,
-            kind = PlacedShopObjectKind.WORKER,
             position = position,
             orientation = Orientation.NORTH,
             workerRole = WorkerRole.PRODUCER_OPERATOR,
@@ -312,11 +310,10 @@ class ShopFloorSecurityTest {
         id: String,
         catalogId: String,
         position: TileCoordinate
-    ): PlacedShopObject {
-        return PlacedShopObject(
+    ): PlacedShopObject.Worker {
+        return PlacedShopObject.Worker(
             id = id,
             catalogId = catalogId,
-            kind = PlacedShopObjectKind.WORKER,
             position = position,
             orientation = Orientation.SOUTH,
             workerRole = WorkerRole.SECURITY
@@ -328,11 +325,10 @@ class ShopFloorSecurityTest {
         catalogId: String,
         position: TileCoordinate,
         assignedMachineId: String
-    ): PlacedShopObject {
-        return PlacedShopObject(
+    ): PlacedShopObject.Worker {
+        return PlacedShopObject.Worker(
             id = id,
             catalogId = catalogId,
-            kind = PlacedShopObjectKind.WORKER,
             position = position,
             orientation = Orientation.NORTH,
             workerRole = WorkerRole.SECURITY,
