@@ -55,6 +55,55 @@ class ShopFloorQaTest {
     }
 
     @Test
+    fun `two qa machines both start, complete and resolve their inspections in one update`() {
+        val qaMachine = qaMachineSpec(
+            strategy = FaultyProductStrategy.DESTROY,
+            falsePositiveChance = 0f
+        )
+        val shopFloor = ShopFloor(
+            blueprint = qaBlueprint(),
+            machineSpecsById = mapOf(qaMachine.id to qaMachine),
+            initialPlacements = listOf(
+                PlacedShopObject.Machine(
+                    id = "machine-1",
+                    catalogId = qaMachine.id,
+                    position = TileCoordinate(5, 4),
+                    orientation = Orientation.NORTH
+                ),
+                PlacedShopObject.Machine(
+                    id = "machine-2",
+                    catalogId = qaMachine.id,
+                    position = TileCoordinate(7, 4),
+                    orientation = Orientation.NORTH
+                )
+            ),
+            initialProducts = listOf(
+                ShopProduct(
+                    id = "product-1",
+                    productId = "ceramic-mug",
+                    sourceMachineId = "bench-assembler",
+                    faultReason = ProductFaultReason.PRODUCTION_DEFECT,
+                    state = ShopProductState.ON_BELT,
+                    tile = TileCoordinate(5, 5)
+                ),
+                ShopProduct(
+                    id = "product-2",
+                    productId = "ceramic-mug",
+                    sourceMachineId = "bench-assembler",
+                    faultReason = ProductFaultReason.PRODUCTION_DEFECT,
+                    state = ShopProductState.ON_BELT,
+                    tile = TileCoordinate(7, 5)
+                )
+            )
+        )
+
+        shopFloor.update(0.2f, emptyMap())
+
+        assertTrue(shopFloor.activeProducts.isEmpty(), "both faulty products should be destroyed in the same update")
+        assertTrue(shopFloor.qaInspectionStates.isEmpty(), "both inspections should be resolved and cleared")
+    }
+
+    @Test
     fun `qa worker inspects good product and returns it to the belt`() {
         val worker = qaWorkerProfile()
         val shopFloor = ShopFloor(

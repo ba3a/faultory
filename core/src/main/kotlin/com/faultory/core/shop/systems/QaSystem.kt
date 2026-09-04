@@ -56,49 +56,59 @@ internal class QaSystem(
     fun update(deltaSeconds: Float, workerProfilesById: Map<String, WorkerProfile>) {
         startQaInspections(workerProfilesById)
 
-        val statesSnapshot = mutableQaInspectionStates.toList()
-        for (inspState in statesSnapshot) {
-            val inspectionIndex = mutableQaInspectionStates.indexOfFirst { it.inspectorObjectId == inspState.inspectorObjectId }
-            if (inspectionIndex < 0) continue
-
-            val currentState = mutableQaInspectionStates[inspectionIndex]
-            if (currentState.isComplete) continue
-
-            val inspector = access.findObjectById(currentState.inspectorObjectId) ?: continue
-            val config = qaConfigFor(inspector, workerProfilesById, requireReady = true) ?: continue
-            val product = access.productById(currentState.productId) ?: run {
-                mutableQaInspectionStates.removeAt(inspectionIndex)
-                access.clearWorkerHold(inspector.id)
-                continue
+        // One pass over the inspections: advance each, then resolve any that are complete now —
+        // including ones whose disposition (no free tile, no producer to hand to) could not run on
+        // an earlier frame. Iterating a snapshot of the inspector ids keeps the loop stable while a
+        // resolve removes its entry; `indexOfId` / `byId` are O(1) so the pass is linear, not
+        // quadratic.
+        for (inspectorId in mutableQaInspectionStates.map { it.inspectorObjectId }) {
+            val index = mutableQaInspectionStates.indexOfId(inspectorId)
+            if (index < 0) continue
+            if (!mutableQaInspectionStates[index].isComplete) {
+                advanceInspection(index, deltaSeconds, workerProfilesById)
             }
+            val completed = mutableQaInspectionStates.byId(inspectorId)?.takeIf { it.isComplete } ?: continue
+            resolveCompletedQaInspection(completed, workerProfilesById)
+        }
+    }
 
-            val updatedProgress = (currentState.progressSeconds + deltaSeconds).coerceAtMost(config.inspectionDurationSeconds)
-            val isComplete = updatedProgress >= config.inspectionDurationSeconds
-            val verdict = if (isComplete) classifyProduct(product, config) else null
-            mutableQaInspectionStates[inspectionIndex] = currentState.copy(
-                progressSeconds = updatedProgress,
-                isComplete = isComplete,
-                classifiedAsFaulty = verdict
-            )
-            // Published on the transition, not in the resolve step: a disposition that cannot run
-            // yet (no free tile, no producer to hand to) is retried every frame, and the verdict
-            // was still only reached once.
-            if (verdict != null) {
-                events.publish {
-                    QaInspectionCompletedEvent(
-                        objectId = inspector.id,
-                        productInstanceId = product.id,
-                        productId = product.productId,
-                        classifiedAsFaulty = verdict,
-                        actuallyFaulty = product.isFaulty,
-                        levelId = it
-                    )
-                }
-            }
+    private fun advanceInspection(
+        inspectionIndex: Int,
+        deltaSeconds: Float,
+        workerProfilesById: Map<String, WorkerProfile>
+    ) {
+        val currentState = mutableQaInspectionStates[inspectionIndex]
+        val inspector = access.findObjectById(currentState.inspectorObjectId) ?: return
+        val config = qaConfigFor(inspector, workerProfilesById, requireReady = true) ?: return
+        val product = access.productById(currentState.productId) ?: run {
+            mutableQaInspectionStates.removeAt(inspectionIndex)
+            access.clearWorkerHold(inspector.id)
+            return
         }
 
-        for (inspState in mutableQaInspectionStates.filter { it.isComplete }.toList()) {
-            resolveCompletedQaInspection(inspState, workerProfilesById)
+        val updatedProgress =
+            (currentState.progressSeconds + deltaSeconds).coerceAtMost(config.inspectionDurationSeconds)
+        val isComplete = updatedProgress >= config.inspectionDurationSeconds
+        val verdict = if (isComplete) classifyProduct(product, config) else null
+        mutableQaInspectionStates[inspectionIndex] = currentState.copy(
+            progressSeconds = updatedProgress,
+            isComplete = isComplete,
+            classifiedAsFaulty = verdict
+        )
+        // Published on the transition, not in the resolve step: a disposition that cannot run
+        // yet (no free tile, no producer to hand to) is retried every frame, and the verdict
+        // was still only reached once.
+        if (verdict != null) {
+            events.publish {
+                QaInspectionCompletedEvent(
+                    objectId = inspector.id,
+                    productInstanceId = product.id,
+                    productId = product.productId,
+                    classifiedAsFaulty = verdict,
+                    actuallyFaulty = product.isFaulty,
+                    levelId = it
+                )
+            }
         }
     }
 
@@ -109,7 +119,7 @@ internal class QaSystem(
 
     private fun startMachineQaInspections(workerProfilesById: Map<String, WorkerProfile>) {
         for (machine in placedMachines) {
-            if (mutableQaInspectionStates.any { it.inspectorObjectId == machine.id }) continue
+            if (mutableQaInspectionStates.byId(machine.id) != null) continue
 
             val machineSpec = machineSpecsById[machine.catalogId] ?: continue
             if (machineSpec.type != MachineType.QA) continue
@@ -132,7 +142,7 @@ internal class QaSystem(
 
     private fun startWorkerQaInspections(workerProfilesById: Map<String, WorkerProfile>) {
         for (worker in placedWorkers) {
-            if (mutableQaInspectionStates.any { it.inspectorObjectId == worker.id }) continue
+            if (mutableQaInspectionStates.byId(worker.id) != null) continue
             if (worker.carriedProductId != null ||
                 worker.qaPostTile == null ||
                 !access.isWorkerAtQaPost(worker)
@@ -171,7 +181,7 @@ internal class QaSystem(
         inspection: QaInspectionState,
         workerProfilesById: Map<String, WorkerProfile>
     ) {
-        val inspectionIndex = mutableQaInspectionStates.indexOfFirst { it.inspectorObjectId == inspection.inspectorObjectId }
+        val inspectionIndex = mutableQaInspectionStates.indexOfId(inspection.inspectorObjectId)
         if (inspectionIndex < 0) return
 
         val inspector = access.findObjectById(inspection.inspectorObjectId) ?: run {
@@ -206,17 +216,15 @@ internal class QaSystem(
     }
 
     private fun holdProductForInspection(productId: String, holderObjectId: String) {
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
-        if (productIndex < 0) return
-
         val holderWorker = access.findObjectById(holderObjectId) as? PlacedShopObject.Worker
-        val product = mutableActiveProducts[productIndex]
-        mutableActiveProducts[productIndex] = product.copy(
-            state = ShopProductState.CARRIED,
-            tile = null,
-            carrierWorkerId = if (holderWorker != null) holderObjectId else null,
-            holderObjectId = holderObjectId
-        )
+        mutableActiveProducts.replaceById(productId) { product ->
+            product.copy(
+                state = ShopProductState.CARRIED,
+                tile = null,
+                carrierWorkerId = if (holderWorker != null) holderObjectId else null,
+                holderObjectId = holderObjectId
+            )
+        } ?: return
         if (holderWorker != null) {
             mutablePlacedObjects.replaceById(holderWorker.id) {
                 holderWorker.copy(carriedProductId = productId, movementPath = emptyList(), movementProgress = 0f)
@@ -231,17 +239,15 @@ internal class QaSystem(
     ): Boolean {
         if (access.isOccupied(beltTile, ignoreProductId = productId)) return false
 
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
-        if (productIndex < 0) return false
-
-        val returned = mutableActiveProducts[productIndex].copy(
-            state = ShopProductState.ON_BELT,
-            tile = beltTile,
-            carrierWorkerId = null,
-            holderObjectId = null,
-            reworkTargetMachineId = null
-        )
-        mutableActiveProducts[productIndex] = returned
+        val returned = mutableActiveProducts.replaceById(productId) {
+            it.copy(
+                state = ShopProductState.ON_BELT,
+                tile = beltTile,
+                carrierWorkerId = null,
+                holderObjectId = null,
+                reworkTargetMachineId = null
+            )
+        } ?: return false
         access.clearWorkerHold(inspectorId)
         events.publish {
             ProductPlacedOnBeltEvent(
@@ -256,15 +262,13 @@ internal class QaSystem(
     }
 
     private fun destroyHeldProduct(productId: String, inspectorId: String): Boolean {
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
-        if (productIndex < 0) return false
+        if (mutableActiveProducts.byId(productId) == null) return false
 
-        val inspectorIndex = mutablePlacedObjects.indexOfFirst { it.id == inspectorId }
+        val inspectorIndex = mutablePlacedObjects.indexOfId(inspectorId)
             .takeIf { it >= 0 && mutablePlacedObjects[it] is PlacedShopObject.Worker } ?: -1
         if (inspectorIndex < 0) {
             // Machine inspector — destroy instantly.
-            val destroyed = mutableActiveProducts[productIndex]
-            mutableActiveProducts.removeAt(productIndex)
+            val destroyed = mutableActiveProducts.removeById(productId) ?: return false
             events.publish {
                 ProductDestroyedEvent(
                     objectId = inspectorId,
@@ -291,7 +295,7 @@ internal class QaSystem(
         inspector: PlacedShopObject,
         beltTile: TileCoordinate
     ): Boolean {
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
+        val productIndex = mutableActiveProducts.indexOfId(productId)
         if (productIndex < 0) return false
 
         val targetTile = grid.orthogonalNeighbors(beltTile)
@@ -331,12 +335,12 @@ internal class QaSystem(
         inspector: PlacedShopObject,
         originTile: TileCoordinate
     ): Boolean {
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
+        val productIndex = mutableActiveProducts.indexOfId(productId)
         if (productIndex < 0) return false
 
         val targetWorker = nearestAvailableProducerWorker(originTile)
         if (targetWorker != null) {
-            val workerIndex = mutablePlacedObjects.indexOfFirst { it.id == targetWorker.id }
+            val workerIndex = mutablePlacedObjects.indexOfId(targetWorker.id)
             if (workerIndex >= 0) {
                 val handed = mutableActiveProducts[productIndex].copy(
                     state = ShopProductState.CARRIED,
@@ -369,7 +373,7 @@ internal class QaSystem(
 
         val automaticProducer = nearestAutomaticProducerWithCapacity(originTile)
         if (automaticProducer != null) {
-            val machineIndex = mutablePlacedObjects.indexOfFirst { it.id == automaticProducer.id }
+            val machineIndex = mutablePlacedObjects.indexOfId(automaticProducer.id)
             if (machineIndex >= 0) {
                 mutablePlacedObjects[machineIndex] = automaticProducer.copy(
                     faultyInventoryCount = automaticProducer.faultyInventoryCount + 1
@@ -485,12 +489,10 @@ internal class QaSystem(
     }
 
     private fun markProductInspectedBy(productId: String, inspectorId: String) {
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
-        if (productIndex < 0) return
-        val product = mutableActiveProducts[productIndex]
+        val product = mutableActiveProducts.byId(productId) ?: return
         if (inspectorId in product.inspectedByObjectIds) return
-        mutableActiveProducts[productIndex] = product.copy(
-            inspectedByObjectIds = product.inspectedByObjectIds + inspectorId
-        )
+        mutableActiveProducts.replaceById(productId) {
+            it.copy(inspectedByObjectIds = it.inspectedByObjectIds + inspectorId)
+        }
     }
 }

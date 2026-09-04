@@ -70,6 +70,19 @@ internal interface ProductWrites : ProductReads {
     val mutableActiveProducts: IdIndexedMutableList<ShopProduct>
 }
 
+/**
+ * Reads the occupancy indexes for the four tiles orthogonally adjacent to a tile — cheaper than a
+ * `mutableActiveProducts.firstOrNull { it.tile in neighbours }` scan of the whole table on every
+ * idle worker, every frame.
+ */
+internal interface AdjacencyReads {
+    /** Distinct placed objects standing on a tile orthogonally adjacent to [tile]. */
+    fun placedObjectsAdjacentTo(tile: TileCoordinate): List<PlacedShopObject>
+
+    /** Non-carried products resting on a tile orthogonally adjacent to [tile]. */
+    fun productsAdjacentTo(tile: TileCoordinate): List<ShopProduct>
+}
+
 /** Derived spatial queries: tile occupancy, path blocking, machine footprints and slot geometry. */
 internal interface OccupancyReads {
     fun isOccupied(
@@ -178,10 +191,11 @@ internal interface SecurityAccess :
     ShopWorld, PlacedObjectWrites, ProductionStateWrites, OccupancyReads, WorkerPostReads
 
 internal interface WorkerObjectiveAccess :
-    ShopWorld, PlacedObjectWrites, ProductWrites, RecipeStateWrites, OccupancyReads, WorkerPostReads
+    ShopWorld, PlacedObjectWrites, ProductWrites, RecipeStateWrites, OccupancyReads, AdjacencyReads,
+    WorkerPostReads
 
 internal interface CleanerAccess :
-    ShopWorld, PlacedObjectWrites, ProductWrites, OccupancyReads
+    ShopWorld, PlacedObjectWrites, ProductWrites, OccupancyReads, AdjacencyReads
 
 internal interface PlacementAccess :
     ShopWorld, PlacedObjectWrites, ProductWrites, ProductionStateReads, RecipeStateReads,

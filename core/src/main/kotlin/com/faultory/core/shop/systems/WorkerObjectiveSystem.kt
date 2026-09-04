@@ -14,7 +14,6 @@ import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
-import com.faultory.core.shop.manhattanDistanceTo
 import com.faultory.core.shop.pathfinding.MovementStrategyResolver
 import kotlin.random.Random
 
@@ -95,7 +94,7 @@ internal class WorkerObjectiveSystem(
             return false
         }
 
-        val recipeState = access.mutableMachineRecipeStates.firstOrNull { it.machineId == machineId }
+        val recipeState = access.mutableMachineRecipeStates.byId(machineId)
             ?: MachineRecipeState(machineId = machineId)
         val needed = neededRecipeIngredients(recipeState.inputBuffer, recipe)
         if (needed.isEmpty()) {
@@ -125,27 +124,23 @@ internal class WorkerObjectiveSystem(
         machineId: String,
         needed: Set<String>
     ): Boolean {
-        val neighborTiles = grid.orthogonalNeighbors(worker.position).toSet()
-        val candidate = mutableActiveProducts.firstOrNull { product ->
+        val candidate = access.productsAdjacentTo(worker.position).firstOrNull { product ->
             product.holderObjectId == null &&
                 product.state != ShopProductState.CARRIED &&
-                product.productId in needed &&
-                product.tile != null &&
-                product.tile in neighborTiles
+                product.productId in needed
         } ?: return false
 
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == candidate.id }
-        if (productIndex < 0) return false
-
         val productTile = candidate.tile ?: return false
-        mutableActiveProducts[productIndex] = candidate.copy(
-            state = ShopProductState.CARRIED,
-            tile = null,
-            beltProgress = 0f,
-            carrierWorkerId = worker.id,
-            holderObjectId = worker.id,
-            reworkTargetMachineId = machineId
-        )
+        mutableActiveProducts.replaceById(candidate.id) {
+            it.copy(
+                state = ShopProductState.CARRIED,
+                tile = null,
+                beltProgress = 0f,
+                carrierWorkerId = worker.id,
+                holderObjectId = worker.id,
+                reworkTargetMachineId = machineId
+            )
+        } ?: return false
         val orientation = Orientation.between(worker.position, productTile) ?: worker.orientation
         mutablePlacedObjects[workerIndex] = worker.copy(
             carriedProductId = candidate.id,
@@ -183,40 +178,28 @@ internal class WorkerObjectiveSystem(
         val pickedIngredient = availableIngredients.toList().random(random)
         val typeMatching = candidates.filter { it.productId == pickedIngredient }
 
-        val blockedTiles = access.blockedTilesForPath(ignoreWorkerId = worker.id)
-        var bestPath: List<TileCoordinate>? = null
-        var bestStandIsFloor = false
-
+        // Every buildable tile next to a matching product is a candidate stand. A floor stand is
+        // always preferred over a belt stand, so search every floor stand with one multi-goal BFS
+        // and fall back to the belt stands only if none is reachable — instead of a separate BFS
+        // per (product × stand tile).
+        val floorStands = mutableSetOf<TileCoordinate>()
+        val beltStands = mutableSetOf<TileCoordinate>()
         for (product in typeMatching) {
             val productTile = product.tile ?: continue
-            val standTiles = grid.orthogonalNeighbors(productTile)
-                .filter { stand ->
-                    grid.isBuildable(stand) &&
-                        (stand == worker.position || !access.isOccupied(stand, ignoreObjectId = worker.id))
-                }
-                .sortedWith(
-                    compareBy<TileCoordinate> { if (it in grid.beltTiles) 1 else 0 }
-                        .thenBy { it.manhattanDistanceTo(worker.position) }
-                )
-
-            val pathFinder = movementStrategyResolver.strategyFor(worker).pathFinder
-            for (stand in standTiles) {
-                val path = pathFinder.findPath(grid, worker.position, setOf(stand), blockedTiles) ?: continue
-                val isFloor = stand !in grid.beltTiles
-                val better = when {
-                    bestPath == null -> true
-                    isFloor && !bestStandIsFloor -> true
-                    isFloor == bestStandIsFloor && path.size < bestPath.size -> true
-                    else -> false
-                }
-                if (better) {
-                    bestPath = path
-                    bestStandIsFloor = isFloor
-                }
+            for (stand in grid.orthogonalNeighbors(productTile)) {
+                if (!grid.isBuildable(stand)) continue
+                if (stand != worker.position && access.isOccupied(stand, ignoreObjectId = worker.id)) continue
+                if (stand in grid.beltTiles) beltStands += stand else floorStands += stand
             }
         }
 
-        val path = bestPath ?: return false
+        val pathFinder = movementStrategyResolver.strategyFor(worker).pathFinder
+        val blockedTiles = access.blockedTilesForPath(ignoreWorkerId = worker.id)
+        val path = sequenceOf(floorStands, beltStands)
+            .filter { it.isNotEmpty() }
+            .mapNotNull { stands -> pathFinder.findPath(grid, worker.position, stands, blockedTiles) }
+            .firstOrNull() ?: return false
+
         val orientation = when {
             path.isNotEmpty() -> Orientation.between(worker.position, path.first()) ?: worker.orientation
             else -> worker.orientation
@@ -239,8 +222,7 @@ internal class WorkerObjectiveSystem(
             return false
         }
 
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == carriedProduct.id }
-        if (productIndex < 0) {
+        if (mutableActiveProducts.byId(carriedProduct.id) == null) {
             return false
         }
 
@@ -270,7 +252,7 @@ internal class WorkerObjectiveSystem(
             }
         }
 
-        mutableActiveProducts.removeAt(productIndex)
+        mutableActiveProducts.removeById(carriedProduct.id)
         mutablePlacedObjects[workerIndex] = worker.copy(
             carriedProductId = null,
             movementPath = emptyList(),
@@ -280,15 +262,14 @@ internal class WorkerObjectiveSystem(
     }
 
     private fun ensureRecipeState(machineId: String): MachineRecipeState {
-        val idx = access.mutableMachineRecipeStates.indexOfFirst { it.machineId == machineId }
-        if (idx >= 0) return access.mutableMachineRecipeStates[idx]
+        access.mutableMachineRecipeStates.byId(machineId)?.let { return it }
         val newState = MachineRecipeState(machineId = machineId)
         access.mutableMachineRecipeStates += newState
         return newState
     }
 
     private fun replaceRecipeState(recipeState: MachineRecipeState) {
-        val idx = access.mutableMachineRecipeStates.indexOfFirst { it.machineId == recipeState.machineId }
+        val idx = access.mutableMachineRecipeStates.indexOfId(recipeState.machineId)
         if (idx >= 0) {
             access.mutableMachineRecipeStates[idx] = recipeState
         } else {
@@ -318,7 +299,7 @@ internal class WorkerObjectiveSystem(
                     !access.isOccupied(beltTile, ignoreObjectId = worker.id, ignoreProductId = carriedProduct.id)
             } ?: return false
 
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == carriedProduct.id }
+        val productIndex = mutableActiveProducts.indexOfId(carriedProduct.id)
         if (productIndex < 0) {
             return false
         }

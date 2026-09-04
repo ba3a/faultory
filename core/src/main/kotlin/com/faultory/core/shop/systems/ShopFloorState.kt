@@ -360,6 +360,20 @@ internal class ShopFloorState(
         }
     }
 
+    override fun placedObjectsAdjacentTo(tile: TileCoordinate): List<PlacedShopObject> {
+        ensureTileOccupancyIndex()
+        return grid.orthogonalNeighbors(tile)
+            .mapNotNull { neighbor -> placedObjectIdByTile[neighbor] }
+            .distinct()
+            .mapNotNull { objectId -> placedObjectsIndex.byId(objectId) }
+    }
+
+    override fun productsAdjacentTo(tile: TileCoordinate): List<ShopProduct> {
+        ensureTileOccupancyIndex()
+        return grid.orthogonalNeighbors(tile)
+            .mapNotNull { neighbor -> productIdByTile[neighbor]?.let { activeProductsIndex.byId(it) } }
+    }
+
     override fun isWorkerAtAssignedSlot(worker: PlacedShopObject.Worker): Boolean {
         val slot = assignedSlotFor(worker) ?: return false
         return worker.position == slot.accessTile
@@ -383,19 +397,18 @@ internal class ShopFloorState(
     }
 
     override fun clearWorkerHold(workerId: String) {
-        val workerIndex = mutablePlacedObjects.indexOfFirst { it.id == workerId }
-        val worker = workerIndex.takeIf { it >= 0 }
-            ?.let { mutablePlacedObjects[it] as? PlacedShopObject.Worker }
-            ?: return
+        val worker = mutablePlacedObjects.byId(workerId) as? PlacedShopObject.Worker ?: return
         if (worker.carriedProductId == null) {
             return
         }
 
-        mutablePlacedObjects[workerIndex] = worker.copy(
-            carriedProductId = null,
-            movementPath = emptyList(),
-            movementProgress = 0f
-        )
+        mutablePlacedObjects.replaceById(workerId) {
+            worker.copy(
+                carriedProductId = null,
+                movementPath = emptyList(),
+                movementProgress = 0f
+            )
+        }
     }
 
     override fun createProductId(): String {

@@ -124,16 +124,16 @@ internal class InteractionController(
 
     private fun transferPayload(giver: PlacedShopObject.Worker, interaction: ActiveInteraction) {
         val productId = interaction.payloadProductId ?: return
-        val takerIndex = mutablePlacedObjects.indexOfFirst { it.id == interaction.partnerObjectId }
+        val takerIndex = mutablePlacedObjects.indexOfId(interaction.partnerObjectId)
         if (takerIndex < 0) {
             return
         }
-        val giverIndex = mutablePlacedObjects.indexOfFirst { it.id == giver.id }
+        val giverIndex = mutablePlacedObjects.indexOfId(giver.id)
         if (giverIndex < 0) {
             return
         }
 
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
+        val productIndex = mutableActiveProducts.indexOfId(productId)
         if (productIndex >= 0) {
             mutableActiveProducts[productIndex] = mutableActiveProducts[productIndex].copy(
                 state = ShopProductState.CARRIED,
@@ -172,8 +172,8 @@ internal class InteractionController(
         recipientId: String,
         payloadProductId: String?
     ): Boolean {
-        val initiatorIndex = mutablePlacedObjects.indexOfFirst { it.id == initiatorId }
-        val recipientIndex = mutablePlacedObjects.indexOfFirst { it.id == recipientId }
+        val initiatorIndex = mutablePlacedObjects.indexOfId(initiatorId)
+        val recipientIndex = mutablePlacedObjects.indexOfId(recipientId)
         if (initiatorIndex < 0 || recipientIndex < 0 || initiatorIndex == recipientIndex) {
             return false
         }

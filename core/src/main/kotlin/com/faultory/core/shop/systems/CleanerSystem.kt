@@ -41,7 +41,7 @@ internal class CleanerSystem(
         }
 
         for (cleaner in cleaners) {
-            val freshIndex = mutablePlacedObjects.indexOfFirst { it.id == cleaner.id }
+            val freshIndex = mutablePlacedObjects.indexOfId(cleaner.id)
             if (freshIndex < 0) continue
             val current = mutablePlacedObjects[freshIndex] as? PlacedShopObject.Worker ?: continue
 
@@ -86,26 +86,21 @@ internal class CleanerSystem(
     }
 
     private fun tryPickUpAdjacentProduct(cleanerIndex: Int, cleaner: PlacedShopObject.Worker): Boolean {
-        val neighborTiles = grid.orthogonalNeighbors(cleaner.position).toSet()
-        val candidate = mutableActiveProducts.firstOrNull { product ->
-            product.holderObjectId == null &&
-                product.state == ShopProductState.ON_FLOOR &&
-                product.tile != null &&
-                product.tile in neighborTiles
+        val candidate = access.productsAdjacentTo(cleaner.position).firstOrNull { product ->
+            product.holderObjectId == null && product.state == ShopProductState.ON_FLOOR
         } ?: return false
 
-        val productIndex = mutableActiveProducts.indexOfFirst { it.id == candidate.id }
-        if (productIndex < 0) return false
-
         val productTile = candidate.tile ?: return false
-        mutableActiveProducts[productIndex] = candidate.copy(
-            state = ShopProductState.CARRIED,
-            tile = null,
-            beltProgress = 0f,
-            carrierWorkerId = cleaner.id,
-            holderObjectId = cleaner.id,
-            reworkTargetMachineId = null
-        )
+        mutableActiveProducts.replaceById(candidate.id) {
+            it.copy(
+                state = ShopProductState.CARRIED,
+                tile = null,
+                beltProgress = 0f,
+                carrierWorkerId = cleaner.id,
+                holderObjectId = cleaner.id,
+                reworkTargetMachineId = null
+            )
+        } ?: return false
         val orientation = Orientation.between(cleaner.position, productTile) ?: cleaner.orientation
         mutablePlacedObjects[cleanerIndex] = cleaner.copy(
             carriedProductId = candidate.id,
@@ -128,16 +123,16 @@ internal class CleanerSystem(
 
     private fun tryHandProductToAdjacentWorker(cleanerIndex: Int, cleaner: PlacedShopObject.Worker): Boolean {
         val productId = cleaner.carriedProductId ?: return false
-        val neighborTiles = grid.orthogonalNeighbors(cleaner.position).toSet()
-        val recipient = mutablePlacedObjects.filterIsInstance<PlacedShopObject.Worker>().firstOrNull { other ->
-            other.id != cleaner.id &&
-                other.workerRole != WorkerRole.CLEANER &&
-                !other.isBusy &&
-                other.carriedProductId == null &&
-                other.position in neighborTiles
-        } ?: return false
+        val recipient = access.placedObjectsAdjacentTo(cleaner.position)
+            .filterIsInstance<PlacedShopObject.Worker>()
+            .firstOrNull { other ->
+                other.id != cleaner.id &&
+                    other.workerRole != WorkerRole.CLEANER &&
+                    !other.isBusy &&
+                    other.carriedProductId == null
+            } ?: return false
 
-        if (mutableActiveProducts.none { it.id == productId }) return false
+        if (mutableActiveProducts.byId(productId) == null) return false
 
         // The product does not change hands here any more - InteractionController moves it partway
         // through the give/take clip, so both workers get to play their half of the exchange.

@@ -60,10 +60,8 @@ internal class UnitPhaseSystem(
     private fun completeDestroyProduct(index: Int, placed: PlacedShopObject.Worker) {
         val productId = placed.carriedProductId
         if (productId != null) {
-            val productIndex = mutableActiveProducts.indexOfFirst { it.id == productId }
-            if (productIndex >= 0) {
-                val destroyed = mutableActiveProducts[productIndex]
-                mutableActiveProducts.removeAt(productIndex)
+            val destroyed = mutableActiveProducts.removeById(productId)
+            if (destroyed != null) {
                 events.publish {
                     ProductDestroyedEvent(
                         objectId = placed.id,

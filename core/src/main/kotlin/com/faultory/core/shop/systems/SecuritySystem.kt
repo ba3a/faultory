@@ -44,7 +44,7 @@ internal class SecuritySystem(
             .toMutableSet()
 
         for (security in securityWorkers) {
-            val freshIndex = mutablePlacedObjects.indexOfFirst { it.id == security.id }
+            val freshIndex = mutablePlacedObjects.indexOfId(security.id)
             if (freshIndex < 0) continue
             val current = mutablePlacedObjects[freshIndex] as PlacedShopObject.Worker
             val profile = workerProfilesById[current.catalogId] ?: continue
@@ -223,7 +223,7 @@ internal class SecuritySystem(
 
     /** The single place a saboteur becomes someone's target, whether spotted on foot or on camera. */
     private fun assignPursuer(pursuer: PlacedShopObject.Worker, target: PlacedShopObject.Worker) {
-        val pursuerIndex = mutablePlacedObjects.indexOfFirst { it.id == pursuer.id }
+        val pursuerIndex = mutablePlacedObjects.indexOfId(pursuer.id)
         if (pursuerIndex < 0) return
         val current = mutablePlacedObjects[pursuerIndex] as PlacedShopObject.Worker
         val path = planSecurityPursuit(current, target)
@@ -283,7 +283,7 @@ internal class SecuritySystem(
     }
 
     private fun cancelSabotage(machineId: String) {
-        val index = mutableMachineProductionStates.indexOfFirst { it.machineId == machineId }
+        val index = mutableMachineProductionStates.indexOfId(machineId)
         if (index < 0) return
         val productionState = mutableMachineProductionStates[index]
         if (productionState.faultReason != ProductFaultReason.SABOTAGE || productionState.isComplete) return

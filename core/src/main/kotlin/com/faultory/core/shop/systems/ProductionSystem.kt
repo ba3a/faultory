@@ -73,7 +73,7 @@ internal class ProductionSystem(
         workerProfilesById: Map<String, WorkerProfile>
     ) {
         val recipeState = ensureRecipeState(machine.id)
-        val productionIndex = mutableMachineProductionStates.indexOfFirst { it.machineId == machine.id }
+        val productionIndex = mutableMachineProductionStates.indexOfId(machine.id)
 
         if (productionIndex < 0) {
             if (recipeState.outputQueue.size >= GameConfig.machineOutputQueueCap) {
@@ -213,15 +213,14 @@ internal class ProductionSystem(
     }
 
     private fun ensureRecipeState(machineId: String): MachineRecipeState {
-        val idx = mutableMachineRecipeStates.indexOfFirst { it.machineId == machineId }
-        if (idx >= 0) return mutableMachineRecipeStates[idx]
+        mutableMachineRecipeStates.byId(machineId)?.let { return it }
         val newState = MachineRecipeState(machineId = machineId)
         mutableMachineRecipeStates += newState
         return newState
     }
 
     private fun replaceRecipeState(recipeState: MachineRecipeState) {
-        val idx = mutableMachineRecipeStates.indexOfFirst { it.machineId == recipeState.machineId }
+        val idx = mutableMachineRecipeStates.indexOfId(recipeState.machineId)
         if (idx >= 0) {
             mutableMachineRecipeStates[idx] = recipeState
         } else {
@@ -262,10 +261,7 @@ internal class ProductionSystem(
                         )
                     )
                 )
-                val productIndex = mutableActiveProducts.indexOfFirst { it.id == product.id }
-                if (productIndex >= 0) {
-                    mutableActiveProducts.removeAt(productIndex)
-                }
+                mutableActiveProducts.removeById(product.id)
                 events.publish {
                     MachineInputLoadedEvent(
                         machineId = machine.id,
@@ -296,7 +292,7 @@ internal class ProductionSystem(
             }
 
             if (placed) {
-                val current = mutableMachineRecipeStates.firstOrNull { it.machineId == machine.id } ?: continue
+                val current = mutableMachineRecipeStates.byId(machine.id) ?: continue
                 replaceRecipeState(current.copy(outputQueue = current.outputQueue.drop(1)))
             }
         }
@@ -338,7 +334,7 @@ internal class ProductionSystem(
         if (!access.isWorkerAtAssignedSlot(worker) || worker.carriedProductId != null) {
             return false
         }
-        val workerIndex = mutablePlacedObjects.indexOfFirst { it.id == worker.id }
+        val workerIndex = mutablePlacedObjects.indexOfId(worker.id)
         if (workerIndex < 0) return false
 
         mutableActiveProducts += ShopProduct(
