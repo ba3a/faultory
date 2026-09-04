@@ -41,13 +41,16 @@ system — take `ShopFloorEvents`.
 ## Counters come for free
 
 `EncounterEngine` knows nothing about individual event types. Each event names its own counters via
-`counterName` and `counterKeys(scope)`. The default gives an all-levels and a per-level total; an
-override adds breakdown keys in the `<counterName>.<scope>.<suffix>` shape that
-`Condition.CounterAtLeast` reads. A new event therefore starts accumulating statistics and becomes
-usable by authored content the moment it is published.
+`counterName` and `counterKeys(scope)`. The default gives an all-levels and a per-level total;
+override with the `counters(scope) { total(); breakdown("dimension", value) }` builder in
+`CounterKeys.kt` to add breakdown keys in the `<counterName>.<scope>.<dimension>.<value>` shape that
+`Condition.CounterAtLeast` reads — `breakdown` takes a raw string or an enum (auto-lower-cased).
+`CounterKeys` is the one place a key string is assembled, so the writing event and the reading
+`Condition` cannot drift. A new event therefore starts accumulating statistics and becomes usable by
+authored content the moment it is published.
 
-`counterName` values and the legacy `shipped.<quality>.<scope>` keys are persisted in
-`encounters.json`. Treat them like JSON field names and do not rename them casually.
+`counterName` values are persisted in `encounters.json`. Treat them like JSON field names and do not
+rename them casually.
 
 ## What is deliberately not published
 

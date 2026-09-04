@@ -45,12 +45,14 @@ class EncounterEngineTest {
         bus.publish(ProductShippedEvent("product-1", "ceramic-mug", ProductQuality.GOOD, "test-level"))
 
         val counters = eng.progress.counters
-        assertEquals(1L, counters["shipped.good.test-level"])
-        assertEquals(1L, counters["shipped.any.test-level"])
-        assertEquals(1L, counters["shipped.good.__all__"])
-        assertEquals(1L, counters["shipped.any.__all__"])
-        assertEquals(1L, counters["shipped.good.test-level.ceramic-mug"])
-        assertEquals(1L, counters["shipped.any.test-level.ceramic-mug"])
+        assertEquals(1L, counters["shipped.test-level"])
+        assertEquals(1L, counters["shipped.__all__"])
+        assertEquals(1L, counters["shipped.test-level.quality.good"])
+        assertEquals(1L, counters["shipped.__all__.quality.good"])
+        assertEquals(1L, counters["shipped.test-level.product.ceramic-mug"])
+        assertEquals(1L, counters["shipped.__all__.product.ceramic-mug"])
+        assertEquals(1L, counters["shipped.test-level.quality.good.product.ceramic-mug"])
+        assertEquals(1L, counters["shipped.__all__.quality.good.product.ceramic-mug"])
     }
 
     @Test

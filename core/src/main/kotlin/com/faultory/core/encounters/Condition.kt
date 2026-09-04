@@ -47,20 +47,20 @@ sealed interface Condition {
         override fun evaluate(ctx: EvaluationContext): Boolean =
             (ctx.encounterProgress.counters[counterKey(ctx.currentLevelId)] ?: 0L) >= atLeast
 
-        internal fun counterKey(levelId: String?): String {
-            val q = if (quality == ProductQuality.ANY) "any" else quality.name.lowercase()
-            val s = if (scope == CountScope.CURRENT_LEVEL) {
-                levelId ?: GameEvent.UNKNOWN_SCOPE
-            } else {
-                GameEvent.ALL_SCOPE
-            }
-            return if (productId != null) "shipped.$q.$s.$productId" else "shipped.$q.$s"
-        }
+        internal fun counterKey(levelId: String?): String = CounterKeys.key(
+            "shipped",
+            scope.scopeSegment(levelId),
+            buildList {
+                if (quality != ProductQuality.ANY) add("quality" to quality.name.lowercase())
+                if (productId != null) add("product" to productId)
+            },
+        )
     }
 
     /**
      * Reads any counter an event accumulates, so an achievement over a new event needs no new
-     * condition type — only the [GameEvent.counterName] and, for a breakdown key, its suffix.
+     * condition type — only the [GameEvent.counterName] and, for a breakdown key, its
+     * `dimension.value` suffix (e.g. `"outcome.caught"`).
      */
     @Serializable @SerialName("counter")
     data class CounterAtLeast(
@@ -73,12 +73,8 @@ sealed interface Condition {
             (ctx.encounterProgress.counters[counterKey(ctx.currentLevelId)] ?: 0L) >= atLeast
 
         internal fun counterKey(levelId: String?): String {
-            val s = if (scope == CountScope.CURRENT_LEVEL) {
-                levelId ?: GameEvent.UNKNOWN_SCOPE
-            } else {
-                GameEvent.ALL_SCOPE
-            }
-            return if (suffix != null) "$counterName.$s.$suffix" else "$counterName.$s"
+            val base = CounterKeys.key(counterName, scope.scopeSegment(levelId))
+            return if (suffix != null) "$base.$suffix" else base
         }
     }
 

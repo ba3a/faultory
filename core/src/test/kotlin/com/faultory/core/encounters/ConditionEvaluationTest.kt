@@ -49,21 +49,21 @@ class ConditionEvaluationTest {
     @Test
     fun `ProductsShipped false below threshold`() {
         val cond = Condition.ProductsShipped(ProductQuality.GOOD, CountScope.ALL_LEVELS, null, atLeast = 5)
-        val progress = EncounterProgress(counters = mapOf("shipped.good.__all__" to 4L))
+        val progress = EncounterProgress(counters = mapOf("shipped.__all__.quality.good" to 4L))
         assertFalse(cond.evaluate(ctx(progress = progress)))
     }
 
     @Test
     fun `ProductsShipped true at threshold`() {
         val cond = Condition.ProductsShipped(ProductQuality.GOOD, CountScope.ALL_LEVELS, null, atLeast = 5)
-        val progress = EncounterProgress(counters = mapOf("shipped.good.__all__" to 5L))
+        val progress = EncounterProgress(counters = mapOf("shipped.__all__.quality.good" to 5L))
         assertTrue(cond.evaluate(ctx(progress = progress)))
     }
 
     @Test
     fun `ProductsShipped with productId filter uses specific counter key`() {
         val cond = Condition.ProductsShipped(ProductQuality.ANY, CountScope.CURRENT_LEVEL, "ceramic-mug", atLeast = 3)
-        val progress = EncounterProgress(counters = mapOf("shipped.any.my-level.ceramic-mug" to 3L))
+        val progress = EncounterProgress(counters = mapOf("shipped.my-level.product.ceramic-mug" to 3L))
         assertTrue(cond.evaluate(ctx(progress = progress, levelId = "my-level")))
         assertFalse(cond.evaluate(ctx(progress = progress, levelId = "other-level")))
     }

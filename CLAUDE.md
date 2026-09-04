@@ -121,8 +121,10 @@ Systems publish through `ShopFloorEvents`, which stamps the current level on the
 null and never optional: `events.publish { SomethingHappenedEvent(…, levelId = it) }`.
 
 Continuous motion is deliberately not published — a product advancing one belt tile emits nothing.
-State transitions do. `counterName` values and the legacy `shipped.<quality>.<scope>` keys are
-persisted in `encounters.json`; treat them like JSON field names.
+State transitions do. `counterName` values are persisted in `encounters.json`; treat them like JSON
+field names. Breakdown keys are built by the `counters { total(); breakdown(dim, value) }` builder in
+`core.encounters.CounterKeys` — the single place their `<counterName>.<scope>.<dimension>.<value>`
+shape is assembled, shared by the event that writes and the `Condition` that reads.
 
 Full contract — which interface to implement, where and when to publish, and how counters are
 derived — is in the **`game-events`** skill (`.claude/skills/game-events/`). Load it whenever you
@@ -172,7 +174,7 @@ Modifying a `@Serializable` model: update the data class → update matching JSO
 
 ## Code quality
 
-- **Match the existing pattern first.** Before writing a new loader, resolver, renderer, or system, search for one that does the same job. If one exists, follow its exact structure and naming. Introducing a second idiom for the same problem makes the codebase harder to read and extend.
+- **Match the existing pattern first.** Before writing a new loader, resolver, renderer, or system, search for one that does the same job. If one exists, follow its exact structure and naming. Introducing a second idiom for the same problem makes the codebase harder to read and extend. When the pattern itself no longer fits the new work, the fix is to change the pattern everywhere, not to run two — see **Refactoring**.
 - **Abstract duplicated logic.** When two or more classes share near-identical method bodies, extract a parameterised base class or helper and have each concrete class extend or delegate. The `JsonAsynchronousAssetLoader<T>` base class is the canonical example: four loaders that each decoded JSON were collapsed into one base class and four two-line subclasses.
 - **detekt is the floor, not the ceiling.** `config/detekt/detekt.yml` holds the shared rule set on
   top of detekt's defaults; `config/detekt/baseline-<module>.xml` absorbs the findings that predate
@@ -180,6 +182,38 @@ Modifying a `@Serializable` model: update the data class → update matching JSO
   regenerate a baseline (`./gradlew.bat detektBaseline`) when you have deliberately accepted a new
   class of finding — never to silence one you introduced.
 - **SOLID — weighted for this codebase.** Apply Single Responsibility (each class has one reason to change), Interface Segregation (prefer narrow interfaces over fat ones), and Dependency Inversion (depend on abstractions passed in, not on concrete singletons constructed inside a class). Open/Closed and Liskov follow naturally. When a refactor conflicts with these, prefer S then I then D.
+
+## Refactoring
+
+The project is pre-release: no shipped builds, no player saves in the wild, no outside consumers.
+**There is no backwards compatibility to keep.** When a shape is wrong, change it outright — no
+deprecation shims, no migration code, no compatibility aliases, no second code path kept "just in
+case" — and delete the old way in the same commit. (The save and content format still moves as a
+unit — `@Serializable` model, `assets/*.json`, loader and tests change together, per **Adding New
+Features** — but nothing has to keep reading an older shape.)
+
+In this phase, prefer consistency, efficiency and cleanliness over speed of delivery. There is
+budget for maintainable code: a change that lands later but leaves the codebase uniform beats one
+that ships today and leaves a wart. This is not a licence to gold-plate — it means that when the
+choice is between bolting a special case onto the current shape and reworking that shape so the new
+code belongs, take the rework.
+
+So when a feature touches existing code:
+
+- **It fits the surrounding idiom** → mirror the neighbours (**Match the existing pattern first**,
+  above).
+- **It doesn't fit** — a parameter half the call sites suddenly need, a class that has grown a
+  second reason to change, an abstraction that no longer spans its cases → refactor the existing
+  code first, then add the feature to the corrected shape.
+
+When a refactor clears out a mistake that could be made again, leave something behind so it isn't:
+
+- **Prefer an enforcing test.** The codebase already works this way — `SimulationScheduleTest`,
+  `SkinActionCatalogTest`, `SpriteActionTest`, `CaptureIsolationTest` and `CounterKeysTest` each
+  lock an invariant that a past refactor established.
+- **Otherwise, or as well, write it down** — a line under **Constraints** below, or in the relevant
+  section, giving the rule and the reason. Most "do not …" entries in this file exist because the
+  mistake was already made once.
 
 ## Constraints
 

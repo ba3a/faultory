@@ -33,10 +33,11 @@ sealed interface GameEvent {
      * Counter keys bumped once per occurrence, already scoped.
      *
      * The default gives an all-levels total and a per-level total, which is what a plain
-     * "how many times did X happen" achievement needs. Override to add breakdown keys, and keep
-     * them in the `<counterName>.<scope>.<suffix>` shape that [Condition.CounterAtLeast] reads.
+     * "how many times did X happen" achievement needs. Override with [counters] to add breakdown
+     * keys — `counters(scope) { total(); breakdown("reason", reason) }` — each in the
+     * `<counterName>.<scope>.<dimension>.<value>` shape that [Condition.CounterAtLeast] reads.
      */
-    fun counterKeys(scope: String): List<String> = keysFor(counterName, scope)
+    fun counterKeys(scope: String): List<String> = counters(scope) { total() }
 
     companion object {
         /** Scope segment for the across-all-levels total. */
@@ -44,12 +45,6 @@ sealed interface GameEvent {
 
         /** Scope segment used when an event carries no level (menus, boot). */
         const val UNKNOWN_SCOPE = "__unknown__"
-
-        /** The all-levels and per-level keys for one counter, with an optional breakdown suffix. */
-        fun keysFor(counterName: String, scope: String, suffix: String? = null): List<String> {
-            val tail = if (suffix == null) "" else ".$suffix"
-            return listOf("$counterName.$ALL_SCOPE$tail", "$counterName.$scope$tail")
-        }
     }
 }
 
@@ -89,10 +84,11 @@ data class LevelCompletedEvent(
 ) : GameEvent {
     override val counterName: String get() = "level.completed"
 
-    override fun counterKeys(scope: String): List<String> =
-        GameEvent.keysFor(counterName, scope) +
-            GameEvent.keysFor(counterName, scope, if (passed) "passed" else "failed") +
-            GameEvent.keysFor(counterName, scope, "stars$starsEarned")
+    override fun counterKeys(scope: String): List<String> = counters(scope) {
+        total()
+        breakdown("result", if (passed) "passed" else "failed")
+        breakdown("stars", starsEarned.toString())
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -113,9 +109,10 @@ data class CashEarnedEvent(
 ) : EconomyEvent {
     override val counterName: String get() = "cash.earned"
 
-    override fun counterKeys(scope: String): List<String> =
-        GameEvent.keysFor(counterName, scope) +
-            GameEvent.keysFor(counterName, scope, reason.name.lowercase())
+    override fun counterKeys(scope: String): List<String> = counters(scope) {
+        total()
+        breakdown("reason", reason)
+    }
 }
 
 data class CashSpentEvent(
@@ -125,9 +122,10 @@ data class CashSpentEvent(
 ) : EconomyEvent {
     override val counterName: String get() = "cash.spent"
 
-    override fun counterKeys(scope: String): List<String> =
-        GameEvent.keysFor(counterName, scope) +
-            GameEvent.keysFor(counterName, scope, reason.name.lowercase())
+    override fun counterKeys(scope: String): List<String> = counters(scope) {
+        total()
+        breakdown("reason", reason)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -143,9 +141,10 @@ data class ObjectPlacedEvent(
 ) : ActorEvent {
     override val counterName: String get() = "object.placed"
 
-    override fun counterKeys(scope: String): List<String> =
-        GameEvent.keysFor(counterName, scope) +
-            GameEvent.keysFor(counterName, scope, catalogId)
+    override fun counterKeys(scope: String): List<String> = counters(scope) {
+        total()
+        breakdown("catalog", catalogId)
+    }
 }
 
 data class ObjectRotatedEvent(
@@ -167,9 +166,10 @@ data class ObjectUpgradedEvent(
 ) : ActorEvent {
     override val counterName: String get() = "object.upgraded"
 
-    override fun counterKeys(scope: String): List<String> =
-        GameEvent.keysFor(counterName, scope) +
-            GameEvent.keysFor(counterName, scope, toCatalogId)
+    override fun counterKeys(scope: String): List<String> = counters(scope) {
+        total()
+        breakdown("catalog", toCatalogId)
+    }
 }
 
 enum class WorkerAssignmentKind {
@@ -186,9 +186,10 @@ data class WorkerAssignedEvent(
 ) : ActorEvent {
     override val counterName: String get() = "worker.assigned"
 
-    override fun counterKeys(scope: String): List<String> =
-        GameEvent.keysFor(counterName, scope) +
-            GameEvent.keysFor(counterName, scope, assignment.name.lowercase())
+    override fun counterKeys(scope: String): List<String> = counters(scope) {
+        total()
+        breakdown("assignment", assignment)
+    }
 }
 
 data class WorkerAssignmentRejectedEvent(
@@ -200,9 +201,10 @@ data class WorkerAssignmentRejectedEvent(
 ) : ActorEvent {
     override val counterName: String get() = "worker.assignmentRejected"
 
-    override fun counterKeys(scope: String): List<String> =
-        GameEvent.keysFor(counterName, scope) +
-            GameEvent.keysFor(counterName, scope, reason.name.lowercase())
+    override fun counterKeys(scope: String): List<String> = counters(scope) {
+        total()
+        breakdown("reason", reason)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -228,10 +230,11 @@ data class ProductionCompletedEvent(
 ) : MachineEvent, ProductEvent {
     override val counterName: String get() = "production.completed"
 
-    override fun counterKeys(scope: String): List<String> =
-        GameEvent.keysFor(counterName, scope) +
-            GameEvent.keysFor(counterName, scope, faultReason?.name?.lowercase() ?: "good") +
-            GameEvent.keysFor(counterName, scope, productId)
+    override fun counterKeys(scope: String): List<String> = counters(scope) {
+        total()
+        breakdown("fault", faultReason?.name?.lowercase() ?: "good")
+        breakdown("product", productId)
+    }
 }
 
 /** A saboteur operator spoiled the batch a machine just started. */
@@ -259,9 +262,10 @@ data class MachineInputLoadedEvent(
 ) : MachineEvent, ProductEvent {
     override val counterName: String get() = "machine.inputLoaded"
 
-    override fun counterKeys(scope: String): List<String> =
-        GameEvent.keysFor(counterName, scope) +
-            GameEvent.keysFor(counterName, scope, source.name.lowercase())
+    override fun counterKeys(scope: String): List<String> = counters(scope) {
+        total()
+        breakdown("source", source)
+    }
 }
 
 /** An automatic producer absorbed a rejected product into its faulty inventory. */
@@ -318,9 +322,10 @@ data class ProductPickedUpEvent(
 ) : ActorEvent, ProductEvent {
     override val counterName: String get() = "product.pickedUp"
 
-    override fun counterKeys(scope: String): List<String> =
-        GameEvent.keysFor(counterName, scope) +
-            GameEvent.keysFor(counterName, scope, (workerRole?.name ?: "unassigned").lowercase())
+    override fun counterKeys(scope: String): List<String> = counters(scope) {
+        total()
+        breakdown("role", (workerRole?.name ?: "unassigned").lowercase())
+    }
 }
 
 /** [objectId] is the giver; the payload has already changed hands when this fires. */
@@ -335,9 +340,10 @@ data class ProductHandedOverEvent(
 ) : ActorEvent, ProductEvent {
     override val counterName: String get() = "product.handedOver"
 
-    override fun counterKeys(scope: String): List<String> =
-        GameEvent.keysFor(counterName, scope) +
-            GameEvent.keysFor(counterName, scope, (giverRole?.name ?: "unassigned").lowercase())
+    override fun counterKeys(scope: String): List<String> = counters(scope) {
+        total()
+        breakdown("role", (giverRole?.name ?: "unassigned").lowercase())
+    }
 }
 
 data class ProductDestroyedEvent(
@@ -359,21 +365,18 @@ data class ProductShippedEvent(
     override val counterName: String get() = "shipped"
 
     /**
-     * Also writes the legacy `shipped.<quality>.<scope>[.<productId>]` keys that
-     * [Condition.ProductsShipped] reads. They predate the uniform shape and are persisted in
-     * player saves, so they stay as they are.
+     * Beyond the totals, breaks down by [quality] (dropped when [ProductQuality.ANY] — that is
+     * just the total) and by [productId], plus the crossed `quality.<q>.product.<id>` key so
+     * [Condition.ProductsShipped] can ask for one quality of one product.
      */
     override fun counterKeys(scope: String): List<String> = buildList {
-        addAll(GameEvent.keysFor(counterName, scope))
-        val qualities = if (quality == ProductQuality.ANY) {
-            listOf("any")
-        } else {
-            listOf(quality.name.lowercase(), "any")
-        }
-        for (q in qualities) {
-            for (s in listOf(scope, GameEvent.ALL_SCOPE)) {
-                add("$counterName.$q.$s")
-                add("$counterName.$q.$s.$productId")
+        for (s in listOf(scope, GameEvent.ALL_SCOPE)) {
+            add(CounterKeys.key(counterName, s))
+            add(CounterKeys.key(counterName, s, listOf("product" to productId)))
+            if (quality != ProductQuality.ANY) {
+                val qualitySegment = "quality" to quality.name.lowercase()
+                add(CounterKeys.key(counterName, s, listOf(qualitySegment)))
+                add(CounterKeys.key(counterName, s, listOf(qualitySegment, "product" to productId)))
             }
         }
     }
@@ -425,9 +428,10 @@ data class QaInspectionCompletedEvent(
             else -> QaOutcome.PASSED
         }
 
-    override fun counterKeys(scope: String): List<String> =
-        GameEvent.keysFor(counterName, scope) +
-            GameEvent.keysFor(counterName, scope, outcome.name.lowercase())
+    override fun counterKeys(scope: String): List<String> = counters(scope) {
+        total()
+        breakdown("outcome", outcome)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -543,9 +547,10 @@ data class InteractionStartedEvent(
 ) : ActorEvent {
     override val counterName: String get() = "interaction.started"
 
-    override fun counterKeys(scope: String): List<String> =
-        GameEvent.keysFor(counterName, scope) +
-            GameEvent.keysFor(counterName, scope, definitionId)
+    override fun counterKeys(scope: String): List<String> = counters(scope) {
+        total()
+        breakdown("definition", definitionId)
+    }
 }
 
 data class InteractionCompletedEvent(

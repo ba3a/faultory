@@ -48,8 +48,8 @@ class GameEventCounterTest {
         val counters = engine.progress.counters
         assertEquals(1L, counters["object.placed.__all__"])
         assertEquals(1L, counters["object.placed.tutorial-shop"])
-        assertEquals(1L, counters["object.placed.__all__.bench-assembler"])
-        assertEquals(1L, counters["object.placed.tutorial-shop.bench-assembler"])
+        assertEquals(1L, counters["object.placed.__all__.catalog.bench-assembler"])
+        assertEquals(1L, counters["object.placed.tutorial-shop.catalog.bench-assembler"])
     }
 
     @Test
@@ -67,7 +67,7 @@ class GameEventCounterTest {
     }
 
     @Test
-    fun `shipped keeps the legacy quality keys that authored conditions read`() {
+    fun `shipped breaks down by quality and product, and crosses the two`() {
         val bus = EventBus()
         val engine = engine(bus)
         engine.currentLevelId = "tutorial-shop"
@@ -82,22 +82,25 @@ class GameEventCounterTest {
         )
 
         val counters = engine.progress.counters
-        assertEquals(1L, counters["shipped.good.tutorial-shop"])
-        assertEquals(1L, counters["shipped.any.__all__"])
-        assertEquals(1L, counters["shipped.good.tutorial-shop.ceramic-mug"])
-        // …and the uniform total that CounterAtLeast can read without knowing the legacy shape.
         assertEquals(1L, counters["shipped.__all__"])
+        assertEquals(1L, counters["shipped.tutorial-shop"])
+        assertEquals(1L, counters["shipped.tutorial-shop.quality.good"])
+        assertEquals(1L, counters["shipped.tutorial-shop.product.ceramic-mug"])
+        assertEquals(1L, counters["shipped.tutorial-shop.quality.good.product.ceramic-mug"])
     }
 
     @Test
-    fun `duplicate keys are only counted once`() {
+    fun `overlapping keys are only counted once`() {
         val bus = EventBus()
         val engine = engine(bus)
 
-        // No level anywhere: the per-level and all-levels keys would otherwise collide.
-        bus.publish(ProductShippedEvent("product-1", "ceramic-mug", ProductQuality.ANY, levelId = null))
+        // A shipment already scoped to the all-levels sentinel makes the per-scope and all-levels
+        // keys identical; the engine must fold them, not double-count.
+        bus.publish(
+            ProductShippedEvent("product-1", "ceramic-mug", ProductQuality.ANY, levelId = GameEvent.ALL_SCOPE)
+        )
 
-        assertEquals(1L, engine.progress.counters["shipped.any.__all__"])
+        assertEquals(1L, engine.progress.counters["shipped.__all__"])
     }
 
     @Test
@@ -109,7 +112,7 @@ class GameEventCounterTest {
         val condition = Condition.CounterAtLeast(
             counterName = "qa.completed",
             scope = CountScope.CURRENT_LEVEL,
-            suffix = "false_positive",
+            suffix = "outcome.false_positive",
             atLeast = 2
         )
         val ctx = { EvaluationContext(
