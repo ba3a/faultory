@@ -87,7 +87,6 @@ internal class ShopFloorState(
     private val operatorWorkerByMachineId: HashMap<String, PlacedShopObject.Worker> = HashMap()
     private val productByBeltTile: HashMap<TileCoordinate, ShopProduct> = HashMap()
 
-    private var tileOccupancyDirty: Boolean = true
     private val placedObjectIdByTile: HashMap<TileCoordinate, String> = HashMap()
     private val productIdByTile: HashMap<TileCoordinate, String> = HashMap()
     private val occupiedTilesByObjectId: HashMap<String, Set<TileCoordinate>> = HashMap()
@@ -105,7 +104,7 @@ internal class ShopFloorState(
 
     init {
         placedObjectsIndex.addMutationListener { old, new ->
-            tileOccupancyDirty = true
+            updatePlacedObjectTileIndex(old, new)
             if (old != null) occupiedTilesByObjectId.remove(old.id)
             if (old is PlacedShopObject.Machine) {
                 slotPositionsByObjectId.remove(old.id)
@@ -118,7 +117,7 @@ internal class ShopFloorState(
             updateKindIndex(old, new)
         }
         activeProductsIndex.addMutationListener { old, new ->
-            tileOccupancyDirty = true
+            updateProductTileIndex(old, new)
             updateProductByBeltTileIndex(old, new)
         }
         rebuildSecondaryIndicesFromScratch()
@@ -190,11 +189,34 @@ internal class ShopFloorState(
         }
     }
 
+    private fun updatePlacedObjectTileIndex(old: PlacedShopObject?, new: PlacedShopObject?) {
+        if (old != null) {
+            for (tile in computeOccupiedTiles(old)) {
+                if (placedObjectIdByTile[tile] == old.id) placedObjectIdByTile.remove(tile)
+            }
+        }
+        if (new != null) {
+            for (tile in computeOccupiedTiles(new)) {
+                placedObjectIdByTile[tile] = new.id
+            }
+        }
+    }
+
+    private fun updateProductTileIndex(old: ShopProduct?, new: ShopProduct?) {
+        if (old != null && old.state != ShopProductState.CARRIED && old.tile != null) {
+            if (productIdByTile[old.tile] == old.id) productIdByTile.remove(old.tile)
+        }
+        if (new != null && new.state != ShopProductState.CARRIED && new.tile != null) {
+            productIdByTile[new.tile] = new.id
+        }
+    }
+
     private fun rebuildSecondaryIndicesFromScratch() {
         operatorWorkerByMachineId.clear()
         _placedMachines.clear()
         _placedWorkers.clear()
         _placedSecurityWorkers.clear()
+        placedObjectIdByTile.clear()
         for (placed in placedObjectsIndex) {
             when (placed) {
                 is PlacedShopObject.Machine -> _placedMachines += placed
@@ -207,31 +229,20 @@ internal class ShopFloorState(
                     }
                 }
             }
+            for (tile in computeOccupiedTiles(placed)) {
+                placedObjectIdByTile[tile] = placed.id
+            }
         }
         productByBeltTile.clear()
+        productIdByTile.clear()
         for (product in activeProductsIndex) {
             if (product.state == ShopProductState.ON_BELT && product.tile != null) {
                 productByBeltTile[product.tile] = product
             }
-        }
-        tileOccupancyDirty = true
-    }
-
-    private fun ensureTileOccupancyIndex() {
-        if (!tileOccupancyDirty) return
-        placedObjectIdByTile.clear()
-        for (placed in placedObjectsIndex) {
-            for (tile in occupiedTilesFor(placed)) {
-                placedObjectIdByTile[tile] = placed.id
-            }
-        }
-        productIdByTile.clear()
-        for (product in activeProductsIndex) {
             if (product.state != ShopProductState.CARRIED && product.tile != null) {
                 productIdByTile[product.tile] = product.id
             }
         }
-        tileOccupancyDirty = false
     }
 
     var nextObjectSequence: Int = initialContent.placements
@@ -287,7 +298,6 @@ internal class ShopFloorState(
         machineRecipeStatesIndex.byId(machineId)
 
     fun objectAtTile(tile: TileCoordinate): PlacedShopObject? {
-        ensureTileOccupancyIndex()
         val id = placedObjectIdByTile[tile] ?: return null
         return placedObjectsIndex.byId(id)
     }
@@ -335,7 +345,6 @@ internal class ShopFloorState(
         ignoreObjectId: String?,
         ignoreProductId: String?
     ): Boolean {
-        ensureTileOccupancyIndex()
         val occupyingObjectId = placedObjectIdByTile[tile]
         if (occupyingObjectId != null && occupyingObjectId != ignoreObjectId) {
             return true
@@ -350,20 +359,42 @@ internal class ShopFloorState(
     override fun blockedTilesForPath(
         ignoreWorkerId: String?,
         ignoreCarriedProductId: String?
-    ): Set<TileCoordinate> {
-        ensureTileOccupancyIndex()
-        return buildSet {
-            placedObjectIdByTile.forEach { (tile, objectId) ->
-                if (objectId != ignoreWorkerId) add(tile)
-            }
-            productIdByTile.forEach { (tile, productId) ->
-                if (productId != ignoreCarriedProductId) add(tile)
-            }
+    ): Set<TileCoordinate> = BlockedTilesView(ignoreWorkerId, ignoreCarriedProductId)
+
+    /**
+     * A live, read-only view over [placedObjectIdByTile] / [productIdByTile] filtered by the two
+     * ignored ids — avoids copying the whole occupancy map on every pathfinding call. `contains` is
+     * the only member every real caller (`ShortestPathFinder`, `StraightLineRoamer`) exercises, and
+     * it is O(1) against the live maps; `iterator`/`size` are implemented for `Set` contract
+     * correctness even though nothing on the hot path needs them.
+     */
+    private inner class BlockedTilesView(
+        private val ignoreWorkerId: String?,
+        private val ignoreCarriedProductId: String?
+    ) : AbstractSet<TileCoordinate>() {
+        override fun contains(element: TileCoordinate): Boolean {
+            val objectId = placedObjectIdByTile[element]
+            if (objectId != null && objectId != ignoreWorkerId) return true
+            val productId = productIdByTile[element]
+            return productId != null && productId != ignoreCarriedProductId
         }
+
+        override fun iterator(): Iterator<TileCoordinate> {
+            val objectTiles = placedObjectIdByTile.asSequence()
+                .filter { (_, id) -> id != ignoreWorkerId }
+                .map { (tile, _) -> tile }
+            val productTiles = productIdByTile.asSequence()
+                .filter { (_, id) -> id != ignoreCarriedProductId }
+                .map { (tile, _) -> tile }
+            return (objectTiles + productTiles).distinct().iterator()
+        }
+
+        // NOT `count()`: that extension fast-paths to `this.size` for any `Collection` receiver,
+        // which would recurse into this getter. Counting the iterator directly avoids that trap.
+        override val size: Int get() = iterator().asSequence().count()
     }
 
     override fun placedObjectsAdjacentTo(tile: TileCoordinate): List<PlacedShopObject> {
-        ensureTileOccupancyIndex()
         return grid.orthogonalNeighbors(tile)
             .mapNotNull { neighbor -> placedObjectIdByTile[neighbor] }
             .distinct()
@@ -371,7 +402,6 @@ internal class ShopFloorState(
     }
 
     override fun productsAdjacentTo(tile: TileCoordinate): List<ShopProduct> {
-        ensureTileOccupancyIndex()
         return grid.orthogonalNeighbors(tile)
             .mapNotNull { neighbor -> productIdByTile[neighbor]?.let { activeProductsIndex.byId(it) } }
     }
