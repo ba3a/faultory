@@ -11,6 +11,7 @@ import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
 import com.faultory.core.shop.UnitPhase
+import com.faultory.core.shop.WorkerAnimationState
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -102,10 +103,9 @@ class ProductActionResolverTest {
         val product = carriedProduct()
         val shopFloor = shopFloor(
             products = listOf(product),
-            placements = listOf(
-                worker(orientation = Orientation.WEST).copy(unitPhase = UnitPhase.DESTROYING_PRODUCT)
-            ),
-            inspections = listOf(inspection(product.id))
+            placements = listOf(worker(orientation = Orientation.WEST)),
+            inspections = listOf(inspection(product.id)),
+            workerAnimations = mapOf("worker-1" to WorkerAnimationState(unitPhase = UnitPhase.DESTROYING_PRODUCT))
         )
 
         assertEquals(SpriteAction.DESTROYING.id, ProductActionResolver.actionFor(shopFloor, product))
@@ -145,7 +145,8 @@ class ProductActionResolverTest {
     private fun shopFloor(
         products: List<ShopProduct> = emptyList(),
         placements: List<PlacedShopObject> = emptyList(),
-        inspections: List<QaInspectionState> = emptyList()
+        inspections: List<QaInspectionState> = emptyList(),
+        workerAnimations: Map<String, WorkerAnimationState> = emptyMap()
     ) = ShopFloor(
         blueprint = ShopBlueprint(
             id = "test",
@@ -165,6 +166,7 @@ class ProductActionResolverTest {
         machineSpecsById = emptyMap(),
         initialPlacements = placements,
         initialProducts = products,
-        initialQaInspectionStates = inspections
+        initialQaInspectionStates = inspections,
+        initialWorkerAnimationStates = workerAnimations
     )
 }

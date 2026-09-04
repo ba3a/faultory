@@ -19,6 +19,7 @@ import com.faultory.core.shop.ShopGrid
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
+import com.faultory.core.shop.WorkerAnimationState
 
 /**
  * The whole mutable shop floor plus its secondary indexes. Systems never see this type: each takes
@@ -30,11 +31,7 @@ internal class ShopFloorState(
     override val grid: ShopGrid,
     override val machineSpecsById: Map<String, MachineSpec>,
     override val productDefinitionsById: Map<String, ProductDefinition>,
-    initialPlacements: List<PlacedShopObject>,
-    initialProducts: List<ShopProduct>,
-    initialMachineProductionStates: List<MachineProductionState>,
-    initialQaInspectionStates: List<QaInspectionState>,
-    initialMachineRecipeStates: List<MachineRecipeState>,
+    initialContent: ShopFloorInitialContent = ShopFloorInitialContent(),
     initialCash: Int,
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) : CleanerSpawnAccess,
@@ -54,28 +51,28 @@ internal class ShopFloorState(
     // Exposed as the concrete type so systems can reach id→index in O(1) (indexOfId / replaceById)
     // instead of an `indexOfFirst { it.id == … }` scan on the per-frame path.
     private val placedObjectsIndex: IdIndexedMutableList<PlacedShopObject> =
-        IdIndexedMutableList(initialPlacements) { it.id }
+        IdIndexedMutableList(initialContent.placements) { it.id }
     override val mutablePlacedObjects: IdIndexedMutableList<PlacedShopObject> = placedObjectsIndex
     override val placedObjects: List<PlacedShopObject> get() = placedObjectsIndex
 
     private val activeProductsIndex: IdIndexedMutableList<ShopProduct> =
-        IdIndexedMutableList(initialProducts) { it.id }
+        IdIndexedMutableList(initialContent.products) { it.id }
     override val mutableActiveProducts: IdIndexedMutableList<ShopProduct> = activeProductsIndex
     override val activeProducts: List<ShopProduct> get() = activeProductsIndex
 
     private val machineProductionStatesIndex: IdIndexedMutableList<MachineProductionState> =
-        IdIndexedMutableList(initialMachineProductionStates) { it.machineId }
+        IdIndexedMutableList(initialContent.machineProductionStates) { it.machineId }
     override val mutableMachineProductionStates: IdIndexedMutableList<MachineProductionState> =
         machineProductionStatesIndex
     override val machineProductionStates: List<MachineProductionState> get() = machineProductionStatesIndex
 
     private val qaInspectionStatesIndex: IdIndexedMutableList<QaInspectionState> =
-        IdIndexedMutableList(initialQaInspectionStates) { it.inspectorObjectId }
+        IdIndexedMutableList(initialContent.qaInspectionStates) { it.inspectorObjectId }
     override val mutableQaInspectionStates: IdIndexedMutableList<QaInspectionState> = qaInspectionStatesIndex
     override val qaInspectionStates: List<QaInspectionState> get() = qaInspectionStatesIndex
 
     private val machineRecipeStatesIndex: IdIndexedMutableList<MachineRecipeState> =
-        IdIndexedMutableList(initialMachineRecipeStates) { it.machineId }
+        IdIndexedMutableList(initialContent.machineRecipeStates) { it.machineId }
     override val mutableMachineRecipeStates: IdIndexedMutableList<MachineRecipeState> = machineRecipeStatesIndex
     override val machineRecipeStates: List<MachineRecipeState> get() = machineRecipeStatesIndex
 
@@ -95,6 +92,8 @@ internal class ShopFloorState(
     private val productIdByTile: HashMap<TileCoordinate, String> = HashMap()
     private val occupiedTilesByObjectId: HashMap<String, Set<TileCoordinate>> = HashMap()
     private val slotPositionsByObjectId: HashMap<String, HashMap<MachineSlotType?, List<MachineSlotPosition>>> = HashMap()
+    private val workerAnimationStatesByWorkerId: HashMap<String, WorkerAnimationState> =
+        HashMap(initialContent.workerAnimationStates)
 
     private val _placedMachines: MutableList<PlacedShopObject.Machine> = mutableListOf()
     private val _placedWorkers: MutableList<PlacedShopObject.Worker> = mutableListOf()
@@ -111,6 +110,9 @@ internal class ShopFloorState(
             if (old is PlacedShopObject.Machine) {
                 slotPositionsByObjectId.remove(old.id)
                 if (new == null) machineRecipeStatesIndex.removeAll { it.machineId == old.id }
+            }
+            if (old is PlacedShopObject.Worker && new == null) {
+                workerAnimationStatesByWorkerId.remove(old.id)
             }
             updateOperatorWorkerIndex(old, new)
             updateKindIndex(old, new)
@@ -232,17 +234,17 @@ internal class ShopFloorState(
         tileOccupancyDirty = false
     }
 
-    var nextObjectSequence: Int = initialPlacements
+    var nextObjectSequence: Int = initialContent.placements
         .mapNotNull { sequenceOf(it.id) }
         .maxOrNull()
         ?.plus(1)
         ?: 1
 
     var nextProductSequence: Int = buildList {
-        addAll(initialProducts.mapNotNull { sequenceOf(it.id) })
-        addAll(initialMachineProductionStates.mapNotNull { sequenceOf(it.productInstanceId) })
+        addAll(initialContent.products.mapNotNull { sequenceOf(it.id) })
+        addAll(initialContent.machineProductionStates.mapNotNull { sequenceOf(it.productInstanceId) })
         addAll(
-            initialMachineRecipeStates.flatMap { state ->
+            initialContent.machineRecipeStates.flatMap { state ->
                 state.outputQueue.mapNotNull { sequenceOf(it.productInstanceId) }
             }
         )
@@ -409,6 +411,18 @@ internal class ShopFloorState(
                 movementProgress = 0f
             )
         }
+    }
+
+    override fun animationStateFor(workerId: String): WorkerAnimationState =
+        workerAnimationStatesByWorkerId[workerId] ?: WorkerAnimationState()
+
+    override fun updateAnimation(
+        workerId: String,
+        transform: (WorkerAnimationState) -> WorkerAnimationState
+    ): WorkerAnimationState {
+        val updated = transform(workerAnimationStatesByWorkerId[workerId] ?: WorkerAnimationState())
+        workerAnimationStatesByWorkerId[workerId] = updated
+        return updated
     }
 
     override fun createProductId(): String {

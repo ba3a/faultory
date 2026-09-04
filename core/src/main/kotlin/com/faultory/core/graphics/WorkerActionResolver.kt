@@ -5,6 +5,7 @@ import com.faultory.core.shop.InteractionRole
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.UnitPhase
+import com.faultory.core.shop.WorkerAnimationState
 
 object WorkerActionResolver {
     /**
@@ -14,19 +15,20 @@ object WorkerActionResolver {
      */
     fun actionFor(
         placedObject: PlacedShopObject.Worker,
+        animation: WorkerAnimationState,
         catalogLookup: (String) -> InteractionDefinition? = { null }
     ): String {
         // A unit phase outranks everything: it is involuntary and the worker is off its feet, so
         // no other state it was in still describes what it is doing.
-        placedObject.unitPhase?.let { return actionFor(it) }
+        animation.unitPhase?.let { return actionFor(it) }
 
         // An interaction outranks belt phase and walking: both participants stand still for its
         // duration, so whatever they were doing before is no longer what they are doing.
-        placedObject.interaction
+        animation.interaction
             ?.let { catalogLookup(it.definitionId)?.let { definition -> definition to it.role } }
             ?.let { (definition, role) -> return actionFor(definition, role) }
 
-        return when (placedObject.beltRidePhase) {
+        return when (animation.beltRidePhase) {
             BeltRidePhase.ENTERING -> SpriteAction.BELT_ENTER.id
             BeltRidePhase.RIDING -> SpriteAction.BELT_RIDE.id
             BeltRidePhase.EXITING -> SpriteAction.BELT_EXIT.id
@@ -55,10 +57,10 @@ object WorkerActionResolver {
         InteractionRole.RECIPIENT -> definition.recipientAction
     }
 
-    fun orientationFor(placedObject: PlacedShopObject.Worker): Orientation {
+    fun orientationFor(placedObject: PlacedShopObject.Worker, animation: WorkerAnimationState): Orientation {
         // Interacting workers were turned to face each other when the pairing began, and hold
         // still, so the placed orientation is already the right one.
-        if (placedObject.interaction != null) {
+        if (animation.interaction != null) {
             return placedObject.orientation
         }
 

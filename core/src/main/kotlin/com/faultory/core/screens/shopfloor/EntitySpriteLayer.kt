@@ -80,29 +80,32 @@ class EntitySpriteLayer(
      */
     private fun buildRenderGroups(ctx: ShopFloorRenderContext) {
         for (placedObject in ctx.frame.placedObjects) {
-            if (placedObject.id in groupsByObjectId) {
-                continue
+            if (placedObject.id !in groupsByObjectId) {
+                registerRenderGroup(ctx, placedObject)
             }
-            val interaction = (placedObject as? PlacedShopObject.Worker)?.interaction ?: continue
-            val definition = shopFloor.interactionDefinitionFor(interaction.definitionId) ?: continue
-            if (definition.layerOrder.isEmpty()) {
-                continue
-            }
-            val partner = shopFloor.findObjectById(interaction.partnerObjectId) ?: continue
-
-            val isInitiator = interaction.role == InteractionRole.INITIATOR
-            val group = InteractionRenderGroup(
-                definition = definition,
-                initiatorId = if (isInitiator) placedObject.id else partner.id,
-                recipientId = if (isInitiator) partner.id else placedObject.id,
-                payloadProductId = interaction.payloadProductId,
-                anchor = listOf(placedObject, partner)
-                    .map { ctx.frame.renderPositionOf(it) }
-                    .minWith(compareBy({ it.worldY }, { it.worldX }))
-            )
-            groupsByObjectId[placedObject.id] = group
-            groupsByObjectId[partner.id] = group
         }
+    }
+
+    /** Pairs [placedObject] with its interaction partner into one [InteractionRenderGroup], if any. */
+    private fun registerRenderGroup(ctx: ShopFloorRenderContext, placedObject: PlacedShopObject) {
+        if (placedObject !is PlacedShopObject.Worker) return
+        val interaction = shopFloor.workerAnimationState(placedObject.id).interaction ?: return
+        val definition = shopFloor.interactionDefinitionFor(interaction.definitionId) ?: return
+        if (definition.layerOrder.isEmpty()) return
+        val partner = shopFloor.findObjectById(interaction.partnerObjectId) ?: return
+
+        val isInitiator = interaction.role == InteractionRole.INITIATOR
+        val group = InteractionRenderGroup(
+            definition = definition,
+            initiatorId = if (isInitiator) placedObject.id else partner.id,
+            recipientId = if (isInitiator) partner.id else placedObject.id,
+            payloadProductId = interaction.payloadProductId,
+            anchor = listOf(placedObject, partner)
+                .map { ctx.frame.renderPositionOf(it) }
+                .minWith(compareBy({ it.worldY }, { it.worldX }))
+        )
+        groupsByObjectId[placedObject.id] = group
+        groupsByObjectId[partner.id] = group
     }
 
     private fun planPlacedObjects(ctx: ShopFloorRenderContext, skinRegistry: SkinRegistry, delta: Float) {
@@ -249,7 +252,8 @@ class EntitySpriteLayer(
         frame: SkinFrameLookup.ResolvedFrame,
         held: SpritePlacement
     ): SpritePlacement {
-        val interaction = (holder as? PlacedShopObject.Worker)?.interaction
+        val interaction = (holder as? PlacedShopObject.Worker)
+            ?.let { shopFloor.workerAnimationState(it.id).interaction }
             ?.takeIf { it.payloadProductId == product.id } ?: return held
         val fraction = handoverFraction(
             elapsedSeconds = interaction.elapsedSeconds,
@@ -357,12 +361,17 @@ class EntitySpriteLayer(
 
     private fun actionFor(placedObject: PlacedShopObject): String = when (placedObject) {
         is PlacedShopObject.Machine -> MachineActionResolver.actionFor(shopFloor, placedObject)
-        is PlacedShopObject.Worker -> WorkerActionResolver.actionFor(placedObject, shopFloor::interactionDefinitionFor)
+        is PlacedShopObject.Worker -> WorkerActionResolver.actionFor(
+            placedObject,
+            shopFloor.workerAnimationState(placedObject.id),
+            shopFloor::interactionDefinitionFor
+        )
     }
 
     private fun orientationFor(placedObject: PlacedShopObject): Orientation = when (placedObject) {
         is PlacedShopObject.Machine -> placedObject.orientation
-        is PlacedShopObject.Worker -> WorkerActionResolver.orientationFor(placedObject)
+        is PlacedShopObject.Worker ->
+            WorkerActionResolver.orientationFor(placedObject, shopFloor.workerAnimationState(placedObject.id))
     }
 
     private fun skinDefinitionFor(placedObject: PlacedShopObject, skinRegistry: SkinRegistry): SkinDefinition? {

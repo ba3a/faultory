@@ -11,6 +11,7 @@ import com.faultory.core.shop.ShopGrid
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
+import com.faultory.core.shop.WorkerAnimationState
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -25,8 +26,8 @@ class InteractionControllerTest {
 
         assertTrue(fixture.begin())
 
-        val giver = assertNotNull(fixture.objectById(GIVER).interaction)
-        val taker = assertNotNull(fixture.objectById(TAKER).interaction)
+        val giver = assertNotNull(fixture.animationOf(GIVER).interaction)
+        val taker = assertNotNull(fixture.animationOf(TAKER).interaction)
         assertEquals(InteractionRole.INITIATOR, giver.role)
         assertEquals(InteractionRole.RECIPIENT, taker.role)
         assertEquals(TAKER, giver.partnerObjectId)
@@ -87,9 +88,9 @@ class InteractionControllerTest {
 
         fixture.advance(seconds = 1.5f)
 
-        assertNull(fixture.objectById(GIVER).interaction)
-        assertNull(fixture.objectById(TAKER).interaction)
-        assertFalse(fixture.objectById(GIVER).isBusy)
+        assertNull(fixture.animationOf(GIVER).interaction)
+        assertNull(fixture.animationOf(TAKER).interaction)
+        assertFalse(fixture.animationOf(GIVER).isBusy)
     }
 
     @Test
@@ -102,8 +103,8 @@ class InteractionControllerTest {
         fixture.remove(TAKER)
         fixture.advance(seconds = 0.05f)
 
-        assertNull(fixture.objectById(GIVER).interaction)
-        assertFalse(fixture.objectById(GIVER).isBusy)
+        assertNull(fixture.animationOf(GIVER).interaction)
+        assertFalse(fixture.animationOf(GIVER).isBusy)
         assertEquals(PRODUCT, fixture.objectById(GIVER).carriedProductId)
     }
 
@@ -114,7 +115,7 @@ class InteractionControllerTest {
 
         assertFalse(fixture.begin(initiator = GIVER, recipient = BYSTANDER))
         assertFalse(fixture.begin(initiator = BYSTANDER, recipient = TAKER))
-        assertNull(fixture.objectById(BYSTANDER).interaction)
+        assertNull(fixture.animationOf(BYSTANDER).interaction)
     }
 
     @Test
@@ -122,7 +123,7 @@ class InteractionControllerTest {
         val fixture = fixture()
 
         assertFalse(fixture.begin(initiator = GIVER, recipient = GIVER))
-        assertNull(fixture.objectById(GIVER).interaction)
+        assertNull(fixture.animationOf(GIVER).interaction)
     }
 
     @Test
@@ -134,7 +135,7 @@ class InteractionControllerTest {
         fixture.advance(seconds = InteractionController.FALLBACK_DURATION_SECONDS + 0.1f)
 
         assertEquals(PRODUCT, fixture.objectById(TAKER).carriedProductId)
-        assertNull(fixture.objectById(GIVER).interaction)
+        assertNull(fixture.animationOf(GIVER).interaction)
     }
 
     @Test
@@ -144,7 +145,7 @@ class InteractionControllerTest {
         assertTrue(fixture.begin(payload = null))
         fixture.advance(seconds = 1.5f)
 
-        assertNull(fixture.objectById(GIVER).interaction)
+        assertNull(fixture.animationOf(GIVER).interaction)
         assertEquals(PRODUCT, fixture.objectById(GIVER).carriedProductId)
     }
 
@@ -171,23 +172,22 @@ class InteractionControllerTest {
             grid = ShopGrid(blueprint()),
             machineSpecsById = emptyMap(),
             productDefinitionsById = emptyMap(),
-            initialPlacements = placements,
-            initialProducts = listOf(
-                ShopProduct(
-                    id = PRODUCT,
-                    productId = "ceramic-mug",
-                    sourceMachineId = "supply",
-                    state = ShopProductState.CARRIED,
-                    carrierWorkerId = GIVER,
-                    holderObjectId = GIVER
+            initialContent = ShopFloorInitialContent(
+                placements = placements,
+                products = listOf(
+                    ShopProduct(
+                        id = PRODUCT,
+                        productId = "ceramic-mug",
+                        sourceMachineId = "supply",
+                        state = ShopProductState.CARRIED,
+                        carrierWorkerId = GIVER,
+                        holderObjectId = GIVER
+                    )
                 )
             ),
-            initialMachineProductionStates = emptyList(),
-            initialQaInspectionStates = emptyList(),
-            initialMachineRecipeStates = emptyList(),
             initialCash = 0
         )
-        return Fixture(state, InteractionController(state, state, catalogProvider = { catalog }))
+        return Fixture(state, InteractionController(state, state, state, catalogProvider = { catalog }))
     }
 
     private class Fixture(
@@ -214,6 +214,8 @@ class InteractionControllerTest {
                 state.mutablePlacedObjects.filterIsInstance<PlacedShopObject.Worker>().firstOrNull { it.id == id },
                 "no worker $id"
             )
+
+        fun animationOf(id: String): WorkerAnimationState = state.animationStateFor(id)
 
         fun productById(id: String): ShopProduct? =
             state.mutableActiveProducts.firstOrNull { it.id == id }

@@ -47,7 +47,7 @@ internal class CleanerSystem(
 
             emitWetTrailIfMoved(current)
 
-            if (current.isBusy) continue
+            if (access.animationStateFor(current.id).isBusy) continue
 
             if (current.carriedProductId == null) {
                 if (tryPickUpAdjacentProduct(freshIndex, current)) continue
@@ -58,7 +58,7 @@ internal class CleanerSystem(
                 if (tryHandProductToAdjacentWorker(freshIndex, current)) continue
                 if (current.movementPath.isEmpty()) {
                     if (!planDeliveryToNearestWorker(freshIndex, current)) {
-                        startDestroyingHeldProduct(freshIndex, current)
+                        startDestroyingHeldProduct(current)
                     }
                 }
             }
@@ -128,7 +128,7 @@ internal class CleanerSystem(
             .firstOrNull { other ->
                 other.id != cleaner.id &&
                     other.workerRole != WorkerRole.CLEANER &&
-                    !other.isBusy &&
+                    !access.animationStateFor(other.id).isBusy &&
                     other.carriedProductId == null
             } ?: return false
 
@@ -191,7 +191,7 @@ internal class CleanerSystem(
         return true
     }
 
-    private fun startDestroyingHeldProduct(cleanerIndex: Int, cleaner: PlacedShopObject.Worker) {
-        mutablePlacedObjects[cleanerIndex] = UnitPhaseSystem.startDestroyProduct(cleaner)
+    private fun startDestroyingHeldProduct(cleaner: PlacedShopObject.Worker) {
+        UnitPhaseSystem.startDestroyProduct(cleaner.id, access, access)
     }
 }

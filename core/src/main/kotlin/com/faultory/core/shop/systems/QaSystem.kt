@@ -18,6 +18,7 @@ import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.QaInspectionState
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
+import com.faultory.core.shop.UnitPhase
 import com.faultory.core.shop.TileCoordinate
 import com.faultory.core.shop.manhattanDistanceTo
 import kotlin.random.Random
@@ -282,11 +283,11 @@ internal class QaSystem(
         }
 
         val inspector = mutablePlacedObjects[inspectorIndex] as PlacedShopObject.Worker
-        if (inspector.unitPhase == com.faultory.core.shop.UnitPhase.DESTROYING_PRODUCT) {
+        if (access.animationStateFor(inspector.id).unitPhase == UnitPhase.DESTROYING_PRODUCT) {
             // Phase already running for this product — nothing to start.
             return false
         }
-        mutablePlacedObjects[inspectorIndex] = UnitPhaseSystem.startDestroyProduct(inspector)
+        UnitPhaseSystem.startDestroyProduct(inspector.id, access, access)
         return true
     }
 

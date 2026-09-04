@@ -37,11 +37,7 @@ class QaPostLocatorTest {
             grid = grid(),
             machineSpecsById = emptyMap(),
             productDefinitionsById = emptyMap(),
-            initialPlacements = placements,
-            initialProducts = emptyList(),
-            initialMachineProductionStates = emptyList(),
-            initialQaInspectionStates = emptyList(),
-            initialMachineRecipeStates = emptyList(),
+            initialContent = ShopFloorInitialContent(placements = placements),
             initialCash = 0
         )
         return QaPostLocator(state, state, state)

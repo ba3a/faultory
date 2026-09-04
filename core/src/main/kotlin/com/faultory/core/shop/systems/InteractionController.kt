@@ -48,6 +48,7 @@ internal interface InteractionStarter {
 internal class InteractionController(
     private val objects: PlacedObjectWrites,
     private val products: ProductWrites,
+    private val animations: WorkerAnimationWrites,
     private val catalogProvider: () -> InteractionCatalog?,
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) : InteractionStarter {
@@ -55,25 +56,28 @@ internal class InteractionController(
     private val mutableActiveProducts get() = products.mutableActiveProducts
 
     fun advanceAll(deltaSeconds: Float) {
-        if (mutablePlacedObjects.none { it is PlacedShopObject.Worker && it.interaction != null }) {
+        val noneInteracting = mutablePlacedObjects.none {
+            it is PlacedShopObject.Worker && animations.animationStateFor(it.id).interaction != null
+        }
+        if (noneInteracting) {
             return
         }
 
         for (index in mutablePlacedObjects.indices) {
             val placed = mutablePlacedObjects[index] as? PlacedShopObject.Worker ?: continue
-            val interaction = placed.interaction ?: continue
+            val interaction = animations.animationStateFor(placed.id).interaction ?: continue
             // The partner drives release: if it vanished mid-shift - removed between shifts, or
             // destroyed - the survivor would otherwise hold a payload nobody can take.
             if (objects.findObjectById(interaction.partnerObjectId) == null) {
-                releaseAbandoned(index, placed, interaction)
+                releaseAbandoned(placed, interaction)
             } else {
-                advance(index, placed, interaction, deltaSeconds)
+                advance(placed, interaction, deltaSeconds)
             }
         }
     }
 
-    private fun releaseAbandoned(index: Int, placed: PlacedShopObject.Worker, interaction: ActiveInteraction) {
-        mutablePlacedObjects[index] = placed.copy(interaction = null)
+    private fun releaseAbandoned(placed: PlacedShopObject.Worker, interaction: ActiveInteraction) {
+        animations.updateAnimation(placed.id) { it.copy(interaction = null) }
         events.publish {
             InteractionAbandonedEvent(
                 definitionId = interaction.definitionId,
@@ -85,7 +89,6 @@ internal class InteractionController(
     }
 
     private fun advance(
-        index: Int,
         placed: PlacedShopObject.Worker,
         interaction: ActiveInteraction,
         deltaSeconds: Float
@@ -101,11 +104,12 @@ internal class InteractionController(
             ticked.payloadTransferred
         }
 
-        val current = mutablePlacedObjects[index] as PlacedShopObject.Worker
-        mutablePlacedObjects[index] = if (ticked.isComplete) {
-            current.copy(interaction = null)
+        if (ticked.isComplete) {
+            animations.updateAnimation(placed.id) { it.copy(interaction = null) }
         } else {
-            current.copy(interaction = ticked.copy(payloadTransferred = transferred))
+            animations.updateAnimation(placed.id) {
+                it.copy(interaction = ticked.copy(payloadTransferred = transferred))
+            }
         }
 
         // Both sides tick their own clock, so - as with the transfer above - only the giver
@@ -179,7 +183,9 @@ internal class InteractionController(
         }
         val initiator = mutablePlacedObjects[initiatorIndex] as? PlacedShopObject.Worker ?: return false
         val recipient = mutablePlacedObjects[recipientIndex] as? PlacedShopObject.Worker ?: return false
-        if (initiator.interaction != null || recipient.interaction != null) {
+        if (animations.animationStateFor(initiatorId).interaction != null ||
+            animations.animationStateFor(recipientId).interaction != null
+        ) {
             return false
         }
 
@@ -191,29 +197,25 @@ internal class InteractionController(
         mutablePlacedObjects[initiatorIndex] = initiator.copy(
             movementPath = emptyList(),
             movementProgress = 0f,
-            orientation = facing ?: initiator.orientation,
-            interaction = ActiveInteraction(
-                definitionId = definitionId,
-                partnerObjectId = recipientId,
-                role = InteractionRole.INITIATOR,
-                payloadProductId = payloadProductId,
-                durationSeconds = duration,
-                transferSeconds = transfer
-            )
+            orientation = facing ?: initiator.orientation
         )
         mutablePlacedObjects[recipientIndex] = recipient.copy(
             movementPath = emptyList(),
             movementProgress = 0f,
-            orientation = facing?.opposite() ?: recipient.orientation,
-            interaction = ActiveInteraction(
-                definitionId = definitionId,
-                partnerObjectId = initiatorId,
-                role = InteractionRole.RECIPIENT,
-                payloadProductId = payloadProductId,
-                durationSeconds = duration,
-                transferSeconds = transfer
-            )
+            orientation = facing?.opposite() ?: recipient.orientation
         )
+        val initiatorSide = ActiveInteraction(
+            definitionId = definitionId,
+            partnerObjectId = recipientId,
+            role = InteractionRole.INITIATOR,
+            payloadProductId = payloadProductId,
+            durationSeconds = duration,
+            transferSeconds = transfer
+        )
+        animations.updateAnimation(initiatorId) { it.copy(interaction = initiatorSide) }
+        animations.updateAnimation(recipientId) {
+            it.copy(interaction = initiatorSide.copy(partnerObjectId = initiatorId, role = InteractionRole.RECIPIENT))
+        }
         events.publish {
             InteractionStartedEvent(
                 definitionId = definitionId,

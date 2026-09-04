@@ -7,14 +7,11 @@
     <ID>CyclomaticComplexMethod:CleanerSystem.kt$CleanerSystem$fun update(deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
     <ID>CyclomaticComplexMethod:CleanerSystem.kt$CleanerSystem$private fun planDeliveryToNearestWorker(cleanerIndex: Int, cleaner: PlacedShopObject.Worker): Boolean</ID>
     <ID>CyclomaticComplexMethod:ProductionSystem.kt$ProductionSystem$fun acceptBeltInputs()</ID>
-    <ID>CyclomaticComplexMethod:QaSystem.kt$QaSystem$fun update(deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
     <ID>CyclomaticComplexMethod:QaSystem.kt$QaSystem$private fun qaConfigFor( inspector: PlacedShopObject, workerProfilesById: Map&lt;String, WorkerProfile&gt;, requireReady: Boolean ): QaInspectorConfig?</ID>
     <ID>CyclomaticComplexMethod:QaSystem.kt$QaSystem$private fun resolveCompletedQaInspection( inspection: QaInspectionState, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
     <ID>CyclomaticComplexMethod:QaSystem.kt$QaSystem$private fun startMachineQaInspections(workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
     <ID>CyclomaticComplexMethod:QaSystem.kt$QaSystem$private fun startWorkerQaInspections(workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
-    <ID>CyclomaticComplexMethod:ShopFloorState.kt$ShopFloorState$private fun updateKindIndex(old: PlacedShopObject?, new: PlacedShopObject?)</ID>
     <ID>CyclomaticComplexMethod:WorkerMovementSystem.kt$WorkerMovementSystem$fun update( deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
-    <ID>CyclomaticComplexMethod:WorkerMovementSystem.kt$WorkerMovementSystem$private fun handleBeltPhase(index: Int, worker: PlacedShopObject.Worker, deltaSeconds: Float)</ID>
     <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun chooseDeliveryPlan(worker: PlacedShopObject.Worker): DeliveryPlan?</ID>
     <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun resolveWorkerObjectives()</ID>
     <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun tryPlanRecipeIngredientFetch( workerIndex: Int, worker: PlacedShopObject.Worker, needed: Set&lt;String&gt; ): Boolean</ID>
@@ -22,15 +19,12 @@
     <ID>LongMethod:LocalSaveRepositoryTest.kt$LocalSaveRepositoryTest$@Test fun `save keeps each level in its own slot even when shop ids match`()</ID>
     <ID>LongMethod:ProductionSystem.kt$ProductionSystem$private fun tickRecipeMachine( machine: PlacedShopObject.Machine, machineSpec: MachineSpec, recipe: MachineRecipe, deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
     <ID>LongMethod:ShopFloorCleanerTest.kt$ShopFloorCleanerTest$@Test fun `cleaner hands carried product to adjacent non-cleaner worker`()</ID>
-    <ID>LongMethod:ShopFloorRecipeFetchTest.kt$ShopFloorRecipeFetchTest$@Test fun `recipe machine without belt input but with belt output places output directly`()</ID>
     <ID>LongMethod:WorkerMovementSystem.kt$WorkerMovementSystem$fun update( deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
-    <ID>LongMethod:WorkerMovementSystem.kt$WorkerMovementSystem$private fun handleBeltPhase(index: Int, worker: PlacedShopObject.Worker, deltaSeconds: Float)</ID>
     <ID>LongParameterList:HudRenderer.kt$HudRenderer$( private val level: LevelDefinition, private val shopFloor: ShopFloor, private val catalogLookup: CatalogLookup, private val bankPanel: BankPanel, private val workerAssignment: WorkerAssignmentController, private val shiftLifecycle: ShiftLifecycleController, private val hoverState: HoverState )</ID>
     <ID>LongParameterList:PlannedSprite.kt$PlannedSprite.Companion$( region: TextureRegion, holderTileWorldX: Float, holderTileWorldY: Float, tileSize: Float, socket: SocketPoint, grip: SocketPoint?, tint: Color? = null, depth: Float = socket.depth, sortAnchorX: Float = holderTileWorldX, sortAnchorY: Float = holderTileWorldY )</ID>
     <ID>LongParameterList:SecuritySystem.kt$SecuritySystem$( securityIndex: Int, security: PlacedShopObject.Worker, profile: WorkerProfile, roleProfile: WorkerRoleProfile, saboteursById: Map&lt;String, PlacedShopObject.Worker&gt;, pursuedSaboteurIds: MutableSet&lt;String&gt; )</ID>
     <ID>LongParameterList:ShopFloorInput.kt$ShopFloorInput$( private val shopFloor: ShopFloor, private val pointerState: PointerState, private val hoverState: HoverState, private val bankPanel: BankPanel, private val placement: PlacementController, private val workerAssignment: WorkerAssignmentController, private val machineDrag: MachineDragController, private val shiftLifecycle: ShiftLifecycleController, private val upgradeFlow: UpgradeFlowController )</ID>
     <ID>LongParameterList:ShopFloorRenderContext.kt$ShopFloorRenderContext$( val shapeRenderer: ShapeRenderer, val spriteBatch: SpriteBatch, val font: BitmapFont, val titleLayout: GlyphLayout, val hintLayout: GlyphLayout, val viewport: Viewport, val frameLookup: SkinFrameLookup, val skinRegistry: SkinRegistry? = null, val productOrientations: ProductOrientationMemory = ProductOrientationMemory(), var delta: Float = 0f )</ID>
-    <ID>LongParameterList:ShopFloorState.kt$ShopFloorState$( override val grid: ShopGrid, override val machineSpecsById: Map&lt;String, MachineSpec&gt;, override val productDefinitionsById: Map&lt;String, ProductDefinition&gt;, initialPlacements: List&lt;PlacedShopObject&gt;, initialProducts: List&lt;ShopProduct&gt;, initialMachineProductionStates: List&lt;MachineProductionState&gt;, initialQaInspectionStates: List&lt;QaInspectionState&gt;, initialMachineRecipeStates: List&lt;MachineRecipeState&gt;, initialCash: Int, private val events: ShopFloorEvents = ShopFloorEvents() )</ID>
     <ID>LongParameterList:SkinFrameLookup.kt$SkinFrameLookup$( definition: SkinDefinition, resolution: SkinFrameResolver.Resolution?, animationId: String, action: String, orientation: Orientation, delta: Float )</ID>
     <ID>LongParameterList:SpritePlacement.kt$SpritePlacement.Companion$( regionWidth: Float, regionHeight: Float, holderTileWorldX: Float, holderTileWorldY: Float, tileSize: Float, socket: SocketPoint, grip: SocketPoint?, depth: Float = socket.depth, sortAnchorX: Float = holderTileWorldX, sortAnchorY: Float = holderTileWorldY )</ID>
     <ID>LoopWithTooManyJumpStatements:BeltSpriteRenderer.kt$BeltSpriteRenderer$for</ID>
@@ -134,7 +128,6 @@
     <ID>MaxLineLength:CompletionModalRenderer.kt$CompletionModalRenderer$titleLayout.setText(font, Messages.text(if (completedRun.passed) UiMessageKey.COMPLETION_PASSED else UiMessageKey.COMPLETION_FAILED))</ID>
     <ID>MaxLineLength:ConditionEvaluationTest.kt$StubSaveRepo$return</ID>
     <ID>MaxLineLength:ConditionJsonRoundTripTest.kt$ConditionJsonRoundTripTest$val json = """{"encounters":[{"id":"e1","condition":{"type":"always"},"effect":{"type":"markTriggered"},"oneShot":true}]}"""</ID>
-    <ID>MaxLineLength:ConveyorSystem.kt$ConveyorSystem$val productIndex = mutableActiveProducts.indexOfFirst { it.state == ShopProductState.ON_BELT &amp;&amp; it.tile == tile }</ID>
     <ID>MaxLineLength:EncounterProgressRepository.kt$LocalEncounterProgressRepository$FaultoryJson.instance.decodeFromString(EncounterProgress.serializer(), handle.readString(Charsets.UTF_8.name()))</ID>
     <ID>MaxLineLength:GridBackgroundRenderer.kt$GridBackgroundRenderer$renderer.rect(0f, GameConfig.virtualHeight - GameConfig.hudHeight, GameConfig.virtualWidth, GameConfig.hudHeight)</ID>
     <ID>MaxLineLength:HudRenderer.kt$HudRenderer$font.color = if (hoverState.isLanguageButtonHovered) ShopFloorPalette.TEXT_HIGHLIGHT_GOLD else BUTTON_TEXT_DEFAULT</ID>
@@ -148,7 +141,6 @@
     <ID>MaxLineLength:ObjectContextMenuRenderer.kt$ObjectContextMenuRenderer$font.color = if (workerAssignment.hoveredContextAction == option.action) ShopFloorPalette.TEXT_HIGHLIGHT_GOLD else OPTION_TEXT</ID>
     <ID>MaxLineLength:ObjectContextMenuRenderer.kt$ObjectContextMenuRenderer$renderer.color = if (workerAssignment.hoveredContextAction == option.action) OPTION_FILL_HOVERED else OPTION_FILL_DEFAULT</ID>
     <ID>MaxLineLength:ObjectContextMenuRenderer.kt$ObjectContextMenuRenderer$renderer.color = if (workerAssignment.hoveredContextAction == option.action) ShopFloorPalette.HIGHLIGHT_GOLD else OPTION_BORDER_DEFAULT</ID>
-    <ID>MaxLineLength:PlacedObjectRenderer.kt$PlacedObjectRenderer$renderer.color = if (placedObject.kind == PlacedShopObjectKind.WORKER) ORIENTATION_MARKER_WORKER else ORIENTATION_MARKER_MACHINE</ID>
     <ID>MaxLineLength:PlacedObjectRenderer.kt$PlacedObjectRenderer$renderer.rect(shopFloor.grid.worldXFor(tile) + 3f, shopFloor.grid.worldYFor(tile) + 3f, GameConfig.tileSize - 6f, GameConfig.tileSize - 6f)</ID>
     <ID>MaxLineLength:PlacedObjectRenderer.kt$PlacedObjectRenderer$renderer.rect(shopFloor.grid.worldXFor(tile), shopFloor.grid.worldYFor(tile), GameConfig.tileSize, GameConfig.tileSize)</ID>
     <ID>MaxLineLength:PlacementController.kt$PlacementController$val</ID>
@@ -157,32 +149,18 @@
     <ID>MaxLineLength:PlacementControllerTest.kt$PlacementControllerTest$val bankPanel = BankPanel(catalogLookup).also { it.rebuild(level, plainCtx()); it.toggleSelect(BankEntryKey(PlacedShopObjectKind.MACHINE, "machine-a")) }</ID>
     <ID>MaxLineLength:PlacementControllerTest.kt$PlacementControllerTest$val bankPanel = BankPanel(catalogLookup).also { it.rebuild(level, plainCtx()); it.toggleSelect(BankEntryKey(PlacedShopObjectKind.WORKER, "worker-a")) }</ID>
     <ID>MaxLineLength:PlacementControllerTest.kt$PlacementControllerTest$val qaCatalog = CatalogLookup(ShopCatalog(workers = emptyList(), machines = listOf(qaSpec), products = emptyList()))</ID>
-    <ID>MaxLineLength:PlacementPreviewRenderer.kt$PlacementPreviewRenderer$renderer.color = if (placedObject.kind == PlacedShopObjectKind.WORKER) ORIENTATION_MARKER_WORKER else ORIENTATION_MARKER_MACHINE</ID>
     <ID>MaxLineLength:PlacementPreviewRenderer.kt$PlacementPreviewRenderer$renderer.color = if (shopFloor.canPlaceObject(previewObject)) ShopFloorPalette.HIGHLIGHT_GOLD else BORDER_INVALID</ID>
     <ID>MaxLineLength:PlacementPreviewRenderer.kt$PlacementPreviewRenderer$renderer.rect(shopFloor.grid.worldXFor(tile) + 1f, shopFloor.grid.worldYFor(tile) + 1f, GameConfig.tileSize - 2f, GameConfig.tileSize - 2f)</ID>
     <ID>MaxLineLength:PlacementPreviewRenderer.kt$PlacementPreviewRenderer$renderer.rect(shopFloor.grid.worldXFor(tile), shopFloor.grid.worldYFor(tile), GameConfig.tileSize, GameConfig.tileSize)</ID>
     <ID>MaxLineLength:ProductionSystem.kt$ProductionSystem$a == ProductFaultReason.PRODUCTION_DEFECT || b == ProductFaultReason.PRODUCTION_DEFECT -&gt; ProductFaultReason.PRODUCTION_DEFECT</ID>
-    <ID>MaxLineLength:QaSystem.kt$QaSystem$(postTile == currentWorkerPosition || !state.isOccupied(postTile, ignoreObjectId = ignoreWorkerId))</ID>
-    <ID>MaxLineLength:QaSystem.kt$QaSystem$.</ID>
     <ID>MaxLineLength:QaSystem.kt$QaSystem$FaultyProductStrategy.HAND_TO_PRODUCER -&gt; handFaultyProductToProducer(product.id, inspector, inspection.beltTile)</ID>
     <ID>MaxLineLength:QaSystem.kt$QaSystem$FaultyProductStrategy.PUT_ON_FREE_TILE -&gt; placeFaultyProductOnFreeTile(product.id, inspector, inspection.beltTile)</ID>
     <ID>MaxLineLength:QaSystem.kt$QaSystem$if</ID>
-    <ID>MaxLineLength:QaSystem.kt$QaSystem$if (worker.carriedProductId != null || worker.qaPostTile == null || !state.isWorkerAtQaPost(worker)) continue</ID>
-    <ID>MaxLineLength:QaSystem.kt$QaSystem$val inspectionIndex = mutableQaInspectionStates.indexOfFirst { it.inspectorObjectId == inspState.inspectorObjectId }</ID>
-    <ID>MaxLineLength:QaSystem.kt$QaSystem$val inspectionIndex = mutableQaInspectionStates.indexOfFirst { it.inspectorObjectId == inspection.inspectorObjectId }</ID>
-    <ID>MaxLineLength:QaSystem.kt$QaSystem$val updatedProgress = (currentState.progressSeconds + deltaSeconds).coerceAtMost(config.inspectionDurationSeconds)</ID>
-    <ID>MaxLineLength:ShopFloorBeltRideTest.kt$ShopFloorBeltRideTest$assertEquals(BeltRidePhase.ENTERING, s.beltRidePhase, "security keeps riding when the exit tile continues the belt")</ID>
     <ID>MaxLineLength:ShopFloorBeltRideTest.kt$ShopFloorBeltRideTest$shopFloor.update(0.25f, mapOf(profile.id to profile))</ID>
     <ID>MaxLineLength:ShopFloorBeltRideTest.kt$ShopFloorBeltRideTest$shopFloor.update(GameConfig.beltRideDurationSeconds, mapOf(profile.id to profile))</ID>
     <ID>MaxLineLength:ShopFloorBeltRideTest.kt$ShopFloorBeltRideTest$worker(id = "worker-1", position = TileCoordinate(4, 5), movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5)))</ID>
     <ID>MaxLineLength:ShopFloorBeltRideTest.kt$ShopFloorBeltRideTest$worker(position = TileCoordinate(4, 5), movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5)))</ID>
     <ID>MaxLineLength:ShopFloorCleanerTest.kt$ShopFloorCleanerTest$random = Random(seed = 1L)</ID>
-    <ID>MaxLineLength:ShopFloorGeometry.kt$ShopFloorGeometry$centerX = occupiedTiles.map { tile -&gt; shopFloor.grid.worldXFor(tile) + GameConfig.tileSize / 2f }.average().toFloat()</ID>
-    <ID>MaxLineLength:ShopFloorGeometry.kt$ShopFloorGeometry$centerY = occupiedTiles.map { tile -&gt; shopFloor.grid.worldYFor(tile) + GameConfig.tileSize / 2f }.average().toFloat()</ID>
-    <ID>MaxLineLength:ShopFloorGeometry.kt$ShopFloorGeometry$val centerX = occupiedTiles.map { tile -&gt; shopFloor.grid.worldXFor(tile) + GameConfig.tileSize / 2f }.average().toFloat()</ID>
-    <ID>MaxLineLength:ShopFloorGeometry.kt$ShopFloorGeometry$val centerY = occupiedTiles.map { tile -&gt; shopFloor.grid.worldYFor(tile) + GameConfig.tileSize / 2f }.average().toFloat()</ID>
-    <ID>MaxLineLength:ShopFloorInput.kt$ShopFloorInput$PlacedShopObjectKind.MACHINE -&gt; workerAssignment.openContextMenuForMachine(target.id, pointerState.worldX, pointerState.worldY)</ID>
-    <ID>MaxLineLength:ShopFloorInput.kt$ShopFloorInput$PlacedShopObjectKind.WORKER -&gt; workerAssignment.openContextMenuForWorker(target.id, pointerState.worldX, pointerState.worldY)</ID>
     <ID>MaxLineLength:ShopFloorInput.kt$ShopFloorInput$hoverState.isBackButtonHovered = HudRenderer.backButtonBounds().contains(pointerState.worldX, pointerState.worldY)</ID>
     <ID>MaxLineLength:ShopFloorInput.kt$ShopFloorInput$hoverState.isLanguageButtonHovered = HudRenderer.languageButtonBounds().contains(pointerState.worldX, pointerState.worldY)</ID>
     <ID>MaxLineLength:ShopFloorInput.kt$ShopFloorInput$if</ID>
@@ -203,13 +181,9 @@
     <ID>MaxLineLength:WorkerAssignmentControllerTest.kt$WorkerAssignmentControllerTest$val catalog = CatalogLookup(ShopCatalog(workers = workers.toList(), machines = listOf(machineSpec), products = emptyList()))</ID>
     <ID>MaxLineLength:WorkerMovementSystem.kt$WorkerMovementSystem$if</ID>
     <ID>MaxLineLength:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$a == ProductFaultReason.PRODUCTION_DEFECT || b == ProductFaultReason.PRODUCTION_DEFECT -&gt; ProductFaultReason.PRODUCTION_DEFECT</ID>
-    <ID>MaxLineLength:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$beltTile in grid.beltTiles &amp;&amp; !state.isOccupied(beltTile, ignoreObjectId = worker.id, ignoreProductId = carriedProduct.id)</ID>
-    <ID>MaxLineLength:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$blockedTiles = state.blockedTilesForPath(ignoreWorkerId = worker.id, ignoreCarriedProductId = worker.carriedProductId)</ID>
     <ID>MaxLineLength:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$deliveryPlan.path.isNotEmpty() -&gt; Orientation.between(worker.position, deliveryPlan.path.first()) ?: worker.orientation</ID>
     <ID>MaxLineLength:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$if</ID>
-    <ID>MaxLineLength:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$if (state.isOccupied(beltTile, ignoreObjectId = worker.id, ignoreProductId = worker.carriedProductId)) continue</ID>
     <ID>MaxLineLength:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$orientation = Orientation.between(worker.position, path.firstOrNull() ?: worker.position) ?: worker.orientation</ID>
-    <ID>MaxLineLength:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$state.isOccupied(standTile, ignoreObjectId = worker.id, ignoreProductId = worker.carriedProductId)</ID>
     <ID>NestedBlockDepth:CleanerSystem.kt$CleanerSystem$fun update(deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
     <ID>NestedBlockDepth:EncounterEngine.kt$EncounterEngine$private fun applyEffect(encounter: EncounterDefinition, ctx: EvaluationContext)</ID>
     <ID>NestedBlockDepth:WorkerMovementSystem.kt$WorkerMovementSystem$fun update( deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
@@ -218,7 +192,7 @@
     <ID>ReturnCount:QaSystem.kt$QaSystem$private fun qaConfigFor( inspector: PlacedShopObject, workerProfilesById: Map&lt;String, WorkerProfile&gt;, requireReady: Boolean ): QaInspectorConfig?</ID>
     <ID>TooGenericExceptionCaught:EncounterProgressRepository.kt$LocalEncounterProgressRepository$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:SaveRepository.kt$LocalSaveRepository$t: Throwable</ID>
-    <ID>TooManyFunctions:ShopFloorState.kt$ShopFloorState</ID>
+    <ID>TooManyFunctions:ShopFloor.kt$ShopFloor</ID>
     <ID>UnusedParameter:CleanerSystem.kt$CleanerSystem$cleanerIndex: Int</ID>
     <ID>UnusedParameter:CleanerSystem.kt$CleanerSystem$deltaSeconds: Float</ID>
     <ID>UnusedParameter:CleanerSystem.kt$CleanerSystem$workerProfilesById: Map&lt;String, WorkerProfile&gt;</ID>

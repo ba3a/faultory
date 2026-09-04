@@ -15,6 +15,7 @@ import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
 import com.faultory.core.shop.UnitPhase
+import com.faultory.core.shop.WorkerAnimationState
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -27,18 +28,19 @@ import kotlin.test.assertTrue
 class SkinActionCatalogTest {
     @Test
     fun `every worker action a resolver can return is authorable`() {
-        val standing = worker()
-        val walking = worker().copy(movementPath = listOf(TileCoordinate(5, 6)), movementProgress = 0.5f)
-        val riding = BeltRidePhase.entries.map { phase -> worker().copy(beltRidePhase = phase) }
-        val phased = UnitPhase.entries.map { phase -> worker().copy(unitPhase = phase) }
+        val standing = worker() to WorkerAnimationState()
+        val walking = worker().copy(movementPath = listOf(TileCoordinate(5, 6)), movementProgress = 0.5f) to
+            WorkerAnimationState()
+        val riding = BeltRidePhase.entries.map { phase -> worker() to WorkerAnimationState(beltRidePhase = phase) }
+        val phased = UnitPhase.entries.map { phase -> worker() to WorkerAnimationState(unitPhase = phase) }
         val pursuing = worker().copy(
             movementPath = listOf(TileCoordinate(5, 6)),
             movementProgress = 0.5f,
             pursuitTargetWorkerId = "worker-9"
-        )
+        ) to WorkerAnimationState()
 
-        (listOf(standing, walking, pursuing) + riding + phased).forEach { placedObject ->
-            assertContains(SkinActionCatalog.worker, WorkerActionResolver.actionFor(placedObject))
+        (listOf(standing, walking, pursuing) + riding + phased).forEach { (placedObject, animation) ->
+            assertContains(SkinActionCatalog.worker, WorkerActionResolver.actionFor(placedObject, animation))
         }
     }
 
@@ -65,7 +67,7 @@ class SkinActionCatalogTest {
         val authorable = SkinActionCatalog.workerActions(catalog)
 
         InteractionRole.entries.forEach { role ->
-            val placedObject = worker().copy(
+            val animation = WorkerAnimationState(
                 interaction = ActiveInteraction(
                     definitionId = InteractionIds.HAND_OFF,
                     partnerObjectId = "worker-2",
@@ -74,7 +76,7 @@ class SkinActionCatalogTest {
                     transferSeconds = 0.3f
                 )
             )
-            assertContains(authorable, WorkerActionResolver.actionFor(placedObject, catalog::find))
+            assertContains(authorable, WorkerActionResolver.actionFor(worker(), animation, catalog::find))
         }
     }
 
@@ -153,7 +155,8 @@ class SkinActionCatalogTest {
             ) to carried,
             shopFloor(
                 products = listOf(carried),
-                placements = listOf(worker().copy(unitPhase = UnitPhase.DESTROYING_PRODUCT))
+                placements = listOf(worker()),
+                workerAnimations = mapOf("worker-1" to WorkerAnimationState(unitPhase = UnitPhase.DESTROYING_PRODUCT))
             ) to carried
         )
 
@@ -216,7 +219,8 @@ class SkinActionCatalogTest {
         placements: List<PlacedShopObject> = emptyList(),
         inspections: List<QaInspectionState> = emptyList(),
         productionStates: List<com.faultory.core.shop.MachineProductionState> = emptyList(),
-        recipeStates: List<com.faultory.core.shop.MachineRecipeState> = emptyList()
+        recipeStates: List<com.faultory.core.shop.MachineRecipeState> = emptyList(),
+        workerAnimations: Map<String, WorkerAnimationState> = emptyMap()
     ) = ShopFloor(
         blueprint = ShopBlueprint(
             id = "test",
@@ -237,6 +241,7 @@ class SkinActionCatalogTest {
         initialProducts = products,
         initialQaInspectionStates = inspections,
         initialMachineProductionStates = productionStates,
-        initialMachineRecipeStates = recipeStates
+        initialMachineRecipeStates = recipeStates,
+        initialWorkerAnimationStates = workerAnimations
     )
 }

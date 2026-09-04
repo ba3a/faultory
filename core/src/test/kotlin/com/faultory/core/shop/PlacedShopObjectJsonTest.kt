@@ -63,24 +63,4 @@ class PlacedShopObjectJsonTest {
 
         assertEquals(objects, json.decodeFromString<List<PlacedShopObject>>(json.encodeToString(objects)))
     }
-
-    @Test
-    fun `the transient animation fields never serialize`() {
-        val riding = PlacedShopObject.Worker(
-            id = "w",
-            catalogId = "c",
-            position = TileCoordinate(1, 1),
-            beltRidePhase = BeltRidePhase.RIDING,
-            unitPhase = UnitPhase.FALLING
-        )
-
-        val encoded = json.encodeToString<PlacedShopObject>(riding)
-
-        assertTrue("beltRidePhase" !in encoded && "unitPhase" !in encoded, encoded)
-        // Decodes to the defaults, not the transient values.
-        assertEquals(
-            PlacedShopObject.Worker(id = "w", catalogId = "c", position = TileCoordinate(1, 1)),
-            json.decodeFromString<PlacedShopObject>(encoded)
-        )
-    }
 }

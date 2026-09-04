@@ -25,7 +25,7 @@ object ProductActionResolver {
     ): Orientation {
         val derived = when (product.state) {
             ShopProductState.ON_BELT -> beltFlowOrientationFor(shopFloor, product)
-            ShopProductState.CARRIED -> holderFor(shopFloor, product)?.let(::holderOrientationFor)
+            ShopProductState.CARRIED -> holderFor(shopFloor, product)?.let { holderOrientationFor(shopFloor, it) }
             ShopProductState.ON_FLOOR -> null
         }
 
@@ -40,7 +40,9 @@ object ProductActionResolver {
     private fun carriedActionFor(shopFloor: ShopFloor, product: ShopProduct): String {
         val holderWorker = holderFor(shopFloor, product) as? PlacedShopObject.Worker
         return when {
-            holderWorker?.unitPhase == UnitPhase.DESTROYING_PRODUCT -> SpriteAction.DESTROYING.id
+            holderWorker != null &&
+                shopFloor.workerAnimationState(holderWorker.id).unitPhase == UnitPhase.DESTROYING_PRODUCT ->
+                SpriteAction.DESTROYING.id
             shopFloor.qaInspectionStates.any { it.productId == product.id } -> SpriteAction.INSPECTED.id
             else -> SpriteAction.CARRIED.id
         }
@@ -52,8 +54,9 @@ object ProductActionResolver {
         return Orientation.between(tile, nextTile)
     }
 
-    private fun holderOrientationFor(holder: PlacedShopObject): Orientation = when (holder) {
-        is PlacedShopObject.Worker -> WorkerActionResolver.orientationFor(holder)
+    private fun holderOrientationFor(shopFloor: ShopFloor, holder: PlacedShopObject): Orientation = when (holder) {
+        is PlacedShopObject.Worker ->
+            WorkerActionResolver.orientationFor(holder, shopFloor.workerAnimationState(holder.id))
         is PlacedShopObject.Machine -> holder.orientation
     }
 

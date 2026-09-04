@@ -3,7 +3,6 @@ package com.faultory.core.shop
 import com.faultory.core.content.WorkerRole
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 
 /**
  * Something standing on the shop floor. A [Worker] or a [Machine] — the two share only an id, a
@@ -43,22 +42,9 @@ sealed interface PlacedShopObject {
         val carriedProductId: String? = null,
         val movementPath: List<TileCoordinate> = emptyList(),
         val movementProgress: Float = 0f,
-        val pursuitTargetWorkerId: String? = null,
-        @Transient val beltRidePhase: BeltRidePhase? = null,
-        @Transient val beltRideTimer: Float = 0f,
-        @Transient val unitPhase: UnitPhase? = null,
-        @Transient val unitPhaseTimer: Float = 0f,
-        @Transient val unitPhaseDurationSeconds: Float = 0f,
-        @Transient val interaction: ActiveInteraction? = null
+        val pursuitTargetWorkerId: String? = null
     ) : PlacedShopObject {
         override val kind: PlacedShopObjectKind get() = PlacedShopObjectKind.WORKER
-
-        /**
-         * True while the worker is playing out a phase or an interaction, and so must not be moved,
-         * re-tasked, or drawn into a second interaction until it finishes.
-         */
-        val isBusy: Boolean
-            get() = unitPhase != null || interaction != null
     }
 
     @Serializable
@@ -88,8 +74,8 @@ enum class PlacedShopObjectKind {
  * a dedicated column per interaction is the point: the previous shape grew this class by a field
  * every time an interaction was added, and every resolver by a branch.
  *
- * Presentation state only, and short-lived by construction, so it stays out of the save format the
- * way [BeltRidePhase] and [UnitPhase] do.
+ * Presentation state only, and short-lived by construction, so it lives in [WorkerAnimationState],
+ * off the record, rather than as a field here — the way [BeltRidePhase] and [UnitPhase] do too.
  */
 data class ActiveInteraction(
     val definitionId: String,

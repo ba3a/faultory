@@ -7,6 +7,7 @@ import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.TileCoordinate
 import com.faultory.core.shop.UnitPhase
+import com.faultory.core.shop.WorkerAnimationState
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -19,7 +20,8 @@ class WorkerActionResolverTest {
                 worker(
                     movementPath = listOf(TileCoordinate(6, 5)),
                     movementProgress = 0.4f
-                )
+                ),
+                WorkerAnimationState()
             )
         )
     }
@@ -32,7 +34,8 @@ class WorkerActionResolverTest {
                 worker(
                     movementPath = listOf(TileCoordinate(6, 5)),
                     movementProgress = 1f
-                )
+                ),
+                WorkerAnimationState()
             )
         )
     }
@@ -45,7 +48,8 @@ class WorkerActionResolverTest {
                 worker(
                     orientation = Orientation.SOUTH,
                     movementPath = listOf(TileCoordinate(6, 5))
-                )
+                ),
+                WorkerAnimationState()
             )
         )
     }
@@ -58,7 +62,8 @@ class WorkerActionResolverTest {
                 worker(
                     orientation = Orientation.WEST,
                     movementPath = emptyList()
-                )
+                ),
+                WorkerAnimationState()
             )
         )
     }
@@ -85,7 +90,7 @@ class WorkerActionResolverTest {
             movementProgress = 0.4f
         ).copy(pursuitTargetWorkerId = "worker-9")
 
-        assertEquals(SpriteAction.PURSUE.id, WorkerActionResolver.actionFor(chasing))
+        assertEquals(SpriteAction.PURSUE.id, WorkerActionResolver.actionFor(chasing, WorkerAnimationState()))
     }
 
     @Test
@@ -93,7 +98,7 @@ class WorkerActionResolverTest {
         // Pursuit is alert locomotion; a stationary run pose would read as a glitch.
         val replanning = worker(movementPath = emptyList()).copy(pursuitTargetWorkerId = "worker-9")
 
-        assertEquals(SpriteAction.IDLE.id, WorkerActionResolver.actionFor(replanning))
+        assertEquals(SpriteAction.IDLE.id, WorkerActionResolver.actionFor(replanning, WorkerAnimationState()))
     }
 
     @Test
@@ -101,9 +106,10 @@ class WorkerActionResolverTest {
         val ridingWhileChasing = worker(
             movementPath = listOf(TileCoordinate(6, 5)),
             movementProgress = 0.4f
-        ).copy(pursuitTargetWorkerId = "worker-9", beltRidePhase = BeltRidePhase.RIDING)
+        ).copy(pursuitTargetWorkerId = "worker-9")
+        val animation = WorkerAnimationState(beltRidePhase = BeltRidePhase.RIDING)
 
-        assertEquals(SpriteAction.BELT_RIDE.id, WorkerActionResolver.actionFor(ridingWhileChasing))
+        assertEquals(SpriteAction.BELT_RIDE.id, WorkerActionResolver.actionFor(ridingWhileChasing, animation))
     }
 
     @Test
@@ -120,17 +126,18 @@ class WorkerActionResolverTest {
         val slipped = worker(
             movementPath = listOf(TileCoordinate(6, 5)),
             movementProgress = 0.4f
-        ).copy(
+        )
+        val slippedAnimation = WorkerAnimationState(
             beltRidePhase = BeltRidePhase.RIDING,
             unitPhase = UnitPhase.FALLING,
             interaction = interaction(InteractionRole.INITIATOR)
         )
 
-        assertEquals(SpriteAction.FALL.id, WorkerActionResolver.actionFor(slipped, ::definitionFor))
+        assertEquals(SpriteAction.FALL.id, WorkerActionResolver.actionFor(slipped, slippedAnimation, ::definitionFor))
     }
 
     private fun actionFor(phase: UnitPhase): String =
-        WorkerActionResolver.actionFor(worker(movementPath = emptyList()).copy(unitPhase = phase))
+        WorkerActionResolver.actionFor(worker(movementPath = emptyList()), WorkerAnimationState(unitPhase = phase))
 
     @Test
     fun `an interaction outranks walking and belt riding`() {
@@ -139,21 +146,24 @@ class WorkerActionResolverTest {
         val giver = worker(
             movementPath = listOf(TileCoordinate(6, 5)),
             movementProgress = 0.4f
-        ).copy(
+        )
+        val giverAnimation = WorkerAnimationState(
             beltRidePhase = BeltRidePhase.RIDING,
             interaction = interaction(InteractionRole.INITIATOR)
         )
 
-        assertEquals(GIVE, WorkerActionResolver.actionFor(giver, ::definitionFor))
+        assertEquals(GIVE, WorkerActionResolver.actionFor(giver, giverAnimation, ::definitionFor))
     }
 
     @Test
     fun `each role plays its own half of the exchange`() {
-        val giver = worker(movementPath = emptyList()).copy(interaction = interaction(InteractionRole.INITIATOR))
-        val taker = worker(movementPath = emptyList()).copy(interaction = interaction(InteractionRole.RECIPIENT))
+        val giver = worker(movementPath = emptyList())
+        val taker = worker(movementPath = emptyList())
+        val giverAnimation = WorkerAnimationState(interaction = interaction(InteractionRole.INITIATOR))
+        val takerAnimation = WorkerAnimationState(interaction = interaction(InteractionRole.RECIPIENT))
 
-        assertEquals(GIVE, WorkerActionResolver.actionFor(giver, ::definitionFor))
-        assertEquals(TAKE, WorkerActionResolver.actionFor(taker, ::definitionFor))
+        assertEquals(GIVE, WorkerActionResolver.actionFor(giver, giverAnimation, ::definitionFor))
+        assertEquals(TAKE, WorkerActionResolver.actionFor(taker, takerAnimation, ::definitionFor))
     }
 
     @Test
@@ -162,9 +172,10 @@ class WorkerActionResolverTest {
         val walking = worker(
             movementPath = listOf(TileCoordinate(6, 5)),
             movementProgress = 0.4f
-        ).copy(interaction = interaction(InteractionRole.INITIATOR))
+        )
+        val walkingAnimation = WorkerAnimationState(interaction = interaction(InteractionRole.INITIATOR))
 
-        assertEquals(SpriteAction.WALK.id, WorkerActionResolver.actionFor(walking) { null })
+        assertEquals(SpriteAction.WALK.id, WorkerActionResolver.actionFor(walking, walkingAnimation) { null })
     }
 
     @Test
@@ -172,9 +183,10 @@ class WorkerActionResolverTest {
         val facing = worker(
             movementPath = listOf(TileCoordinate(6, 5)),
             movementProgress = 0.4f
-        ).copy(orientation = Orientation.WEST, interaction = interaction(InteractionRole.RECIPIENT))
+        ).copy(orientation = Orientation.WEST)
+        val facingAnimation = WorkerAnimationState(interaction = interaction(InteractionRole.RECIPIENT))
 
-        assertEquals(Orientation.WEST, WorkerActionResolver.orientationFor(facing))
+        assertEquals(Orientation.WEST, WorkerActionResolver.orientationFor(facing, facingAnimation))
     }
 
     private fun interaction(role: InteractionRole): ActiveInteraction = ActiveInteraction(

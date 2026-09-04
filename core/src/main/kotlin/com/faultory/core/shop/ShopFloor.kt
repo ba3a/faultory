@@ -29,6 +29,7 @@ class ShopFloor(
     initialMachineProductionStates: List<MachineProductionState> = emptyList(),
     initialQaInspectionStates: List<QaInspectionState> = emptyList(),
     initialMachineRecipeStates: List<MachineRecipeState> = emptyList(),
+    initialWorkerAnimationStates: Map<String, WorkerAnimationState> = emptyMap(),
     private val productDefinitionsById: Map<String, ProductDefinition> = emptyMap(),
     initialCash: Int = 0,
     private val beltSupplyFeeder: BeltSupplyFeeder? = null,
@@ -47,11 +48,14 @@ class ShopFloor(
         grid = grid,
         machineSpecsById = machineSpecsById,
         productDefinitionsById = productDefinitionsById,
-        initialPlacements = initialPlacements,
-        initialProducts = initialProducts,
-        initialMachineProductionStates = initialMachineProductionStates,
-        initialQaInspectionStates = initialQaInspectionStates,
-        initialMachineRecipeStates = initialMachineRecipeStates,
+        initialContent = ShopFloorInitialContent(
+            placements = initialPlacements,
+            products = initialProducts,
+            machineProductionStates = initialMachineProductionStates,
+            qaInspectionStates = initialQaInspectionStates,
+            machineRecipeStates = initialMachineRecipeStates,
+            workerAnimationStates = initialWorkerAnimationStates
+        ),
         initialCash = initialCash,
         events = events
     )
@@ -82,7 +86,7 @@ class ShopFloor(
         CleanerSpawnSystem(state, random, events, it)
     }
     private val interactionController: InteractionController =
-        InteractionController(state, state, interactionCatalogProvider, events)
+        InteractionController(state, state, state, interactionCatalogProvider, events)
     private val interactionSystem: InteractionSystem = InteractionSystem(interactionController)
     private val cleanerSystem: CleanerSystem = CleanerSystem(
         access = state,
@@ -203,6 +207,8 @@ class ShopFloor(
     ): Boolean = state.isOccupied(tile, ignoreObjectId, ignoreProductId)
 
     fun findObjectById(objectId: String): PlacedShopObject? = state.findObjectById(objectId)
+
+    fun workerAnimationState(workerId: String): WorkerAnimationState = state.animationStateFor(workerId)
 
     fun objectAt(tile: TileCoordinate): PlacedShopObject? = state.objectAtTile(tile)
 

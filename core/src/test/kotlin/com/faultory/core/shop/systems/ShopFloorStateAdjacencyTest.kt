@@ -38,11 +38,7 @@ class ShopFloorStateAdjacencyTest {
         grid = grid(),
         machineSpecsById = emptyMap(),
         productDefinitionsById = emptyMap(),
-        initialPlacements = placements,
-        initialProducts = products,
-        initialMachineProductionStates = emptyList(),
-        initialQaInspectionStates = emptyList(),
-        initialMachineRecipeStates = emptyList(),
+        initialContent = ShopFloorInitialContent(placements = placements, products = products),
         initialCash = 0
     )
 

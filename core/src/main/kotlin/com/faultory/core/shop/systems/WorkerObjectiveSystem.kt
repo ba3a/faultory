@@ -40,7 +40,7 @@ internal class WorkerObjectiveSystem(
     private fun resolveWorkerObjectives() {
         for (index in mutablePlacedObjects.indices) {
             val worker = mutablePlacedObjects[index] as? PlacedShopObject.Worker ?: continue
-            if (worker.isBusy) {
+            if (access.animationStateFor(worker.id).isBusy) {
                 continue
             }
 

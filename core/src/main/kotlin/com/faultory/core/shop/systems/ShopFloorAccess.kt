@@ -14,6 +14,7 @@ import com.faultory.core.shop.ShipmentEvent
 import com.faultory.core.shop.ShopGrid
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.TileCoordinate
+import com.faultory.core.shop.WorkerAnimationState
 
 /**
  * The seams every simulation system reads and writes the shop floor through.
@@ -136,6 +137,24 @@ internal interface QaInspectionStateWrites : QaInspectionStateReads {
     val mutableQaInspectionStates: IdIndexedMutableList<QaInspectionState>
 }
 
+/** Read side of per-worker presentation state: belt ride, unit phase, and interaction pairing. */
+internal interface WorkerAnimationReads {
+    /** [workerId]'s current presentation state, or the idle default when it has none in flight. */
+    fun animationStateFor(workerId: String): WorkerAnimationState
+}
+
+/** Write side of per-worker presentation state. */
+internal interface WorkerAnimationWrites : WorkerAnimationReads {
+    /**
+     * Replaces [workerId]'s presentation state with `transform(current)` and returns the result.
+     * `current` is the idle default when [workerId] has no entry yet, so callers never null-check.
+     */
+    fun updateAnimation(
+        workerId: String,
+        transform: (WorkerAnimationState) -> WorkerAnimationState
+    ): WorkerAnimationState
+}
+
 /** Derived "is this worker standing where its job is" checks. */
 internal interface WorkerPostReads {
     fun isWorkerAtAssignedSlot(worker: PlacedShopObject.Worker): Boolean
@@ -172,9 +191,9 @@ internal interface ShiftSpawnFlags {
 internal interface CleanerSpawnAccess :
     ShopWorld, PlacedObjectWrites, OccupancyReads, FloorIdFactory, ShiftSpawnFlags
 
-internal interface UnitPhaseAccess : PlacedObjectWrites, ProductWrites
+internal interface UnitPhaseAccess : PlacedObjectWrites, ProductWrites, WorkerAnimationWrites
 
-internal interface WorkerMovementAccess : ShopWorld, PlacedObjectWrites, OccupancyReads
+internal interface WorkerMovementAccess : ShopWorld, PlacedObjectWrites, OccupancyReads, WorkerAnimationWrites
 
 internal interface ConveyorAccess :
     ShopWorld, PlacedObjectReads, ProductWrites, OccupancyReads, EconomyWrites, ShipmentSink
@@ -185,17 +204,17 @@ internal interface ProductionAccess :
 
 internal interface QaAccess :
     ShopWorld, PlacedObjectWrites, ProductWrites, QaInspectionStateWrites, OccupancyReads,
-    WorkerPostReads
+    WorkerPostReads, WorkerAnimationWrites
 
 internal interface SecurityAccess :
     ShopWorld, PlacedObjectWrites, ProductionStateWrites, OccupancyReads, WorkerPostReads
 
 internal interface WorkerObjectiveAccess :
     ShopWorld, PlacedObjectWrites, ProductWrites, RecipeStateWrites, OccupancyReads, AdjacencyReads,
-    WorkerPostReads
+    WorkerPostReads, WorkerAnimationReads
 
 internal interface CleanerAccess :
-    ShopWorld, PlacedObjectWrites, ProductWrites, OccupancyReads, AdjacencyReads
+    ShopWorld, PlacedObjectWrites, ProductWrites, OccupancyReads, AdjacencyReads, WorkerAnimationWrites
 
 internal interface PlacementAccess :
     ShopWorld, PlacedObjectWrites, ProductWrites, ProductionStateReads, RecipeStateReads,

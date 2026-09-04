@@ -73,7 +73,7 @@ class ShopFloorBeltRideTest {
 
         val w = (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker)
         assertEquals(TileCoordinate(5, 5), w.position)
-        assertEquals(BeltRidePhase.ENTERING, w.beltRidePhase)
+        assertEquals(BeltRidePhase.ENTERING, shopFloor.workerAnimationState("worker-1").beltRidePhase)
     }
 
     @Test
@@ -89,17 +89,11 @@ class ShopFloorBeltRideTest {
 
         // Arrive at belt tile
         shopFloor.update(0.25f, mapOf(profile.id to profile))
-        assertEquals(
-            BeltRidePhase.ENTERING,
-            (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker).beltRidePhase
-        )
+        assertEquals(BeltRidePhase.ENTERING, shopFloor.workerAnimationState("worker-1").beltRidePhase)
 
         // Wait for ENTERING duration
         shopFloor.update(GameConfig.beltEnterDurationSeconds, mapOf(profile.id to profile))
-        assertEquals(
-            BeltRidePhase.RIDING,
-            (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker).beltRidePhase
-        )
+        assertEquals(BeltRidePhase.RIDING, shopFloor.workerAnimationState("worker-1").beltRidePhase)
     }
 
     @Test
@@ -119,7 +113,7 @@ class ShopFloorBeltRideTest {
 
         val w = (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker)
         assertEquals(TileCoordinate(6, 5), w.position)
-        assertEquals(BeltRidePhase.EXITING, w.beltRidePhase)
+        assertEquals(BeltRidePhase.EXITING, shopFloor.workerAnimationState("worker-1").beltRidePhase)
     }
 
     @Test
@@ -140,7 +134,7 @@ class ShopFloorBeltRideTest {
 
         val w = (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker)
         assertEquals(TileCoordinate(6, 5), w.position)
-        assertNull(w.beltRidePhase)
+        assertNull(shopFloor.workerAnimationState("worker-1").beltRidePhase)
     }
 
     // Blueprint with a 3-tile belt going EAST: (5,5) → (6,5) → (7,5)
@@ -197,7 +191,11 @@ class ShopFloorBeltRideTest {
 
         val w = (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker)
         assertEquals(TileCoordinate(6, 5), w.position)
-        assertEquals(BeltRidePhase.EXITING, w.beltRidePhase, "non-security worker rides exactly one tile then exits")
+        assertEquals(
+            BeltRidePhase.EXITING,
+            shopFloor.workerAnimationState("worker-1").beltRidePhase,
+            "non-security worker rides exactly one tile then exits"
+        )
     }
 
     @Test
@@ -223,7 +221,11 @@ class ShopFloorBeltRideTest {
 
         val s = (shopFloor.findObjectById("security-1") as PlacedShopObject.Worker)
         assertEquals(TileCoordinate(6, 5), s.position)
-        assertEquals(BeltRidePhase.ENTERING, s.beltRidePhase, "security keeps riding when the exit tile continues the belt")
+        assertEquals(
+            BeltRidePhase.ENTERING,
+            shopFloor.workerAnimationState("security-1").beltRidePhase,
+            "security keeps riding when the exit tile continues the belt"
+        )
     }
 
     @Test
@@ -242,16 +244,17 @@ class ShopFloorBeltRideTest {
         // Advance worker-1 to belt, through ENTERING, into RIDING
         shopFloor.update(0.25f, mapOf(profile.id to profile))
         shopFloor.update(GameConfig.beltEnterDurationSeconds, mapOf(profile.id to profile))
-        assertEquals(
-            BeltRidePhase.RIDING,
-            (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker).beltRidePhase
-        )
+        assertEquals(BeltRidePhase.RIDING, shopFloor.workerAnimationState("worker-1").beltRidePhase)
 
         // Give ample time for RIDING to complete — blocker still in the way
         shopFloor.update(GameConfig.beltRideDurationSeconds * 2, mapOf(profile.id to profile))
 
         val w = (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker)
-        assertEquals(BeltRidePhase.RIDING, w.beltRidePhase, "should still be RIDING while exit is blocked")
+        assertEquals(
+            BeltRidePhase.RIDING,
+            shopFloor.workerAnimationState("worker-1").beltRidePhase,
+            "should still be RIDING while exit is blocked"
+        )
         assertEquals(TileCoordinate(5, 5), w.position, "should not have moved to exit tile")
     }
 }
