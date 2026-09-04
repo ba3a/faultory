@@ -8,6 +8,7 @@ import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.save.GameSave
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.systems.ProductionDayDirector
+import kotlin.math.floor
 
 class ShiftLifecycleController(
     private val host: ShiftLifecycleHost,
@@ -16,7 +17,8 @@ class ShiftLifecycleController(
     private val shopFloor: ShopFloor,
     private val workerProfilesById: Map<String, WorkerProfile>,
     initialSave: GameSave,
-    private val events: ShopFloorEvents = ShopFloorEvents()
+    private val events: ShopFloorEvents = ShopFloorEvents(),
+    private val stepSeconds: Float = GameConfig.simulationStepSeconds
 ) {
     val dayDirector = ProductionDayDirector(
         shiftLengthSeconds = shopFloor.blueprint.shiftLengthSeconds,
@@ -37,36 +39,69 @@ class ShiftLifecycleController(
     private var persistOnHide = true
     private var dirty = false
 
-    fun tick(delta: Float): Float {
+    /** Real time fed to [tick] that hasn't yet accumulated to a whole [stepSeconds] slice. */
+    private var accumulator: Double = 0.0
+    private val stepSecondsDouble: Double = stepSeconds.toDouble()
+
+    /** Sub-steps the most recent [tick] ran — exposed for the fixed-step regression test. */
+    internal var lastTickSubStepCount: Int = 0
+        private set
+
+    /**
+     * Slices [frameDelta] into fixed [stepSeconds] steps so a hitch (GC pause, alt-tab, a
+     * breakpoint) steps the simulation smoothly instead of one large [ShopFloor.update] burst.
+     * Each step still clamps to the shift's remaining time, exactly like the single step this
+     * replaces.
+     */
+    fun tick(frameDelta: Float): Float {
         if (isShiftEnded) {
             return 0f
         }
-        val activeDelta = (shopFloor.blueprint.shiftLengthSeconds - dayDirector.elapsedSeconds)
-            .coerceAtLeast(0f)
-            .coerceAtMost(delta)
-        if (activeDelta <= 0f) {
-            return 0f
+        val elapsedBefore = dayDirector.elapsedSeconds
+        accumulator += frameDelta.toDouble()
+        val wholeSteps = floor(accumulator / stepSecondsDouble + STEP_COUNT_EPSILON)
+            .toInt()
+            .coerceAtLeast(0)
+
+        var consumedSteps = 0
+        while (consumedSteps < wholeSteps) {
+            val remaining = (shopFloor.blueprint.shiftLengthSeconds - dayDirector.elapsedSeconds)
+                .coerceAtLeast(0f)
+            if (remaining <= 0f) {
+                break
+            }
+            stepOnce(minOf(remaining, stepSeconds))
+            consumedSteps++
         }
 
-        shopFloor.update(activeDelta, workerProfilesById)
+        accumulator -= consumedSteps * stepSecondsDouble
+        if (consumedSteps < wholeSteps) {
+            // Shift ended before every computed whole step ran — the rest was real time beyond
+            // the shift, not a sub-step remainder worth carrying into a shift that's over.
+            accumulator = 0.0
+        }
+        lastTickSubStepCount = consumedSteps
+        return dayDirector.elapsedSeconds - elapsedBefore
+    }
+
+    /** One fixed simulation step: schedule tick, shipment drain, day-director advance, autosave accrual. */
+    private fun stepOnce(deltaSeconds: Float) {
+        shopFloor.update(deltaSeconds, workerProfilesById)
         // ConveyorSystem publishes the shipment on the bus as it happens; this drain is only the
         // day's tally.
         for (shipment in shopFloor.consumeShipmentEvents()) {
             dayDirector.recordShipment(shipment.productId, shipment.faultReason)
             dirty = true
         }
-        dayDirector.update(activeDelta)
-        if (activeDelta > 0f) {
-            dirty = true
-        }
-        autosaveElapsedSeconds += activeDelta
+        dayDirector.update(deltaSeconds)
+        dirty = true
+        autosaveElapsedSeconds += deltaSeconds
         if (autosaveElapsedSeconds >= GameConfig.autosaveIntervalSeconds) {
             if (dirty) {
                 persist()
             }
             autosaveElapsedSeconds = 0f
         }
-        return activeDelta
     }
 
     fun finalizeIfNeeded(): Boolean {
@@ -131,5 +166,22 @@ class ShiftLifecycleController(
     fun returnToLevelSelection() {
         persist()
         host.openLevelSelection()
+    }
+
+    private companion object {
+        /**
+         * Nudges the whole-step count up when the accumulator sits a hair under an exact multiple
+         * of [stepSecondsDouble]. [stepSeconds] is a `Float` (from [GameConfig.simulationStepSeconds]
+         * or [com.faultory.core.capture.CaptureRuntime.fixedDeltaSeconds]); widening an
+         * already-Float32-rounded constant to `Double` does not recover the precision lost in that
+         * rounding — `1f/60f` widened to `Double` is ~4.7e-9 above the true 1/60, so a 3.0 s
+         * accumulator (`tick(3f)`) would floor to 179 steps, one short of 180, without this.
+         * Value is ~50x below the 0.5 threshold that could falsely swallow a genuine partial-step
+         * remainder, and ~8x above the worst rounding shortfall measured up to several hundred
+         * accumulated seconds (this game's longest shift is 180 s) — and is provably irrelevant to
+         * capture's byte-identical guarantee, since there `accumulator / stepSecondsDouble` is the
+         * same `Float` value divided by itself: exactly `1.0` regardless of epsilon.
+         */
+        const val STEP_COUNT_EPSILON = 1e-2
     }
 }

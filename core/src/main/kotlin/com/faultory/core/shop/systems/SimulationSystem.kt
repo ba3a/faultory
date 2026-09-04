@@ -108,9 +108,9 @@ internal enum class SimulationPhase {
     SECURITY,
 
     /**
-     * The conveyor advances every belt product one tile (more on a large frame delta) and ships the
-     * ones that reach a shipping edge. After [QUALITY] and [SECURITY] so every system that acts on a
-     * product at its current tile has already run; the belt then moves it.
+     * The conveyor advances every belt product one tile and ships the ones that reach a shipping
+     * edge. After [QUALITY] and [SECURITY] so every system that acts on a product at its current
+     * tile has already run; the belt then moves it.
      */
     CONVEYOR,
 

@@ -14,7 +14,7 @@ import com.faultory.core.shop.ShopProductState
 
 /**
  * Lets another system start a two-actor interaction without depending on [InteractionSystem].
- * [CleanerSystem] asks for this, not the whole system (CODE_REVIEW 2.3).
+ * [CleanerSystem] asks for this, not the whole system.
  */
 internal interface InteractionStarter {
     /**

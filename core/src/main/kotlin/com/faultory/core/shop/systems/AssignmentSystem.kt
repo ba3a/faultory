@@ -25,7 +25,7 @@ import com.faultory.core.shop.pathfinding.MovementStrategyResolver
  * It has no [SimulationPhase] and never runs on the per-frame tick.
  *
  * Takes [QaPostLocator] for the QA-post candidate list, the same collaborator [WorkerObjectiveSystem]
- * uses — neither system reaches into [QaSystem] any more (CODE_REVIEW 2.3).
+ * uses — neither system reaches into [QaSystem] any more.
  */
 internal class AssignmentSystem(
     private val access: AssignmentAccess,

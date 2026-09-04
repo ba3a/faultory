@@ -1,5 +1,6 @@
 package com.faultory.core.screens.shopfloor
 
+import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.LevelStarThresholds
 import com.faultory.core.save.GameSave
@@ -38,7 +39,8 @@ class ShiftLifecycleControllerTest {
     private fun controller(
         shopFloor: ShopFloor = shopFloor(),
         host: RecordingHost = RecordingHost(),
-        startingCash: Int = 0
+        startingCash: Int = 0,
+        stepSeconds: Float = GameConfig.simulationStepSeconds
     ): Pair<ShiftLifecycleController, RecordingHost> {
         val save = GameSave.forLevel(level.id, blueprint.id, emptyList(), emptyList(), startingCash)
         val ctrl = ShiftLifecycleController(
@@ -47,7 +49,8 @@ class ShiftLifecycleControllerTest {
             nextLevel = null,
             shopFloor = shopFloor,
             workerProfilesById = emptyMap(),
-            initialSave = save
+            initialSave = save,
+            stepSeconds = stepSeconds
         )
         return ctrl to host
     }
@@ -157,6 +160,40 @@ class ShiftLifecycleControllerTest {
         repeat(6) { ctrl.tick(1f) }
 
         assertTrue(host.savedGames.isNotEmpty())
+    }
+
+    @Test
+    fun `tick reaches the same elapsed time regardless of how the same total delta is split across frames`() {
+        val (ctrl60, _) = controller()
+        repeat(360) { ctrl60.tick(1f / 60f) }
+        val (ctrl10, _) = controller()
+        repeat(60) { ctrl10.tick(0.1f) }
+        val (ctrl1, _) = controller()
+        repeat(6) { ctrl1.tick(1f) }
+
+        assertEquals(ctrl60.dayDirector.elapsedSeconds, ctrl10.dayDirector.elapsedSeconds, absoluteTolerance = 0.001f)
+        assertEquals(ctrl60.dayDirector.elapsedSeconds, ctrl1.dayDirector.elapsedSeconds, absoluteTolerance = 0.001f)
+    }
+
+    @Test
+    fun `a single hitch frame runs multiple fixed sub-steps instead of one big step`() {
+        val (ctrl, _) = controller()
+
+        val advanced = ctrl.tick(0.1f) // mirrors ShopFloorScreen.MAX_FRAME_DELTA_SECONDS
+
+        assertTrue(advanced <= 0.1f + 0.001f)
+        assertTrue(ctrl.lastTickSubStepCount >= 6)
+    }
+
+    @Test
+    fun `a sub-step remainder carries across tick calls`() {
+        val (ctrl, _) = controller()
+
+        val first = ctrl.tick(0.01f)
+        val second = ctrl.tick(0.01f)
+
+        assertEquals(0f, first)
+        assertEquals(GameConfig.simulationStepSeconds, second, absoluteTolerance = 0.0001f)
     }
 
     private fun assertEquals(expected: Float, actual: Float, absoluteTolerance: Float) {

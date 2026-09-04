@@ -16,6 +16,10 @@ object GameConfig {
     const val failureBlinkSeconds = 0.6f
     const val defaultFrameDurationSeconds = 0.1f
     const val targetFps = 60
+    // The shop-floor simulation's fixed step. Deliberately independent of targetFps (a display/
+    // vsync pacing target): if the two were ever derived from each other, changing one would
+    // silently change the other and perturb the seeded Random stream in capture mode.
+    const val simulationStepSeconds = 1f / 60f
     const val saveDirectoryName = "saves"
     const val autosaveIntervalSeconds = 5f
     const val securityRoamMinSteps = 3

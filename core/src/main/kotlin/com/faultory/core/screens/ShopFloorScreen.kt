@@ -71,7 +71,8 @@ class ShopFloorScreen(
         shopFloor = shopFloor,
         workerProfilesById = catalogLookup.workerProfilesById,
         initialSave = saveSnapshot,
-        events = events
+        events = events,
+        stepSeconds = captureRuntime.fixedDeltaSeconds ?: GameConfig.simulationStepSeconds
     )
     private val bankPanel = BankPanel(catalogLookup)
     private val failureBlink = FailureBlinkController()

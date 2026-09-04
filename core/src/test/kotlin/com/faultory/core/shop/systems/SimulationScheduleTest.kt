@@ -8,8 +8,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Locks the shop-floor system execution order (CODE_REVIEW 2.1). The order used to be a hand-tuned
- * flat list in `ShopFloor.update()` with no test able to catch a misplaced system; it is now
+ * Locks the shop-floor system execution order. The order used to be a hand-tuned flat list in
+ * `ShopFloor.update()` with no test able to catch a misplaced system; it is now
  * [SimulationPhase] plus a fixed registration order, and this test fails if either drifts.
  */
 class SimulationScheduleTest {

@@ -10,8 +10,8 @@ import com.faultory.core.shop.plus
  * tile a worker already posted at is watching.
  *
  * These are pure derivations from the grid and current occupancy. They used to be helper methods on
- * [QaSystem] that [WorkerObjectiveSystem] and [AssignmentSystem] reached across for (CODE_REVIEW
- * 2.3); pulling them here lets all three depend on this small collaborator instead of on each other.
+ * [QaSystem] that [WorkerObjectiveSystem] and [AssignmentSystem] reached across for — pulling them
+ * here lets all three depend on this small collaborator instead of on each other.
  */
 internal class QaPostLocator(
     private val world: ShopWorld,

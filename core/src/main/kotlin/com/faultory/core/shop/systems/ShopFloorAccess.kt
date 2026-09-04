@@ -20,7 +20,7 @@ import com.faultory.core.shop.TileCoordinate
  *
  * [ShopFloorState] is one mutable object holding the whole world plus a dozen secondary indexes.
  * Handing it whole to every system meant that to change one system safely you had to understand all
- * of it (CODE_REVIEW 2.3). Instead each system takes exactly one **`*Access`** interface (declared
+ * of it. Instead each system takes exactly one **`*Access`** interface (declared
  * at the foot of this file) composed of the narrow capability interfaces below, so its constructor
  * states precisely what it may touch — and [ShopFloorState] is the single class that implements
  * them all.
