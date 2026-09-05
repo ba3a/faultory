@@ -2,6 +2,7 @@ package com.faultory.core.screens.shopfloor
 
 import com.badlogic.gdx.math.Rectangle
 import com.faultory.core.config.GameConfig
+import com.faultory.core.config.UiMetrics
 import com.faultory.core.encounters.EvaluationContext
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
@@ -132,25 +133,25 @@ object UpgradeModalLayout {
         kind: PlacedShopObjectKind,
         options: List<UpgradeOption>
     ): UpgradeModalState {
-        val width = options.size * GameConfig.upgradeModalCardWidth +
-            (options.size - 1).coerceAtLeast(0) * GameConfig.upgradeModalCardGap +
-            GameConfig.upgradeModalHorizontalPadding * 2f
-        val height = GameConfig.upgradeModalCardHeight +
-            GameConfig.upgradeModalTitleSpace +
-            GameConfig.upgradeModalVerticalPadding
+        val width = options.size * UiMetrics.upgradeModalCardWidth +
+            (options.size - 1).coerceAtLeast(0) * UiMetrics.upgradeModalCardGap +
+            UiMetrics.upgradeModalHorizontalPadding * 2f
+        val height = UiMetrics.upgradeModalCardHeight +
+            UiMetrics.upgradeModalTitleSpace +
+            UiMetrics.upgradeModalVerticalPadding
         val x = (GameConfig.virtualWidth - width) / 2f
         val y = (GameConfig.virtualHeight - height) / 2f
-        val cardsTotal = options.size * GameConfig.upgradeModalCardWidth +
-            (options.size - 1).coerceAtLeast(0) * GameConfig.upgradeModalCardGap
+        val cardsTotal = options.size * UiMetrics.upgradeModalCardWidth +
+            (options.size - 1).coerceAtLeast(0) * UiMetrics.upgradeModalCardGap
         val cardsStartX = x + (width - cardsTotal) / 2f
-        val cardsY = y + GameConfig.upgradeModalVerticalPadding
+        val cardsY = y + UiMetrics.upgradeModalVerticalPadding
         val laidOut = options.mapIndexed { index, option ->
             option.copy(
                 bounds = Rectangle(
-                    cardsStartX + index * (GameConfig.upgradeModalCardWidth + GameConfig.upgradeModalCardGap),
+                    cardsStartX + index * (UiMetrics.upgradeModalCardWidth + UiMetrics.upgradeModalCardGap),
                     cardsY,
-                    GameConfig.upgradeModalCardWidth,
-                    GameConfig.upgradeModalCardHeight
+                    UiMetrics.upgradeModalCardWidth,
+                    UiMetrics.upgradeModalCardHeight
                 )
             )
         }

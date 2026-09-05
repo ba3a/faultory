@@ -1,6 +1,5 @@
 package com.faultory.core.shop.systems
 
-import com.faultory.core.config.GameConfig
 import com.faultory.core.encounters.ProductDestroyedEvent
 import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.encounters.UnitStoodUpEvent
@@ -54,7 +53,7 @@ internal class UnitPhaseSystem(
                 it.copy(
                     unitPhase = UnitPhase.STANDING,
                     unitPhaseTimer = 0f,
-                    unitPhaseDurationSeconds = GameConfig.unitStandingSeconds
+                    unitPhaseDurationSeconds = access.floorTuning.unitStandingSeconds
                 )
             }
             UnitPhase.STANDING -> {
@@ -90,16 +89,21 @@ internal class UnitPhaseSystem(
     }
 
     private fun jitterLyingDuration(): Float {
-        val jitter = if (GameConfig.unitLyingJitterSeconds > 0f) {
-            (random.nextFloat() * 2f - 1f) * GameConfig.unitLyingJitterSeconds
+        val jitter = if (access.floorTuning.unitLyingJitterSeconds > 0f) {
+            (random.nextFloat() * 2f - 1f) * access.floorTuning.unitLyingJitterSeconds
         } else {
             0f
         }
-        return (GameConfig.unitLyingBaseSeconds + jitter).coerceAtLeast(0.05f)
+        return (access.floorTuning.unitLyingBaseSeconds + jitter).coerceAtLeast(0.05f)
     }
 
     companion object {
-        fun startFalling(workerId: String, objects: PlacedObjectWrites, animations: WorkerAnimationWrites) {
+        fun startFalling(
+            workerId: String,
+            objects: PlacedObjectWrites,
+            animations: WorkerAnimationWrites,
+            fallSeconds: Float
+        ) {
             val worker = objects.mutablePlacedObjects.byId(workerId) as? PlacedShopObject.Worker ?: return
             objects.mutablePlacedObjects.replaceById(workerId) {
                 worker.copy(movementPath = emptyList(), movementProgress = 0f)
@@ -108,12 +112,17 @@ internal class UnitPhaseSystem(
                 it.copy(
                     unitPhase = UnitPhase.FALLING,
                     unitPhaseTimer = 0f,
-                    unitPhaseDurationSeconds = GameConfig.unitFallSeconds
+                    unitPhaseDurationSeconds = fallSeconds
                 )
             }
         }
 
-        fun startDestroyProduct(workerId: String, objects: PlacedObjectWrites, animations: WorkerAnimationWrites) {
+        fun startDestroyProduct(
+            workerId: String,
+            objects: PlacedObjectWrites,
+            animations: WorkerAnimationWrites,
+            destroySeconds: Float
+        ) {
             val worker = objects.mutablePlacedObjects.byId(workerId) as? PlacedShopObject.Worker ?: return
             objects.mutablePlacedObjects.replaceById(workerId) {
                 worker.copy(movementPath = emptyList(), movementProgress = 0f)
@@ -122,7 +131,7 @@ internal class UnitPhaseSystem(
                 it.copy(
                     unitPhase = UnitPhase.DESTROYING_PRODUCT,
                     unitPhaseTimer = 0f,
-                    unitPhaseDurationSeconds = GameConfig.cleanerDestroyProductSeconds
+                    unitPhaseDurationSeconds = destroySeconds
                 )
             }
         }

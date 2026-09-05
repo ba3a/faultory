@@ -51,12 +51,12 @@ internal class SecuritySystem(
             val roleProfile = profile.profileFor(WorkerRole.SECURITY) ?: continue
 
             if (current.pursuitTargetWorkerId != null) {
-                handleSecurityPursuit(freshIndex, current, saboteursById, pursuedSaboteurIds)
+                handleSecurityPursuit(freshIndex, current, saboteursById, pursuedSaboteurIds, profile)
                 continue
             }
 
             if (isSecurityOnDutyAtCamera(current)) {
-                dispatchFromCamera(current, securityWorkers, saboteursById, pursuedSaboteurIds)
+                dispatchFromCamera(current, securityWorkers, saboteursById, pursuedSaboteurIds, workerProfilesById)
                 continue
             }
 
@@ -90,7 +90,8 @@ internal class SecuritySystem(
         securityIndex: Int,
         security: PlacedShopObject.Worker,
         saboteursById: Map<String, PlacedShopObject.Worker>,
-        pursuedSaboteurIds: MutableSet<String>
+        pursuedSaboteurIds: MutableSet<String>,
+        workerProfile: WorkerProfile?
     ) {
         val targetId = security.pursuitTargetWorkerId ?: return
         val target = saboteursById[targetId]
@@ -130,7 +131,7 @@ internal class SecuritySystem(
         }
 
         if (security.movementPath.isEmpty() || !isPathStillValid(security)) {
-            val path = planSecurityPursuit(security, target) ?: return
+            val path = planSecurityPursuit(security, target, workerProfile) ?: return
             if (path.isEmpty()) return
             mutablePlacedObjects[securityIndex] = security.copy(
                 movementPath = path,
@@ -144,7 +145,8 @@ internal class SecuritySystem(
         cameraSecurity: PlacedShopObject.Worker,
         allSecurityWorkers: List<PlacedShopObject.Worker>,
         saboteursById: Map<String, PlacedShopObject.Worker>,
-        pursuedSaboteurIds: MutableSet<String>
+        pursuedSaboteurIds: MutableSet<String>,
+        workerProfilesById: Map<String, WorkerProfile>
     ) {
         val unattended = saboteursById.values.filter { it.id !in pursuedSaboteurIds }
         if (unattended.isEmpty()) return
@@ -162,7 +164,7 @@ internal class SecuritySystem(
             } else {
                 cameraSecurity
             }
-            assignPursuer(pursuer, saboteur)
+            assignPursuer(pursuer, saboteur, workerProfilesById[pursuer.catalogId])
             pursuedSaboteurIds += saboteur.id
             if (pursuer.id == cameraSecurity.id) {
                 return
@@ -190,13 +192,13 @@ internal class SecuritySystem(
             val target = visible.firstOrNull()
             if (target != null) {
                 pursuedSaboteurIds += target.id
-                assignPursuer(security, target)
+                assignPursuer(security, target, profile)
                 return
             }
         }
 
         if (security.movementPath.isEmpty()) {
-            val path = planSecurityRoamingPath(security)
+            val path = planSecurityRoamingPath(security, profile)
             if (path.isNotEmpty()) {
                 mutablePlacedObjects[securityIndex] = security.copy(
                     movementPath = path,
@@ -222,11 +224,15 @@ internal class SecuritySystem(
     }
 
     /** The single place a saboteur becomes someone's target, whether spotted on foot or on camera. */
-    private fun assignPursuer(pursuer: PlacedShopObject.Worker, target: PlacedShopObject.Worker) {
+    private fun assignPursuer(
+        pursuer: PlacedShopObject.Worker,
+        target: PlacedShopObject.Worker,
+        workerProfile: WorkerProfile?
+    ) {
         val pursuerIndex = mutablePlacedObjects.indexOfId(pursuer.id)
         if (pursuerIndex < 0) return
         val current = mutablePlacedObjects[pursuerIndex] as PlacedShopObject.Worker
-        val path = planSecurityPursuit(current, target)
+        val path = planSecurityPursuit(current, target, workerProfile)
         mutablePlacedObjects[pursuerIndex] = current.copy(
             pursuitTargetWorkerId = target.id,
             movementPath = path ?: emptyList(),
@@ -248,7 +254,8 @@ internal class SecuritySystem(
 
     private fun planSecurityPursuit(
         security: PlacedShopObject.Worker,
-        target: PlacedShopObject.Worker
+        target: PlacedShopObject.Worker,
+        workerProfile: WorkerProfile?
     ): List<TileCoordinate>? {
         val standTiles = grid.orthogonalNeighbors(target.position)
             .filter { tile ->
@@ -262,7 +269,8 @@ internal class SecuritySystem(
         if (security.position in standTiles) {
             return emptyList()
         }
-        return movementStrategyResolver.strategyFor(security).pathFinder.findPath(
+        val pathFinder = movementStrategyResolver.strategyFor(security, workerProfile).pathFinder
+        return pathFinder.findPath(
             grid = grid,
             start = security.position,
             goals = standTiles,
@@ -270,8 +278,11 @@ internal class SecuritySystem(
         )
     }
 
-    private fun planSecurityRoamingPath(security: PlacedShopObject.Worker): List<TileCoordinate> {
-        val roamer = movementStrategyResolver.strategyFor(security).roamer ?: return emptyList()
+    private fun planSecurityRoamingPath(
+        security: PlacedShopObject.Worker,
+        workerProfile: WorkerProfile?
+    ): List<TileCoordinate> {
+        val roamer = movementStrategyResolver.strategyFor(security, workerProfile).roamer ?: return emptyList()
         val blocked = access.blockedTilesForPath(ignoreWorkerId = security.id)
         return roamer.nextRoam(grid, security.position, blocked, random)
     }

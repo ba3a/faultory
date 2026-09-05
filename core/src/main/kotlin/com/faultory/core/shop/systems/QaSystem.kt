@@ -287,7 +287,7 @@ internal class QaSystem(
             // Phase already running for this product — nothing to start.
             return false
         }
-        UnitPhaseSystem.startDestroyProduct(inspector.id, access, access)
+        UnitPhaseSystem.startDestroyProduct(inspector.id, access, access, access.floorTuning.destroyProductSeconds)
         return true
     }
 

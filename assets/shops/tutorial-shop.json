@@ -35,5 +35,22 @@
     }
   ],
   "machineSlots": [],
-  "workerSpawnPoints": []
+  "workerSpawnPoints": [],
+  "floorTuning": {
+    "conveyorSpeedTilesPerSecond": 2.5,
+    "machineInputBufferCap": 5,
+    "machineOutputQueueCap": 3,
+    "beltEnterDurationSeconds": 0.3,
+    "beltRideDurationSeconds": 0.4,
+    "beltExitDurationSeconds": 0.3,
+    "wetTileBaseSeconds": 6.0,
+    "wetTileJitterSeconds": 2.0,
+    "wetTileSlipBaseChance": 0.25,
+    "wetTileSlipJitterChance": 0.1,
+    "unitFallSeconds": 0.4,
+    "unitLyingBaseSeconds": 1.4,
+    "unitLyingJitterSeconds": 0.6,
+    "unitStandingSeconds": 0.4,
+    "destroyProductSeconds": 1.0
+  }
 }

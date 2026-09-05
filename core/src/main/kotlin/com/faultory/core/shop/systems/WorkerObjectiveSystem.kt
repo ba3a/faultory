@@ -3,6 +3,7 @@ package com.faultory.core.shop.systems
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.MachineRecipe
 import com.faultory.core.content.MachineSlotType
+import com.faultory.core.content.WorkerProfile
 import com.faultory.core.encounters.MachineInputLoadedEvent
 import com.faultory.core.encounters.MachineInputSource
 import com.faultory.core.encounters.ProductPickedUpEvent
@@ -34,14 +35,14 @@ internal class WorkerObjectiveSystem(
 
     override val phase = SimulationPhase.PLANNING
 
-    override fun step(context: SystemContext) = update(context.deltaSeconds)
+    override fun step(context: SystemContext) = update(context.deltaSeconds, context.workerProfilesById)
 
-    fun update(deltaSeconds: Float) {
+    fun update(deltaSeconds: Float, workerProfilesById: Map<String, WorkerProfile>) {
         replansIssuedThisStep = 0
-        resolveWorkerObjectives(deltaSeconds)
+        resolveWorkerObjectives(deltaSeconds, workerProfilesById)
     }
 
-    private fun resolveWorkerObjectives(deltaSeconds: Float) {
+    private fun resolveWorkerObjectives(deltaSeconds: Float, workerProfilesById: Map<String, WorkerProfile>) {
         for (index in mutablePlacedObjects.indices) {
             val worker = mutablePlacedObjects[index] as? PlacedShopObject.Worker ?: continue
             if (access.animationStateFor(worker.id).isBusy) {
@@ -55,31 +56,31 @@ internal class WorkerObjectiveSystem(
                         continue
                     }
                     if (worker.movementPath.isEmpty()) {
-                        planWorkerReturnToMachine(index, worker, deltaSeconds)
+                        planWorkerReturnToMachine(index, worker, deltaSeconds, workerProfilesById)
                     }
                     continue
                 }
 
-                if (tryDropCarriedProduct(index, worker, carriedProduct, deltaSeconds)) {
+                if (tryDropCarriedProduct(index, worker, carriedProduct, deltaSeconds, workerProfilesById)) {
                     continue
                 }
                 if (worker.movementPath.isEmpty()) {
-                    planWorkerDelivery(index, worker, deltaSeconds)
+                    planWorkerDelivery(index, worker, deltaSeconds, workerProfilesById)
                 }
                 continue
             }
 
-            if (tryHandleRecipeIngredientFetch(index, worker, deltaSeconds)) {
+            if (tryHandleRecipeIngredientFetch(index, worker, deltaSeconds, workerProfilesById)) {
                 continue
             }
 
             if (worker.assignedMachineId != null && worker.movementPath.isEmpty() && !access.isWorkerAtAssignedSlot(worker)) {
-                planWorkerReturnToMachine(index, worker, deltaSeconds)
+                planWorkerReturnToMachine(index, worker, deltaSeconds, workerProfilesById)
                 continue
             }
 
             if (worker.qaPostTile != null && worker.movementPath.isEmpty() && !access.isWorkerAtQaPost(worker)) {
-                planWorkerReturnToQaPost(index, worker, deltaSeconds)
+                planWorkerReturnToQaPost(index, worker, deltaSeconds, workerProfilesById)
             }
         }
     }
@@ -151,7 +152,8 @@ internal class WorkerObjectiveSystem(
     private fun tryHandleRecipeIngredientFetch(
         workerIndex: Int,
         worker: PlacedShopObject.Worker,
-        deltaSeconds: Float
+        deltaSeconds: Float,
+        workerProfilesById: Map<String, WorkerProfile>
     ): Boolean {
         val machineId = worker.assignedMachineId ?: return false
         val machine = access.findObjectById(machineId) ?: return false
@@ -174,7 +176,7 @@ internal class WorkerObjectiveSystem(
             return true
         }
 
-        return tryPlanRecipeIngredientFetch(workerIndex, worker, needed, deltaSeconds)
+        return tryPlanRecipeIngredientFetch(workerIndex, worker, needed, deltaSeconds, workerProfilesById)
     }
 
     private fun neededRecipeIngredients(
@@ -234,7 +236,8 @@ internal class WorkerObjectiveSystem(
         workerIndex: Int,
         worker: PlacedShopObject.Worker,
         needed: Set<String>,
-        deltaSeconds: Float
+        deltaSeconds: Float,
+        workerProfilesById: Map<String, WorkerProfile>
     ): Boolean {
         val candidates = mutableActiveProducts.filter { product ->
             product.holderObjectId == null &&
@@ -263,7 +266,7 @@ internal class WorkerObjectiveSystem(
             }
         }
 
-        val pathFinder = movementStrategyResolver.strategyFor(worker).pathFinder
+        val pathFinder = movementStrategyResolver.strategyFor(worker, workerProfilesById[worker.catalogId]).pathFinder
         val blockedTiles = access.blockedTilesForPath(ignoreWorkerId = worker.id)
         val path = attemptPlan(worker, WorkerPlanGoalKind.RECIPE_FETCH, worker.assignedMachineId, deltaSeconds) {
             sequenceOf(floorStands, beltStands)
@@ -364,7 +367,8 @@ internal class WorkerObjectiveSystem(
         workerIndex: Int,
         worker: PlacedShopObject.Worker,
         carriedProduct: ShopProduct,
-        deltaSeconds: Float
+        deltaSeconds: Float,
+        workerProfilesById: Map<String, WorkerProfile>
     ): Boolean {
         val targetBeltTile = grid.orthogonalNeighbors(worker.position)
             .firstOrNull { beltTile ->
@@ -402,9 +406,9 @@ internal class WorkerObjectiveSystem(
 
         val updatedWorker = mutablePlacedObjects[workerIndex] as? PlacedShopObject.Worker ?: return true
         if (updatedWorker.assignedMachineId != null && !access.isWorkerAtAssignedSlot(updatedWorker)) {
-            planWorkerReturnToMachine(workerIndex, updatedWorker, deltaSeconds)
+            planWorkerReturnToMachine(workerIndex, updatedWorker, deltaSeconds, workerProfilesById)
         } else if (updatedWorker.qaPostTile != null && !access.isWorkerAtQaPost(updatedWorker)) {
-            planWorkerReturnToQaPost(workerIndex, updatedWorker, deltaSeconds)
+            planWorkerReturnToQaPost(workerIndex, updatedWorker, deltaSeconds, workerProfilesById)
         }
         return true
     }
@@ -412,9 +416,10 @@ internal class WorkerObjectiveSystem(
     private fun planWorkerDelivery(
         workerIndex: Int,
         worker: PlacedShopObject.Worker,
-        deltaSeconds: Float
+        deltaSeconds: Float,
+        workerProfilesById: Map<String, WorkerProfile>
     ) {
-        val deliveryPlan = chooseDeliveryPlan(worker, deltaSeconds) ?: return
+        val deliveryPlan = chooseDeliveryPlan(worker, deltaSeconds, workerProfilesById) ?: return
         mutablePlacedObjects[workerIndex] = worker.copy(
             movementPath = deliveryPlan.path,
             movementProgress = 0f,
@@ -425,7 +430,11 @@ internal class WorkerObjectiveSystem(
         )
     }
 
-    private fun chooseDeliveryPlan(worker: PlacedShopObject.Worker, deltaSeconds: Float): DeliveryPlan? {
+    private fun chooseDeliveryPlan(
+        worker: PlacedShopObject.Worker,
+        deltaSeconds: Float,
+        workerProfilesById: Map<String, WorkerProfile>
+    ): DeliveryPlan? {
         val carried = worker.carriedProductId
         val blockedTiles = access.blockedTilesForPath(
             ignoreWorkerId = worker.id,
@@ -450,7 +459,7 @@ internal class WorkerObjectiveSystem(
         }
 
         if (standToBelt.isEmpty()) return null
-        val pathFinder = movementStrategyResolver.strategyFor(worker).pathFinder
+        val pathFinder = movementStrategyResolver.strategyFor(worker, workerProfilesById[worker.catalogId]).pathFinder
         val path = attemptPlan(worker, WorkerPlanGoalKind.DELIVERY, targetId = null, deltaSeconds = deltaSeconds) {
             pathFinder.findPath(grid, worker.position, standToBelt.keys.toSet(), blockedTiles)
         } ?: return null
@@ -462,7 +471,8 @@ internal class WorkerObjectiveSystem(
     private fun planWorkerReturnToMachine(
         workerIndex: Int,
         worker: PlacedShopObject.Worker,
-        deltaSeconds: Float
+        deltaSeconds: Float,
+        workerProfilesById: Map<String, WorkerProfile>
     ) {
         val assignedSlot = access.assignedSlotFor(worker) ?: return
         if (assignedSlot.accessTile == worker.position) {
@@ -475,7 +485,7 @@ internal class WorkerObjectiveSystem(
         }
 
         val path = attemptPlan(worker, WorkerPlanGoalKind.RETURN_TO_MACHINE, worker.assignedMachineId, deltaSeconds) {
-            movementStrategyResolver.strategyFor(worker).pathFinder.findPath(
+            movementStrategyResolver.strategyFor(worker, workerProfilesById[worker.catalogId]).pathFinder.findPath(
                 grid = grid,
                 start = worker.position,
                 goals = setOf(assignedSlot.accessTile),
@@ -496,7 +506,8 @@ internal class WorkerObjectiveSystem(
     private fun planWorkerReturnToQaPost(
         workerIndex: Int,
         worker: PlacedShopObject.Worker,
-        deltaSeconds: Float
+        deltaSeconds: Float,
+        workerProfilesById: Map<String, WorkerProfile>
     ) {
         val qaPostTile = worker.qaPostTile ?: return
         if (qaPostTile == worker.position) {
@@ -511,7 +522,7 @@ internal class WorkerObjectiveSystem(
         }
 
         val path = attemptPlan(worker, WorkerPlanGoalKind.RETURN_TO_QA_POST, qaPostTile.toString(), deltaSeconds) {
-            movementStrategyResolver.strategyFor(worker).pathFinder.findPath(
+            movementStrategyResolver.strategyFor(worker, workerProfilesById[worker.catalogId]).pathFinder.findPath(
                 grid = grid,
                 start = worker.position,
                 goals = setOf(qaPostTile),

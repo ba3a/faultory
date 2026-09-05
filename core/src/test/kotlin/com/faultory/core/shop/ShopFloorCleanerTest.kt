@@ -330,7 +330,7 @@ class ShopFloorCleanerTest {
             initialWorkerAnimationStates = mapOf(
                 "worker-1" to WorkerAnimationState(
                     unitPhase = UnitPhase.FALLING,
-                    unitPhaseDurationSeconds = GameConfig.unitFallSeconds
+                    unitPhaseDurationSeconds = FloorTuning().unitFallSeconds
                 )
             ),
             random = Random(seed = 0L),

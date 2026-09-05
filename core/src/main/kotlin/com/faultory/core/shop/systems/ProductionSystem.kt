@@ -1,6 +1,5 @@
 package com.faultory.core.shop.systems
 
-import com.faultory.core.config.GameConfig
 import com.faultory.core.content.MachineRecipe
 import com.faultory.core.content.MachineSlotType
 import com.faultory.core.content.MachineSpec
@@ -76,7 +75,7 @@ internal class ProductionSystem(
         val productionIndex = mutableMachineProductionStates.indexOfId(machine.id)
 
         if (productionIndex < 0) {
-            if (recipeState.outputQueue.size >= GameConfig.machineOutputQueueCap) {
+            if (recipeState.outputQueue.size >= access.floorTuning.machineOutputQueueCap) {
                 return
             }
             if (!hasInputsFor(recipeState.inputBuffer, recipe)) {
@@ -249,7 +248,7 @@ internal class ProductionSystem(
                 val recipeInput = recipe.inputs.firstOrNull { it.productId == product.productId } ?: continue
                 val recipeState = ensureRecipeState(machine.id)
                 val currentCount = recipeState.inputBuffer[product.productId] ?: 0
-                val cap = max(recipeInput.quantity, GameConfig.machineInputBufferCap)
+                val cap = max(recipeInput.quantity, access.floorTuning.machineInputBufferCap)
                 if (currentCount >= cap) continue
 
                 replaceRecipeState(

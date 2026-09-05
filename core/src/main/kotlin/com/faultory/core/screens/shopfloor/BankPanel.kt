@@ -2,6 +2,7 @@ package com.faultory.core.screens.shopfloor
 
 import com.badlogic.gdx.math.Rectangle
 import com.faultory.core.config.GameConfig
+import com.faultory.core.config.UiMetrics
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.encounters.EvaluationContext
 import com.faultory.core.shop.PlacedShopObjectKind
@@ -36,8 +37,12 @@ class BankPanel(private val catalogLookup: CatalogLookup) {
     fun layout() {
         val workerEntries = mutableEntries.filter { it.key.kind == PlacedShopObjectKind.WORKER }
         val machineEntries = mutableEntries.filter { it.key.kind == PlacedShopObjectKind.MACHINE }
-        layoutSection(workerEntries, GameConfig.bankSectionPaddingX, GameConfig.bankSectionPaddingY)
-        layoutSection(machineEntries, GameConfig.virtualWidth / 2f + GameConfig.bankSectionPaddingX, GameConfig.bankSectionPaddingY)
+        layoutSection(workerEntries, UiMetrics.bankSectionPaddingX, UiMetrics.bankSectionPaddingY)
+        layoutSection(
+            machineEntries,
+            GameConfig.virtualWidth / 2f + UiMetrics.bankSectionPaddingX,
+            UiMetrics.bankSectionPaddingY
+        )
     }
 
     fun toggleSelect(key: BankEntryKey) {
@@ -65,8 +70,8 @@ class BankPanel(private val catalogLookup: CatalogLookup) {
     private fun layoutSection(entries: List<BankEntry>, startX: Float, startY: Float) {
         var currentX = startX
         for (entry in entries) {
-            entry.bounds.set(currentX, startY, GameConfig.bankCardWidth, GameConfig.bankCardHeight)
-            currentX += GameConfig.bankCardWidth + GameConfig.bankCardGap
+            entry.bounds.set(currentX, startY, UiMetrics.bankCardWidth, UiMetrics.bankCardHeight)
+            currentX += UiMetrics.bankCardWidth + UiMetrics.bankCardGap
         }
     }
 }

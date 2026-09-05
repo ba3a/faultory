@@ -1,6 +1,5 @@
 package com.faultory.core.shop
 
-import com.faultory.core.config.GameConfig
 import com.faultory.core.content.MachineRecipe
 import com.faultory.core.content.MachineShapeTile
 import com.faultory.core.content.MachineSlotSpec
@@ -155,7 +154,7 @@ class ShopFloorRecipeTest {
                 MachineRecipeState(
                     machineId = "blender-1",
                     inputBuffer = mapOf(
-                        "ceramic-mug" to GameConfig.machineInputBufferCap
+                        "ceramic-mug" to FloorTuning().machineInputBufferCap
                     )
                 )
             ),

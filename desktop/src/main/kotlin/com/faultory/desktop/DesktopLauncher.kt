@@ -5,13 +5,14 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration
 import com.faultory.core.FaultoryGame
 import com.faultory.core.config.CaptureMode
 import com.faultory.core.config.GameConfig
+import com.faultory.core.config.UiMetrics
 
 fun main() {
     val configuration = Lwjgl3ApplicationConfiguration().apply {
         setTitle(GameConfig.title)
-        setWindowedMode(GameConfig.windowWidth, GameConfig.windowHeight)
+        setWindowedMode(UiMetrics.windowWidth, UiMetrics.windowHeight)
         useVsync(true)
-        setForegroundFPS(GameConfig.targetFps)
+        setForegroundFPS(UiMetrics.targetFps)
         if (CaptureMode.settings.borderless) {
             // Capture mode's window: no title bar to leak into a recording, and a fixed size so it
             // can't be dragged off the pixel-perfect 1:1 scale a promo shoot wants. It also cannot

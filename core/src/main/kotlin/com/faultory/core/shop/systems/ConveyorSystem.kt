@@ -1,6 +1,5 @@
 package com.faultory.core.shop.systems
 
-import com.faultory.core.config.GameConfig
 import com.faultory.core.content.MachineSlotType
 import com.faultory.core.encounters.CashFlowReason
 import com.faultory.core.encounters.ProductQuality
@@ -28,7 +27,7 @@ internal class ConveyorSystem(
     override fun step(context: SystemContext) = update(context.deltaSeconds)
 
     fun update(deltaSeconds: Float) {
-        conveyorProgress += deltaSeconds * GameConfig.conveyorSpeedTilesPerSecond
+        conveyorProgress += deltaSeconds * access.floorTuning.conveyorSpeedTilesPerSecond
         while (conveyorProgress >= 1f) {
             conveyorProgress -= 1f
             stepConveyorOnce()

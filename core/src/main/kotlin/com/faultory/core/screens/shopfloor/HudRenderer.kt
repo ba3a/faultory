@@ -3,6 +3,7 @@ package com.faultory.core.screens.shopfloor
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Rectangle
 import com.faultory.core.config.GameConfig
+import com.faultory.core.config.UiMetrics
 import com.faultory.core.i18n.CatalogMessageKey
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.MachineType
@@ -158,23 +159,23 @@ class HudRenderer(
     companion object {
         fun backButtonBounds(): Rectangle {
             return Rectangle(
-                GameConfig.virtualWidth - GameConfig.hudButtonRightInset - GameConfig.hudBackButtonWidth,
-                GameConfig.virtualHeight - GameConfig.hudButtonTopInset - GameConfig.hudButtonHeight,
-                GameConfig.hudBackButtonWidth,
-                GameConfig.hudButtonHeight
+                GameConfig.virtualWidth - UiMetrics.hudButtonRightInset - UiMetrics.hudBackButtonWidth,
+                GameConfig.virtualHeight - UiMetrics.hudButtonTopInset - UiMetrics.hudButtonHeight,
+                UiMetrics.hudBackButtonWidth,
+                UiMetrics.hudButtonHeight
             )
         }
 
         fun languageButtonBounds(): Rectangle {
             return Rectangle(
                 GameConfig.virtualWidth -
-                    GameConfig.hudButtonRightInset -
-                    GameConfig.hudBackButtonWidth -
-                    GameConfig.hudButtonGap -
-                    GameConfig.hudLanguageButtonWidth,
-                GameConfig.virtualHeight - GameConfig.hudButtonTopInset - GameConfig.hudButtonHeight,
-                GameConfig.hudLanguageButtonWidth,
-                GameConfig.hudButtonHeight
+                    UiMetrics.hudButtonRightInset -
+                    UiMetrics.hudBackButtonWidth -
+                    UiMetrics.hudButtonGap -
+                    UiMetrics.hudLanguageButtonWidth,
+                GameConfig.virtualHeight - UiMetrics.hudButtonTopInset - UiMetrics.hudButtonHeight,
+                UiMetrics.hudLanguageButtonWidth,
+                UiMetrics.hudButtonHeight
             )
         }
 

@@ -1,6 +1,7 @@
 package com.faultory.core.screens.shopfloor
 
 import com.faultory.core.config.GameConfig
+import com.faultory.core.config.UiMetrics
 import com.faultory.core.shop.PlacedShopObjectKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,7 +14,7 @@ class UpgradeModalLayoutTest {
 
         val modal = UpgradeModalLayout.build("worker-1", PlacedShopObjectKind.WORKER, options)
 
-        val expectedWidth = GameConfig.upgradeModalCardWidth + GameConfig.upgradeModalHorizontalPadding * 2f
+        val expectedWidth = UiMetrics.upgradeModalCardWidth + UiMetrics.upgradeModalHorizontalPadding * 2f
         val expectedX = (GameConfig.virtualWidth - expectedWidth) / 2f
         assertEquals(expectedX, modal.bounds.x, absoluteTolerance = 0.01f)
     }
@@ -24,7 +25,9 @@ class UpgradeModalLayoutTest {
 
         val modal = UpgradeModalLayout.build("worker-1", PlacedShopObjectKind.WORKER, options)
 
-        val expectedWidth = 2 * GameConfig.upgradeModalCardWidth + GameConfig.upgradeModalCardGap + GameConfig.upgradeModalHorizontalPadding * 2f
+        val expectedWidth = 2 * UiMetrics.upgradeModalCardWidth +
+            UiMetrics.upgradeModalCardGap +
+            UiMetrics.upgradeModalHorizontalPadding * 2f
         assertEquals(expectedWidth, modal.bounds.width, absoluteTolerance = 0.01f)
         assertEquals(2, modal.options.size)
     }
@@ -50,8 +53,8 @@ class UpgradeModalLayoutTest {
         val modal = UpgradeModalLayout.build("worker-1", PlacedShopObjectKind.WORKER, options)
 
         val opt = modal.options.first()
-        assertEquals(GameConfig.upgradeModalCardWidth, opt.bounds.width, absoluteTolerance = 0.01f)
-        assertEquals(GameConfig.upgradeModalCardHeight, opt.bounds.height, absoluteTolerance = 0.01f)
+        assertEquals(UiMetrics.upgradeModalCardWidth, opt.bounds.width, absoluteTolerance = 0.01f)
+        assertEquals(UiMetrics.upgradeModalCardHeight, opt.bounds.height, absoluteTolerance = 0.01f)
     }
 
     @Test
@@ -61,7 +64,7 @@ class UpgradeModalLayoutTest {
         val modal = UpgradeModalLayout.build("worker-1", PlacedShopObjectKind.WORKER, options)
 
         val gap = modal.options[1].bounds.x - (modal.options[0].bounds.x + modal.options[0].bounds.width)
-        assertEquals(GameConfig.upgradeModalCardGap, gap, absoluteTolerance = 0.01f)
+        assertEquals(UiMetrics.upgradeModalCardGap, gap, absoluteTolerance = 0.01f)
     }
 
     private fun upgradeOption(targetId: String): UpgradeOption {

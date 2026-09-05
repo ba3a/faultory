@@ -1,6 +1,6 @@
 package com.faultory.core.screens.shopfloor
 
-import com.faultory.core.config.GameConfig
+import com.faultory.core.config.UiMetrics
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -15,7 +15,7 @@ class FailureBlinkControllerTest {
         blink.start("machine-1")
 
         assertEquals("machine-1", blink.machineId)
-        assertEquals(GameConfig.failureBlinkSeconds, blink.remaining)
+        assertEquals(UiMetrics.failureBlinkSeconds, blink.remaining)
     }
 
     @Test
@@ -25,7 +25,7 @@ class FailureBlinkControllerTest {
 
         blink.update(0.1f)
 
-        assertEquals(GameConfig.failureBlinkSeconds - 0.1f, blink.remaining, absoluteTolerance = 0.001f)
+        assertEquals(UiMetrics.failureBlinkSeconds - 0.1f, blink.remaining, absoluteTolerance = 0.001f)
     }
 
     @Test
@@ -33,7 +33,7 @@ class FailureBlinkControllerTest {
         val blink = FailureBlinkController()
         blink.start("machine-1")
 
-        blink.update(GameConfig.failureBlinkSeconds)
+        blink.update(UiMetrics.failureBlinkSeconds)
 
         assertNull(blink.machineId)
         assertEquals(0f, blink.remaining)
@@ -58,7 +58,7 @@ class FailureBlinkControllerTest {
         blink.start("machine-2")
 
         assertEquals("machine-2", blink.machineId)
-        assertEquals(GameConfig.failureBlinkSeconds, blink.remaining)
+        assertEquals(UiMetrics.failureBlinkSeconds, blink.remaining)
     }
 
     @Test

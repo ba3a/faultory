@@ -5,16 +5,16 @@
     <ID>ComplexCondition:EncounterEngine.kt$EncounterEngine$target != null &amp;&amp; !target.id.let { target.oneShot &amp;&amp; it in progress.triggeredEncounterIds } &amp;&amp; target.condition.evaluate(ctx)</ID>
     <ID>ComplexCondition:HudRenderer.kt$HudRenderer$selectedItemTextDirty || isShiftEnded != lastIsShiftEnded || assignmentWorkerId != lastAssignmentWorkerId || selectedKey != lastSelectedKey</ID>
     <ID>CyclomaticComplexMethod:CleanerSystem.kt$CleanerSystem$fun update(deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
-    <ID>CyclomaticComplexMethod:CleanerSystem.kt$CleanerSystem$private fun planDeliveryToNearestWorker(cleanerIndex: Int, cleaner: PlacedShopObject.Worker): Boolean</ID>
+    <ID>CyclomaticComplexMethod:CleanerSystem.kt$CleanerSystem$private fun planDeliveryToNearestWorker( cleanerIndex: Int, cleaner: PlacedShopObject.Worker, workerProfilesById: Map&lt;String, WorkerProfile&gt; ): Boolean</ID>
     <ID>CyclomaticComplexMethod:ProductionSystem.kt$ProductionSystem$fun acceptBeltInputs()</ID>
     <ID>CyclomaticComplexMethod:QaSystem.kt$QaSystem$private fun qaConfigFor( inspector: PlacedShopObject, workerProfilesById: Map&lt;String, WorkerProfile&gt;, requireReady: Boolean ): QaInspectorConfig?</ID>
     <ID>CyclomaticComplexMethod:QaSystem.kt$QaSystem$private fun resolveCompletedQaInspection( inspection: QaInspectionState, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
     <ID>CyclomaticComplexMethod:QaSystem.kt$QaSystem$private fun startMachineQaInspections(workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
     <ID>CyclomaticComplexMethod:QaSystem.kt$QaSystem$private fun startWorkerQaInspections(workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
     <ID>CyclomaticComplexMethod:WorkerMovementSystem.kt$WorkerMovementSystem$fun update( deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
-    <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun chooseDeliveryPlan(worker: PlacedShopObject.Worker, deltaSeconds: Float): DeliveryPlan?</ID>
-    <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun resolveWorkerObjectives(deltaSeconds: Float)</ID>
-    <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun tryPlanRecipeIngredientFetch( workerIndex: Int, worker: PlacedShopObject.Worker, needed: Set&lt;String&gt;, deltaSeconds: Float ): Boolean</ID>
+    <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun chooseDeliveryPlan( worker: PlacedShopObject.Worker, deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; ): DeliveryPlan?</ID>
+    <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun resolveWorkerObjectives(deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
+    <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun tryPlanRecipeIngredientFetch( workerIndex: Int, worker: PlacedShopObject.Worker, needed: Set&lt;String&gt;, deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; ): Boolean</ID>
     <ID>LongMethod:CompletionModalRenderer.kt$CompletionModalRenderer$override fun drawText(ctx: ShopFloorRenderContext)</ID>
     <ID>LongMethod:LocalSaveRepositoryTest.kt$LocalSaveRepositoryTest$@Test fun `save keeps each level in its own slot even when shop ids match`()</ID>
     <ID>LongMethod:ProductionSystem.kt$ProductionSystem$private fun tickRecipeMachine( machine: PlacedShopObject.Machine, machineSpec: MachineSpec, recipe: MachineRecipe, deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
@@ -117,7 +117,6 @@
     <ID>MagicNumber:WorkerAssignmentController.kt$WorkerAssignmentController$38f</ID>
     <ID>MagicNumber:WorkerAssignmentController.kt$WorkerAssignmentController$6f</ID>
     <ID>MatchingDeclarationName:UpgradeTree.kt$BinaryUpgradeTree</ID>
-    <ID>MaxLineLength:BankPanel.kt$BankPanel$layoutSection(machineEntries, GameConfig.virtualWidth / 2f + GameConfig.bankSectionPaddingX, GameConfig.bankSectionPaddingY)</ID>
     <ID>MaxLineLength:BankPanelTest.kt$BankPanelStubSaveRepository$return</ID>
     <ID>MaxLineLength:BankPanelTest.kt$BankPanelTest$recipe = MachineRecipe(inputs = emptyList(), outputProductId = "product-a", durationSeconds = 1f, defectChance = 0f)</ID>
     <ID>MaxLineLength:BootScreen.kt$BootScreen$Gdx.app?.error(LOG_TAG, "Atlas '$atlasPath' referenced in skin JSON not found on disk; renderer will fall back to shapes.")</ID>
@@ -157,7 +156,6 @@
     <ID>MaxLineLength:QaSystem.kt$QaSystem$FaultyProductStrategy.PUT_ON_FREE_TILE -&gt; placeFaultyProductOnFreeTile(product.id, inspector, inspection.beltTile)</ID>
     <ID>MaxLineLength:QaSystem.kt$QaSystem$if</ID>
     <ID>MaxLineLength:ShopFloorBeltRideTest.kt$ShopFloorBeltRideTest$shopFloor.update(0.25f, mapOf(profile.id to profile))</ID>
-    <ID>MaxLineLength:ShopFloorBeltRideTest.kt$ShopFloorBeltRideTest$shopFloor.update(GameConfig.beltRideDurationSeconds, mapOf(profile.id to profile))</ID>
     <ID>MaxLineLength:ShopFloorBeltRideTest.kt$ShopFloorBeltRideTest$worker(id = "worker-1", position = TileCoordinate(4, 5), movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5)))</ID>
     <ID>MaxLineLength:ShopFloorBeltRideTest.kt$ShopFloorBeltRideTest$worker(position = TileCoordinate(4, 5), movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5)))</ID>
     <ID>MaxLineLength:ShopFloorCleanerTest.kt$ShopFloorCleanerTest$random = Random(seed = 1L)</ID>
@@ -173,7 +171,6 @@
     <ID>MaxLineLength:SkinRegistry.kt$SkinRegistry$Gdx.app?.error(LOG_TAG, "Atlas '$atlasPath' was not pre-loaded; sprite rendering will fall back to shapes.")</ID>
     <ID>MaxLineLength:UpgradeModalLayoutTest.kt$UpgradeModalLayoutTest$assertTrue(opt.bounds.x + opt.bounds.width &lt;= modal.bounds.x + modal.bounds.width, "option right must be inside modal")</ID>
     <ID>MaxLineLength:UpgradeModalLayoutTest.kt$UpgradeModalLayoutTest$assertTrue(opt.bounds.y + opt.bounds.height &lt;= modal.bounds.y + modal.bounds.height, "option top must be inside modal")</ID>
-    <ID>MaxLineLength:UpgradeModalLayoutTest.kt$UpgradeModalLayoutTest$val expectedWidth = 2 * GameConfig.upgradeModalCardWidth + GameConfig.upgradeModalCardGap + GameConfig.upgradeModalHorizontalPadding * 2f</ID>
     <ID>MaxLineLength:UpgradeModalRenderer.kt$UpgradeModalRenderer$font.draw(batch, titleLayout, modal.bounds.x + (modal.bounds.width - titleLayout.width) / 2f, modal.bounds.y + modal.bounds.height - 22f)</ID>
     <ID>MaxLineLength:UpgradeModalRenderer.kt$UpgradeModalRenderer$renderer.color = if (index == upgradeFlow.hoveredOptionIndex) ShopFloorPalette.HIGHLIGHT_GOLD else OPTION_BORDER_DEFAULT</ID>
     <ID>MaxLineLength:WorkerAssignmentController.kt$WorkerAssignmentController$return</ID>
@@ -187,7 +184,7 @@
     <ID>NestedBlockDepth:CleanerSystem.kt$CleanerSystem$fun update(deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
     <ID>NestedBlockDepth:EncounterEngine.kt$EncounterEngine$private fun applyEffect(encounter: EncounterDefinition, ctx: EvaluationContext)</ID>
     <ID>NestedBlockDepth:WorkerMovementSystem.kt$WorkerMovementSystem$fun update( deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
-    <ID>NestedBlockDepth:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun resolveWorkerObjectives(deltaSeconds: Float)</ID>
+    <ID>NestedBlockDepth:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun resolveWorkerObjectives(deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
     <ID>ReturnCount:ProductionSystem.kt$ProductionSystem$private fun tickRecipeMachine( machine: PlacedShopObject.Machine, machineSpec: MachineSpec, recipe: MachineRecipe, deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
     <ID>ReturnCount:QaSystem.kt$QaSystem$private fun qaConfigFor( inspector: PlacedShopObject, workerProfilesById: Map&lt;String, WorkerProfile&gt;, requireReady: Boolean ): QaInspectorConfig?</ID>
     <ID>TooGenericExceptionCaught:EncounterProgressRepository.kt$LocalEncounterProgressRepository$t: Throwable</ID>
@@ -195,9 +192,7 @@
     <ID>TooManyFunctions:ShopFloor.kt$ShopFloor</ID>
     <ID>UnusedParameter:CleanerSystem.kt$CleanerSystem$cleanerIndex: Int</ID>
     <ID>UnusedParameter:CleanerSystem.kt$CleanerSystem$deltaSeconds: Float</ID>
-    <ID>UnusedParameter:CleanerSystem.kt$CleanerSystem$workerProfilesById: Map&lt;String, WorkerProfile&gt;</ID>
     <ID>UnusedParameter:ProductionSystem.kt$ProductionSystem$workerProfilesById: Map&lt;String, WorkerProfile&gt;</ID>
-    <ID>UnusedParameter:SecuritySystem.kt$SecuritySystem$profile: WorkerProfile</ID>
     <ID>UnusedPrivateProperty:CompletionModalRenderer.kt$CompletionModalRenderer$private val catalogLookup: CatalogLookup</ID>
     <ID>UseCheckOrError:ConditionLibrary.kt$ConditionLibrary$throw IllegalStateException("Cycle detected in ConditionLibrary: $cycle")</ID>
     <ID>UseCheckOrError:LocalSaveRepositoryTest.kt$LocalSaveRepositoryTest.&lt;no name provided&gt;$throw IllegalStateException("boom")</ID>

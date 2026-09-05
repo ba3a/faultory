@@ -1,6 +1,5 @@
 package com.faultory.core.shop
 
-import com.faultory.core.config.GameConfig
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.content.WorkerRoleProfile
@@ -92,7 +91,7 @@ class ShopFloorBeltRideTest {
         assertEquals(BeltRidePhase.ENTERING, shopFloor.workerAnimationState("worker-1").beltRidePhase)
 
         // Wait for ENTERING duration
-        shopFloor.update(GameConfig.beltEnterDurationSeconds, mapOf(profile.id to profile))
+        shopFloor.update(FloorTuning().beltEnterDurationSeconds, mapOf(profile.id to profile))
         assertEquals(BeltRidePhase.RIDING, shopFloor.workerAnimationState("worker-1").beltRidePhase)
     }
 
@@ -108,8 +107,8 @@ class ShopFloorBeltRideTest {
         )
 
         shopFloor.update(0.25f, mapOf(profile.id to profile))                          // arrive at belt
-        shopFloor.update(GameConfig.beltEnterDurationSeconds, mapOf(profile.id to profile))  // ENTERING → RIDING
-        shopFloor.update(GameConfig.beltRideDurationSeconds, mapOf(profile.id to profile))   // RIDING → EXITING
+        shopFloor.update(FloorTuning().beltEnterDurationSeconds, mapOf(profile.id to profile))  // ENTERING → RIDING
+        shopFloor.update(FloorTuning().beltRideDurationSeconds, mapOf(profile.id to profile))   // RIDING → EXITING
 
         val w = (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker)
         assertEquals(TileCoordinate(6, 5), w.position)
@@ -128,9 +127,9 @@ class ShopFloorBeltRideTest {
         )
 
         shopFloor.update(0.25f, mapOf(profile.id to profile))
-        shopFloor.update(GameConfig.beltEnterDurationSeconds, mapOf(profile.id to profile))
-        shopFloor.update(GameConfig.beltRideDurationSeconds, mapOf(profile.id to profile))
-        shopFloor.update(GameConfig.beltExitDurationSeconds, mapOf(profile.id to profile))
+        shopFloor.update(FloorTuning().beltEnterDurationSeconds, mapOf(profile.id to profile))
+        shopFloor.update(FloorTuning().beltRideDurationSeconds, mapOf(profile.id to profile))
+        shopFloor.update(FloorTuning().beltExitDurationSeconds, mapOf(profile.id to profile))
 
         val w = (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker)
         assertEquals(TileCoordinate(6, 5), w.position)
@@ -186,8 +185,8 @@ class ShopFloorBeltRideTest {
         )
 
         shopFloor.update(0.25f, mapOf(profile.id to profile))                                // arrive at belt entry
-        shopFloor.update(GameConfig.beltEnterDurationSeconds, mapOf(profile.id to profile)) // ENTERING → RIDING
-        shopFloor.update(GameConfig.beltRideDurationSeconds, mapOf(profile.id to profile))  // RIDING → EXITING
+        shopFloor.update(FloorTuning().beltEnterDurationSeconds, mapOf(profile.id to profile)) // ENTERING → RIDING
+        shopFloor.update(FloorTuning().beltRideDurationSeconds, mapOf(profile.id to profile))  // RIDING → EXITING
 
         val w = (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker)
         assertEquals(TileCoordinate(6, 5), w.position)
@@ -216,8 +215,9 @@ class ShopFloorBeltRideTest {
         )
 
         shopFloor.update(0.25f, mapOf(profile.id to profile))                                // arrive at belt entry (5,5)
-        shopFloor.update(GameConfig.beltEnterDurationSeconds, mapOf(profile.id to profile)) // ENTERING → RIDING
-        shopFloor.update(GameConfig.beltRideDurationSeconds, mapOf(profile.id to profile))  // RIDING ends at (6,5); chain to ENTERING for next belt tile
+        shopFloor.update(FloorTuning().beltEnterDurationSeconds, mapOf(profile.id to profile)) // ENTERING → RIDING
+        // RIDING ends at (6,5); chain to ENTERING for next belt tile
+        shopFloor.update(FloorTuning().beltRideDurationSeconds, mapOf(profile.id to profile))
 
         val s = (shopFloor.findObjectById("security-1") as PlacedShopObject.Worker)
         assertEquals(TileCoordinate(6, 5), s.position)
@@ -243,11 +243,11 @@ class ShopFloorBeltRideTest {
 
         // Advance worker-1 to belt, through ENTERING, into RIDING
         shopFloor.update(0.25f, mapOf(profile.id to profile))
-        shopFloor.update(GameConfig.beltEnterDurationSeconds, mapOf(profile.id to profile))
+        shopFloor.update(FloorTuning().beltEnterDurationSeconds, mapOf(profile.id to profile))
         assertEquals(BeltRidePhase.RIDING, shopFloor.workerAnimationState("worker-1").beltRidePhase)
 
         // Give ample time for RIDING to complete — blocker still in the way
-        shopFloor.update(GameConfig.beltRideDurationSeconds * 2, mapOf(profile.id to profile))
+        shopFloor.update(FloorTuning().beltRideDurationSeconds * 2, mapOf(profile.id to profile))
 
         val w = (shopFloor.findObjectById("worker-1") as PlacedShopObject.Worker)
         assertEquals(

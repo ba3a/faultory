@@ -3,7 +3,7 @@ package com.faultory.core.graphics
 import com.faultory.core.content.MachineType
 import com.faultory.core.shop.BeltNode
 import com.faultory.core.shop.ConveyorBelt
-import com.faultory.core.config.GameConfig
+import com.faultory.core.shop.FloorTuning
 import com.faultory.core.shop.MachineProductionState
 import com.faultory.core.shop.MachineRecipeState
 import com.faultory.core.shop.QueuedMachineOutput
@@ -52,7 +52,7 @@ class MachineActionResolverTest {
             initialMachineRecipeStates = listOf(
                 MachineRecipeState(
                     machineId = "machine-1",
-                    outputQueue = List(GameConfig.machineOutputQueueCap) { index ->
+                    outputQueue = List(FloorTuning().machineOutputQueueCap) { index ->
                         QueuedMachineOutput(productInstanceId = "product-$index", productId = "ceramic-mug")
                     }
                 )
@@ -96,7 +96,7 @@ class MachineActionResolverTest {
             initialMachineRecipeStates = listOf(
                 MachineRecipeState(
                     machineId = "machine-1",
-                    outputQueue = List(GameConfig.machineOutputQueueCap) { index ->
+                    outputQueue = List(FloorTuning().machineOutputQueueCap) { index ->
                         QueuedMachineOutput(productInstanceId = "product-$index", productId = "ceramic-mug")
                     }
                 )

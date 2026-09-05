@@ -44,7 +44,7 @@ internal class WorkerMovementSystem(
             }
 
             if (animation.beltRidePhase != null) {
-                handleBeltPhase(index, placedObject, animation, deltaSeconds)
+                handleBeltPhase(index, placedObject, animation, deltaSeconds, workerProfilesById)
                 continue
             }
 
@@ -93,7 +93,7 @@ internal class WorkerMovementSystem(
                     position = currentPosition,
                     orientation = currentOrientation
                 )
-                UnitPhaseSystem.startFalling(placedObject.id, access, access)
+                UnitPhaseSystem.startFalling(placedObject.id, access, access, access.floorTuning.unitFallSeconds)
                 events.publish {
                     UnitFellEvent(objectId = placedObject.id, tile = currentPosition, levelId = it)
                 }
@@ -146,11 +146,12 @@ internal class WorkerMovementSystem(
         index: Int,
         worker: PlacedShopObject.Worker,
         animation: WorkerAnimationState,
-        deltaSeconds: Float
+        deltaSeconds: Float,
+        workerProfilesById: Map<String, WorkerProfile>
     ) {
         when (animation.beltRidePhase) {
             BeltRidePhase.ENTERING -> handleBeltEntering(index, worker, animation, deltaSeconds)
-            BeltRidePhase.RIDING -> handleBeltRiding(index, worker, deltaSeconds)
+            BeltRidePhase.RIDING -> handleBeltRiding(index, worker, deltaSeconds, workerProfilesById)
             BeltRidePhase.EXITING -> handleBeltExiting(index, worker, animation, deltaSeconds)
             null -> Unit
         }
@@ -163,7 +164,7 @@ internal class WorkerMovementSystem(
         deltaSeconds: Float
     ) {
         val newTimer = animation.beltRideTimer + deltaSeconds
-        if (newTimer >= GameConfig.beltEnterDurationSeconds) {
+        if (newTimer >= access.floorTuning.beltEnterDurationSeconds) {
             mutablePlacedObjects[index] = worker.copy(movementProgress = 0f)
             access.updateAnimation(worker.id) {
                 it.copy(beltRidePhase = BeltRidePhase.RIDING, beltRideTimer = 0f)
@@ -173,19 +174,25 @@ internal class WorkerMovementSystem(
         }
     }
 
-    private fun handleBeltRiding(index: Int, worker: PlacedShopObject.Worker, deltaSeconds: Float) {
+    private fun handleBeltRiding(
+        index: Int,
+        worker: PlacedShopObject.Worker,
+        deltaSeconds: Float,
+        workerProfilesById: Map<String, WorkerProfile>
+    ) {
         val exitTile = grid.nextBeltTile(worker.position) ?: return
         if (access.isOccupied(exitTile, ignoreObjectId = worker.id, ignoreProductId = worker.carriedProductId)) {
             return
         }
-        val newProgress = worker.movementProgress + deltaSeconds / GameConfig.beltRideDurationSeconds
+        val newProgress = worker.movementProgress + deltaSeconds / access.floorTuning.beltRideDurationSeconds
         if (newProgress < 1f) {
             mutablePlacedObjects[index] = worker.copy(movementProgress = newProgress)
             return
         }
         val newPath = if (worker.movementPath.firstOrNull() == exitTile) worker.movementPath.drop(1) else emptyList()
         val exitOrientation = Orientation.between(worker.position, exitTile) ?: worker.orientation
-        val nextPhase = movementStrategyResolver.strategyFor(worker).beltRidePolicy.phaseAfterRide(grid, exitTile)
+        val nextPhase = movementStrategyResolver.strategyFor(worker, workerProfilesById[worker.catalogId])
+            .beltRidePolicy.phaseAfterRide(grid, exitTile)
         mutablePlacedObjects[index] = worker.copy(
             position = exitTile,
             orientation = exitOrientation,
@@ -202,7 +209,7 @@ internal class WorkerMovementSystem(
         deltaSeconds: Float
     ) {
         val newTimer = animation.beltRideTimer + deltaSeconds
-        if (newTimer < GameConfig.beltExitDurationSeconds) {
+        if (newTimer < access.floorTuning.beltExitDurationSeconds) {
             access.updateAnimation(worker.id) { it.copy(beltRideTimer = newTimer) }
             return
         }
@@ -217,12 +224,12 @@ internal class WorkerMovementSystem(
     }
 
     private fun jitteredSlipChance(): Float {
-        val jitter = if (GameConfig.cleanerSlipJitterChance > 0f) {
-            (random.nextFloat() * 2f - 1f) * GameConfig.cleanerSlipJitterChance
+        val jitter = if (access.floorTuning.wetTileSlipJitterChance > 0f) {
+            (random.nextFloat() * 2f - 1f) * access.floorTuning.wetTileSlipJitterChance
         } else {
             0f
         }
-        return (GameConfig.cleanerSlipBaseChance + jitter).coerceIn(0f, 1f)
+        return (access.floorTuning.wetTileSlipBaseChance + jitter).coerceIn(0f, 1f)
     }
 
     private fun orientationAtAssignedSlot(worker: PlacedShopObject.Worker): Orientation? {

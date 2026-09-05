@@ -51,7 +51,10 @@ data class WorkerRoleProfile(
     val faultyProductStrategy: FaultyProductStrategy? = null,
     val acceptedProductIds: List<String> = emptyList(),
     val eyesightRadius: Float? = null,
-    val spawnChance: Float? = null
+    val spawnChance: Float? = null,
+    val roamMinSteps: Int? = null,
+    val roamMaxSteps: Int? = null,
+    val beltTripChance: Float? = null
 ) {
     /**
      * True when this is a QA profile with every field a QA inspection needs. The three nullable

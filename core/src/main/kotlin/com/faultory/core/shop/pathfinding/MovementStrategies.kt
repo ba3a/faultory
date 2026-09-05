@@ -1,12 +1,15 @@
 package com.faultory.core.shop.pathfinding
 
-import com.faultory.core.config.GameConfig
+import com.faultory.core.content.WorkerRoleProfile
 
 /**
  * Predefined coherent [MovementStrategy] instances.
  *
  * Each strategy pairs a [PathFinder] with a matching [BeltRidePolicy] so the simulation
- * walks paths the search produced.
+ * walks paths the search produced. [securityPathFinder] / [cleanerPathFinder] are kept as
+ * long-lived singletons - each holds pooled scratch buffers reused across calls (see
+ * [PathFinder]'s KDoc) - so a per-worker [WorkerRoleProfile]'s roam tuning only rebuilds the cheap
+ * [StraightLineRoamer] / [MovementStrategy] wrapper around them, never the path finder itself.
  */
 object MovementStrategies {
 
@@ -19,39 +22,38 @@ object MovementStrategies {
         beltRidePolicy = BeltRidePolicy.OneTileRideExit
     )
 
+    private val securityPathFinder = ShortestPathFinder(BeltTraversal.LongRide)
+    private val cleanerPathFinder = ShortestPathFinder(BeltTraversal.Avoid)
+
     /**
      * Security: shortest path treating belts as plain walkable, straight-line roaming with
-     * occasional belt trips, simulation chains long rides.
+     * occasional belt trips, simulation chains long rides. [roleProfile]'s `roamMinSteps` /
+     * `roamMaxSteps` / `beltTripChance`, when present, override the defaults below.
      */
-    val Security: MovementStrategy = run {
-        val longRideFinder = ShortestPathFinder(BeltTraversal.LongRide)
-        MovementStrategy(
-            pathFinder = longRideFinder,
-            roamer = StraightLineRoamer(
-                pathFinder = longRideFinder,
-                minSteps = GameConfig.securityRoamMinSteps,
-                maxSteps = GameConfig.securityRoamMaxSteps,
-                beltTripChance = GameConfig.securityRoamBeltTripChance
-            ),
-            beltRidePolicy = BeltRidePolicy.ChainLongRide
-        )
-    }
+    fun securityStrategy(roleProfile: WorkerRoleProfile?): MovementStrategy = MovementStrategy(
+        pathFinder = securityPathFinder,
+        roamer = StraightLineRoamer(
+            pathFinder = securityPathFinder,
+            minSteps = roleProfile?.roamMinSteps ?: 3,
+            maxSteps = roleProfile?.roamMaxSteps ?: 10,
+            beltTripChance = roleProfile?.beltTripChance ?: 0.12f
+        ),
+        beltRidePolicy = BeltRidePolicy.ChainLongRide
+    )
 
     /**
      * Cleaner: belt-avoiding shortest path, short straight-line roams so 90° turns happen
-     * frequently between segments. Cleaner never rides belts; the ride policy is unused.
+     * frequently between segments. Cleaner never rides belts (the ride policy is unused) and never
+     * trips on a belt regardless of [roleProfile] content.
      */
-    val Cleaner: MovementStrategy = run {
-        val avoidBeltFinder = ShortestPathFinder(BeltTraversal.Avoid)
-        MovementStrategy(
-            pathFinder = avoidBeltFinder,
-            roamer = StraightLineRoamer(
-                pathFinder = avoidBeltFinder,
-                minSteps = GameConfig.cleanerRoamMinSteps,
-                maxSteps = GameConfig.cleanerRoamMaxSteps,
-                beltTripChance = 0f
-            ),
-            beltRidePolicy = BeltRidePolicy.OneTileRideExit
-        )
-    }
+    fun cleanerStrategy(roleProfile: WorkerRoleProfile?): MovementStrategy = MovementStrategy(
+        pathFinder = cleanerPathFinder,
+        roamer = StraightLineRoamer(
+            pathFinder = cleanerPathFinder,
+            minSteps = roleProfile?.roamMinSteps ?: 1,
+            maxSteps = roleProfile?.roamMaxSteps ?: 4,
+            beltTripChance = 0f
+        ),
+        beltRidePolicy = BeltRidePolicy.OneTileRideExit
+    )
 }

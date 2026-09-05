@@ -5,6 +5,7 @@ import com.faultory.core.content.MachineSlotType
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.ProductDefinition
 import com.faultory.core.encounters.CashFlowReason
+import com.faultory.core.shop.FloorTuning
 import com.faultory.core.shop.MachineProductionState
 import com.faultory.core.shop.MachineRecipeState
 import com.faultory.core.shop.PlacedShopObject
@@ -34,11 +35,12 @@ import com.faultory.core.shop.WorkerAnimationState
  * `private val grid get() = access.grid` accessors unchanged apart from the receiver.
  */
 
-/** Immutable level context: the grid and the catalog data keyed by id. */
+/** Immutable level context: the grid, the catalog data keyed by id, and the floor's tuning knobs. */
 internal interface ShopWorld {
     val grid: ShopGrid
     val machineSpecsById: Map<String, MachineSpec>
     val productDefinitionsById: Map<String, ProductDefinition>
+    val floorTuning: FloorTuning
 }
 
 /** Read side of the placed-object table (workers + machines) and its kind indexes. */
@@ -204,7 +206,7 @@ internal interface ShiftSpawnFlags {
 internal interface CleanerSpawnAccess :
     ShopWorld, PlacedObjectWrites, OccupancyReads, FloorIdFactory, ShiftSpawnFlags
 
-internal interface UnitPhaseAccess : PlacedObjectWrites, ProductWrites, WorkerAnimationWrites
+internal interface UnitPhaseAccess : ShopWorld, PlacedObjectWrites, ProductWrites, WorkerAnimationWrites
 
 internal interface WorkerMovementAccess : ShopWorld, PlacedObjectWrites, OccupancyReads, WorkerAnimationWrites
 

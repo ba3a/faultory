@@ -108,6 +108,7 @@ internal class AssignmentSystem(
 
         return routeWorkerTo(
             worker = worker,
+            workerProfile = workerProfile,
             goalsByAccessTile = operatorSlots.associateBy { it.accessTile },
             fallbackOrientation = { it.side.opposite() }
         ) { assigned, slot, path, orientation ->
@@ -141,6 +142,7 @@ internal class AssignmentSystem(
 
         return routeWorkerTo(
             worker = worker,
+            workerProfile = workerProfile,
             goalsByAccessTile = candidatesByPost,
             fallbackOrientation = { it.orientation }
         ) { assigned, post, path, orientation ->
@@ -165,11 +167,12 @@ internal class AssignmentSystem(
      */
     private fun <T> routeWorkerTo(
         worker: PlacedShopObject.Worker,
+        workerProfile: WorkerProfile?,
         goalsByAccessTile: Map<TileCoordinate, T>,
         fallbackOrientation: (T) -> Orientation,
         assign: (PlacedShopObject.Worker, T, List<TileCoordinate>, Orientation) -> PlacedShopObject.Worker
     ): WorkerAssignmentResult {
-        val path = movementStrategyResolver.strategyFor(worker).pathFinder.findPath(
+        val path = movementStrategyResolver.strategyFor(worker, workerProfile).pathFinder.findPath(
             grid = grid,
             start = worker.position,
             goals = goalsByAccessTile.keys,

@@ -123,7 +123,7 @@ class SkinActionCatalogTest {
             recipeStates = listOf(
                 com.faultory.core.shop.MachineRecipeState(
                     machineId = machine.id,
-                    outputQueue = List(com.faultory.core.config.GameConfig.machineOutputQueueCap) { index ->
+                    outputQueue = List(com.faultory.core.shop.FloorTuning().machineOutputQueueCap) { index ->
                         com.faultory.core.shop.QueuedMachineOutput(
                             productInstanceId = "product-$index",
                             productId = "ceramic-mug"

@@ -1,6 +1,6 @@
 package com.faultory.core.screens.shopfloor
 
-import com.faultory.core.config.GameConfig
+import com.faultory.core.config.UiMetrics
 
 class FailureBlinkController {
     var machineId: String? = null
@@ -10,7 +10,7 @@ class FailureBlinkController {
 
     fun start(machineId: String) {
         this.machineId = machineId
-        remaining = GameConfig.failureBlinkSeconds
+        remaining = UiMetrics.failureBlinkSeconds
     }
 
     fun update(delta: Float) {

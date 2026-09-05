@@ -1,6 +1,5 @@
 package com.faultory.core.graphics
 
-import com.faultory.core.config.GameConfig
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ShopFloor
 
@@ -19,7 +18,7 @@ object MachineActionResolver {
         // A full output queue is why the machine stopped, and the one stall worth showing: waiting
         // on inputs is ordinary idling, but a backed-up machine needs the player to act.
         val outputQueue = shopFloor.machineRecipeStateFor(placedObject.id)?.outputQueue.orEmpty()
-        if (outputQueue.size >= GameConfig.machineOutputQueueCap) {
+        if (outputQueue.size >= shopFloor.blueprint.floorTuning.machineOutputQueueCap) {
             return SpriteAction.BLOCKED.id
         }
 

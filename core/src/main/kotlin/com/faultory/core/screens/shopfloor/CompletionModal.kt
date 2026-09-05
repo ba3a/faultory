@@ -2,6 +2,7 @@ package com.faultory.core.screens.shopfloor
 
 import com.badlogic.gdx.math.Rectangle
 import com.faultory.core.config.GameConfig
+import com.faultory.core.config.UiMetrics
 import com.faultory.core.i18n.Messages
 import com.faultory.core.i18n.UiMessageKey
 
@@ -20,10 +21,10 @@ data class CompletionButton(
 object CompletionModalLayout {
     fun bounds(): Rectangle {
         return Rectangle(
-            (GameConfig.virtualWidth - GameConfig.completionModalWidth) / 2f,
-            (GameConfig.virtualHeight - GameConfig.completionModalHeight) / 2f,
-            GameConfig.completionModalWidth,
-            GameConfig.completionModalHeight
+            (GameConfig.virtualWidth - UiMetrics.completionModalWidth) / 2f,
+            (GameConfig.virtualHeight - UiMetrics.completionModalHeight) / 2f,
+            UiMetrics.completionModalWidth,
+            UiMetrics.completionModalHeight
         )
     }
 
@@ -36,10 +37,10 @@ object CompletionModalLayout {
             }
             add(CompletionAction.BACK_TO_LEVEL_SELECTION)
         }
-        val totalWidth = actions.size * GameConfig.completionModalButtonWidth +
-            (actions.size - 1) * GameConfig.completionModalButtonGap
+        val totalWidth = actions.size * UiMetrics.completionModalButtonWidth +
+            (actions.size - 1) * UiMetrics.completionModalButtonGap
         val startX = bounds.x + (bounds.width - totalWidth) / 2f
-        val y = bounds.y + GameConfig.completionModalPadding
+        val y = bounds.y + UiMetrics.completionModalPadding
         return actions.mapIndexed { index, action ->
             CompletionButton(
                 action = action,
@@ -50,12 +51,12 @@ object CompletionModalLayout {
                 },
                 bounds = Rectangle(
                     startX + index * (
-                        GameConfig.completionModalButtonWidth +
-                            GameConfig.completionModalButtonGap
+                        UiMetrics.completionModalButtonWidth +
+                            UiMetrics.completionModalButtonGap
                         ),
                     y,
-                    GameConfig.completionModalButtonWidth,
-                    GameConfig.completionModalButtonHeight
+                    UiMetrics.completionModalButtonWidth,
+                    UiMetrics.completionModalButtonHeight
                 )
             )
         }

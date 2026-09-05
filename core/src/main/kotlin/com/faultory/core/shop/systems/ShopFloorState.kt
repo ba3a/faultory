@@ -9,6 +9,7 @@ import com.faultory.core.encounters.CashEarnedEvent
 import com.faultory.core.encounters.CashFlowReason
 import com.faultory.core.encounters.CashSpentEvent
 import com.faultory.core.encounters.ShopFloorEvents
+import com.faultory.core.shop.FloorTuning
 import com.faultory.core.shop.MachineProductionState
 import com.faultory.core.shop.MachineRecipeState
 import com.faultory.core.shop.PlacedShopObject
@@ -31,6 +32,7 @@ internal class ShopFloorState(
     override val grid: ShopGrid,
     override val machineSpecsById: Map<String, MachineSpec>,
     override val productDefinitionsById: Map<String, ProductDefinition>,
+    override val floorTuning: FloorTuning = FloorTuning.default(),
     initialContent: ShopFloorInitialContent = ShopFloorInitialContent(),
     initialCash: Int,
     private val events: ShopFloorEvents = ShopFloorEvents()

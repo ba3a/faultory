@@ -11,6 +11,7 @@ import com.badlogic.gdx.utils.viewport.FitViewport
 import com.faultory.core.FaultoryGame
 import com.faultory.core.capture.CaptureRuntime
 import com.faultory.core.config.GameConfig
+import com.faultory.core.config.UiMetrics
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.graphics.ProductOrientationMemory
 import com.faultory.core.graphics.SkinFrameLookup
@@ -272,7 +273,7 @@ class ShopFloorScreen(
             Gdx.graphics.setForegroundFPS(0)
         } else {
             Gdx.graphics.setVSync(true)
-            Gdx.graphics.setForegroundFPS(GameConfig.targetFps)
+            Gdx.graphics.setForegroundFPS(UiMetrics.targetFps)
         }
     }
 

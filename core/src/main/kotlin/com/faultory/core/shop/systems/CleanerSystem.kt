@@ -1,6 +1,5 @@
 package com.faultory.core.shop.systems
 
-import com.faultory.core.config.GameConfig
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.encounters.ProductPickedUpEvent
@@ -52,12 +51,12 @@ internal class CleanerSystem(
             if (current.carriedProductId == null) {
                 if (tryPickUpAdjacentProduct(freshIndex, current)) continue
                 if (current.movementPath.isEmpty()) {
-                    planRoaming(freshIndex, current)
+                    planRoaming(freshIndex, current, workerProfilesById)
                 }
             } else {
                 if (tryHandProductToAdjacentWorker(freshIndex, current)) continue
                 if (current.movementPath.isEmpty()) {
-                    if (!planDeliveryToNearestWorker(freshIndex, current)) {
+                    if (!planDeliveryToNearestWorker(freshIndex, current, workerProfilesById)) {
                         startDestroyingHeldProduct(current)
                     }
                 }
@@ -77,12 +76,12 @@ internal class CleanerSystem(
     }
 
     private fun jitteredWetDuration(): Float {
-        val jitter = if (GameConfig.cleanerWetTileJitterSeconds > 0f) {
-            (random.nextFloat() * 2f - 1f) * GameConfig.cleanerWetTileJitterSeconds
+        val jitter = if (access.floorTuning.wetTileJitterSeconds > 0f) {
+            (random.nextFloat() * 2f - 1f) * access.floorTuning.wetTileJitterSeconds
         } else {
             0f
         }
-        return (GameConfig.cleanerWetTileBaseSeconds + jitter).coerceAtLeast(0.1f)
+        return (access.floorTuning.wetTileBaseSeconds + jitter).coerceAtLeast(0.1f)
     }
 
     private fun tryPickUpAdjacentProduct(cleanerIndex: Int, cleaner: PlacedShopObject.Worker): Boolean {
@@ -145,8 +144,13 @@ internal class CleanerSystem(
         )
     }
 
-    private fun planRoaming(cleanerIndex: Int, cleaner: PlacedShopObject.Worker) {
-        val roamer = movementStrategyResolver.strategyFor(cleaner).roamer ?: return
+    private fun planRoaming(
+        cleanerIndex: Int,
+        cleaner: PlacedShopObject.Worker,
+        workerProfilesById: Map<String, WorkerProfile>
+    ) {
+        val roamer = movementStrategyResolver.strategyFor(cleaner, workerProfilesById[cleaner.catalogId]).roamer
+            ?: return
         val blocked = access.blockedTilesForPath(ignoreWorkerId = cleaner.id)
         val path = roamer.nextRoam(grid, cleaner.position, blocked, random)
         if (path.isEmpty()) return
@@ -157,7 +161,11 @@ internal class CleanerSystem(
         )
     }
 
-    private fun planDeliveryToNearestWorker(cleanerIndex: Int, cleaner: PlacedShopObject.Worker): Boolean {
+    private fun planDeliveryToNearestWorker(
+        cleanerIndex: Int,
+        cleaner: PlacedShopObject.Worker,
+        workerProfilesById: Map<String, WorkerProfile>
+    ): Boolean {
         val carriedProductId = cleaner.carriedProductId
         val standTilesByWorker = mutableMapOf<TileCoordinate, String>()
         for (worker in mutablePlacedObjects.filterIsInstance<PlacedShopObject.Worker>()) {
@@ -174,7 +182,7 @@ internal class CleanerSystem(
         }
         if (standTilesByWorker.isEmpty()) return false
 
-        val pathFinder = movementStrategyResolver.strategyFor(cleaner).pathFinder
+        val pathFinder = movementStrategyResolver.strategyFor(cleaner, workerProfilesById[cleaner.catalogId]).pathFinder
         val blocked = access.blockedTilesForPath(
             ignoreWorkerId = cleaner.id,
             ignoreCarriedProductId = carriedProductId
@@ -192,6 +200,6 @@ internal class CleanerSystem(
     }
 
     private fun startDestroyingHeldProduct(cleaner: PlacedShopObject.Worker) {
-        UnitPhaseSystem.startDestroyProduct(cleaner.id, access, access)
+        UnitPhaseSystem.startDestroyProduct(cleaner.id, access, access, access.floorTuning.destroyProductSeconds)
     }
 }

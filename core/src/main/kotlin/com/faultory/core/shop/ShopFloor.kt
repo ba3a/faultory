@@ -49,6 +49,7 @@ class ShopFloor(
         grid = grid,
         machineSpecsById = machineSpecsById,
         productDefinitionsById = productDefinitionsById,
+        floorTuning = blueprint.floorTuning,
         initialContent = ShopFloorInitialContent(
             placements = initialPlacements,
             products = initialProducts,

@@ -120,7 +120,7 @@ class WorkerObjectiveSystemTest {
         val worker = qaWorker("w1", position, qaPostTile)
         val state = state(placements = listOf(worker) + blockersAround(position, "w1"))
 
-        system(state).update(GameConfig.simulationStepSeconds)
+        system(state).update(GameConfig.simulationStepSeconds, emptyMap())
 
         assertEquals(emptyList(), (state.findObjectById("w1") as PlacedShopObject.Worker).movementPath)
         val replanState = state.replanStateFor("w1")
@@ -135,10 +135,10 @@ class WorkerObjectiveSystemTest {
         val worker = qaWorker("w1", position, TileCoordinate(30, 15))
         val state = state(placements = listOf(worker) + blockersAround(position, "w1"))
         val objectiveSystem = system(state)
-        objectiveSystem.update(GameConfig.simulationStepSeconds)
+        objectiveSystem.update(GameConfig.simulationStepSeconds, emptyMap())
         val afterFirstFailure = state.replanStateFor("w1").cooldownRemainingSeconds
 
-        objectiveSystem.update(GameConfig.simulationStepSeconds)
+        objectiveSystem.update(GameConfig.simulationStepSeconds, emptyMap())
 
         assertEquals(emptyList(), (state.findObjectById("w1") as PlacedShopObject.Worker).movementPath)
         assertEquals(
@@ -153,13 +153,13 @@ class WorkerObjectiveSystemTest {
         val worker = qaWorker("w1", position, TileCoordinate(30, 15))
         val state = state(placements = listOf(worker) + blockersAround(position, "w1"))
         val objectiveSystem = system(state)
-        objectiveSystem.update(GameConfig.simulationStepSeconds)
+        objectiveSystem.update(GameConfig.simulationStepSeconds, emptyMap())
 
         // Larger than the maximum possible cooldown (base + jitter), so this single call both
         // crosses the expiry and immediately retries within the same update().
         val largerThanAnyCooldown =
             GameConfig.workerReplanCooldownBaseSeconds + GameConfig.workerReplanCooldownJitterSeconds + 1f
-        objectiveSystem.update(largerThanAnyCooldown)
+        objectiveSystem.update(largerThanAnyCooldown, emptyMap())
 
         // Positive again — not just decremented further into negative territory — is only possible
         // if the retry ran and failed again, re-arming a fresh cooldown.
@@ -195,7 +195,7 @@ class WorkerObjectiveSystemTest {
             machineSpecsById = machineSpecsById
         )
         val objectiveSystem = system(state)
-        objectiveSystem.update(GameConfig.simulationStepSeconds)
+        objectiveSystem.update(GameConfig.simulationStepSeconds, emptyMap())
         val afterFirstFailure = state.replanStateFor("w1")
         assertTrue(afterFirstFailure.cooldownRemainingSeconds > 0f)
         assertEquals("machine-a", afterFirstFailure.cooldownTargetId)
@@ -203,7 +203,7 @@ class WorkerObjectiveSystemTest {
         state.mutablePlacedObjects.replaceById("w1") {
             (it as PlacedShopObject.Worker).copy(assignedMachineId = "machine-b", assignedSlotIndex = 0)
         }
-        objectiveSystem.update(GameConfig.simulationStepSeconds)
+        objectiveSystem.update(GameConfig.simulationStepSeconds, emptyMap())
 
         val reassignedWorker = state.findObjectById("w1") as PlacedShopObject.Worker
         assertTrue(reassignedWorker.movementPath.isNotEmpty())
@@ -223,12 +223,12 @@ class WorkerObjectiveSystemTest {
             "test assumes more workers than the per-step budget"
         }
 
-        objectiveSystem.update(GameConfig.simulationStepSeconds)
+        objectiveSystem.update(GameConfig.simulationStepSeconds, emptyMap())
 
         val onCooldownAfterFirstStep = ids.count { state.replanStateFor(it).cooldownRemainingSeconds > 0f }
         assertEquals(GameConfig.workerReplanBudgetPerStep, onCooldownAfterFirstStep)
 
-        objectiveSystem.update(GameConfig.simulationStepSeconds)
+        objectiveSystem.update(GameConfig.simulationStepSeconds, emptyMap())
 
         val onCooldownAfterSecondStep = ids.count { state.replanStateFor(it).cooldownRemainingSeconds > 0f }
         assertEquals(ids.size, onCooldownAfterSecondStep)
