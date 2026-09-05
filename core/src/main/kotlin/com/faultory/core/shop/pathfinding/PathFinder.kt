@@ -31,6 +31,15 @@ fun interface PathFinder {
 class ShortestPathFinder(
     private val beltTraversal: BeltTraversal
 ) : PathFinder {
+    // Reused across calls: MovementStrategies holds exactly 3 long-lived instances of this class for
+    // the game's lifetime, the sim is single-threaded, and findPath is never called reentrantly, so
+    // clearing and reusing these avoids a fresh ArrayDeque+HashMap allocation on every replan
+    // attempt. reconstructPath/reconstructStatePath still allocate their returned list fresh — that
+    // list becomes Worker.movementPath and must not alias pooled storage.
+    private val plainQueue = ArrayDeque<TileCoordinate>()
+    private val plainPreviousByTile = HashMap<TileCoordinate, TileCoordinate?>()
+    private val beltAwareQueue = ArrayDeque<BeltAwareState>()
+    private val beltAwarePreviousByState = HashMap<BeltAwareState, BeltAwareState?>()
 
     override fun findPath(
         grid: ShopGrid,
@@ -55,8 +64,10 @@ class ShortestPathFinder(
         blockedTiles: Set<TileCoordinate>,
         allowBelts: Boolean
     ): List<TileCoordinate>? {
-        val queue = ArrayDeque<TileCoordinate>()
-        val previousByTile = HashMap<TileCoordinate, TileCoordinate?>()
+        val queue = plainQueue
+        val previousByTile = plainPreviousByTile
+        queue.clear()
+        previousByTile.clear()
         queue.addLast(start)
         previousByTile[start] = null
 
@@ -86,8 +97,10 @@ class ShortestPathFinder(
         // State-aware BFS: `rideCommitted = true` means we just stepped onto a belt
         // entry tile and must ride exactly one tile to nextBeltTile(tile). After the
         // ride we are free to walk again — including starting a separate ride.
-        val queue = ArrayDeque<BeltAwareState>()
-        val previousByState = HashMap<BeltAwareState, BeltAwareState?>()
+        val queue = beltAwareQueue
+        val previousByState = beltAwarePreviousByState
+        queue.clear()
+        previousByState.clear()
         val startState = BeltAwareState(start, rideCommitted = false)
         queue.addLast(startState)
         previousByState[startState] = null

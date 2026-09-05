@@ -64,4 +64,9 @@ object GameConfig {
     const val cleanerRoamMinSteps = 1
     const val cleanerRoamMaxSteps = 4
     const val cleanerWalkSpeedFallback = 96f
+
+    const val workerReplanBudgetPerStep = 2
+    const val workerReplanCooldownBaseSeconds = 1f
+    const val workerReplanCooldownJitterSeconds = 0.5f
+    const val workerReplanCooldownFloorSeconds = 0.1f
 }

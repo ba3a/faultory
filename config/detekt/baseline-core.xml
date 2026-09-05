@@ -12,9 +12,9 @@
     <ID>CyclomaticComplexMethod:QaSystem.kt$QaSystem$private fun startMachineQaInspections(workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
     <ID>CyclomaticComplexMethod:QaSystem.kt$QaSystem$private fun startWorkerQaInspections(workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
     <ID>CyclomaticComplexMethod:WorkerMovementSystem.kt$WorkerMovementSystem$fun update( deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
-    <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun chooseDeliveryPlan(worker: PlacedShopObject.Worker): DeliveryPlan?</ID>
-    <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun resolveWorkerObjectives()</ID>
-    <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun tryPlanRecipeIngredientFetch( workerIndex: Int, worker: PlacedShopObject.Worker, needed: Set&lt;String&gt; ): Boolean</ID>
+    <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun chooseDeliveryPlan(worker: PlacedShopObject.Worker, deltaSeconds: Float): DeliveryPlan?</ID>
+    <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun resolveWorkerObjectives(deltaSeconds: Float)</ID>
+    <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun tryPlanRecipeIngredientFetch( workerIndex: Int, worker: PlacedShopObject.Worker, needed: Set&lt;String&gt;, deltaSeconds: Float ): Boolean</ID>
     <ID>LongMethod:CompletionModalRenderer.kt$CompletionModalRenderer$override fun drawText(ctx: ShopFloorRenderContext)</ID>
     <ID>LongMethod:LocalSaveRepositoryTest.kt$LocalSaveRepositoryTest$@Test fun `save keeps each level in its own slot even when shop ids match`()</ID>
     <ID>LongMethod:ProductionSystem.kt$ProductionSystem$private fun tickRecipeMachine( machine: PlacedShopObject.Machine, machineSpec: MachineSpec, recipe: MachineRecipe, deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
@@ -187,7 +187,7 @@
     <ID>NestedBlockDepth:CleanerSystem.kt$CleanerSystem$fun update(deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
     <ID>NestedBlockDepth:EncounterEngine.kt$EncounterEngine$private fun applyEffect(encounter: EncounterDefinition, ctx: EvaluationContext)</ID>
     <ID>NestedBlockDepth:WorkerMovementSystem.kt$WorkerMovementSystem$fun update( deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
-    <ID>NestedBlockDepth:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun resolveWorkerObjectives()</ID>
+    <ID>NestedBlockDepth:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun resolveWorkerObjectives(deltaSeconds: Float)</ID>
     <ID>ReturnCount:ProductionSystem.kt$ProductionSystem$private fun tickRecipeMachine( machine: PlacedShopObject.Machine, machineSpec: MachineSpec, recipe: MachineRecipe, deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
     <ID>ReturnCount:QaSystem.kt$QaSystem$private fun qaConfigFor( inspector: PlacedShopObject, workerProfilesById: Map&lt;String, WorkerProfile&gt;, requireReady: Boolean ): QaInspectorConfig?</ID>
     <ID>TooGenericExceptionCaught:EncounterProgressRepository.kt$LocalEncounterProgressRepository$t: Throwable</ID>

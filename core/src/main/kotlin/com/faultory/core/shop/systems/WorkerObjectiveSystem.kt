@@ -1,5 +1,6 @@
 package com.faultory.core.shop.systems
 
+import com.faultory.core.config.GameConfig
 import com.faultory.core.content.MachineRecipe
 import com.faultory.core.content.MachineSlotType
 import com.faultory.core.encounters.MachineInputLoadedEvent
@@ -29,15 +30,18 @@ internal class WorkerObjectiveSystem(
     private val machineSpecsById get() = access.machineSpecsById
     private val grid get() = access.grid
 
+    private var replansIssuedThisStep = 0
+
     override val phase = SimulationPhase.PLANNING
 
-    override fun step(context: SystemContext) = update()
+    override fun step(context: SystemContext) = update(context.deltaSeconds)
 
-    fun update() {
-        resolveWorkerObjectives()
+    fun update(deltaSeconds: Float) {
+        replansIssuedThisStep = 0
+        resolveWorkerObjectives(deltaSeconds)
     }
 
-    private fun resolveWorkerObjectives() {
+    private fun resolveWorkerObjectives(deltaSeconds: Float) {
         for (index in mutablePlacedObjects.indices) {
             val worker = mutablePlacedObjects[index] as? PlacedShopObject.Worker ?: continue
             if (access.animationStateFor(worker.id).isBusy) {
@@ -51,38 +55,103 @@ internal class WorkerObjectiveSystem(
                         continue
                     }
                     if (worker.movementPath.isEmpty()) {
-                        planWorkerReturnToMachine(index, worker)
+                        planWorkerReturnToMachine(index, worker, deltaSeconds)
                     }
                     continue
                 }
 
-                if (tryDropCarriedProduct(index, worker, carriedProduct)) {
+                if (tryDropCarriedProduct(index, worker, carriedProduct, deltaSeconds)) {
                     continue
                 }
                 if (worker.movementPath.isEmpty()) {
-                    planWorkerDelivery(index, worker)
+                    planWorkerDelivery(index, worker, deltaSeconds)
                 }
                 continue
             }
 
-            if (tryHandleRecipeIngredientFetch(index, worker)) {
+            if (tryHandleRecipeIngredientFetch(index, worker, deltaSeconds)) {
                 continue
             }
 
             if (worker.assignedMachineId != null && worker.movementPath.isEmpty() && !access.isWorkerAtAssignedSlot(worker)) {
-                planWorkerReturnToMachine(index, worker)
+                planWorkerReturnToMachine(index, worker, deltaSeconds)
                 continue
             }
 
             if (worker.qaPostTile != null && worker.movementPath.isEmpty() && !access.isWorkerAtQaPost(worker)) {
-                planWorkerReturnToQaPost(index, worker)
+                planWorkerReturnToQaPost(index, worker, deltaSeconds)
             }
         }
     }
 
+    /**
+     * Runs [search] for [worker]'s ([goalKind], [targetId]) behind a per-worker cooldown and a
+     * per-step budget, converging the four planning call sites' failure handling onto one
+     * chokepoint. [targetId] disambiguates *which* machine/post within [goalKind] (see
+     * [WorkerReplanState.cooldownTargetId]) so a cooldown from an old, now-abandoned target never
+     * delays a freshly (re)assigned, reachable one. Cooldown is only spent on an actual attempt (a
+     * budget-starved skip never arms one, so the worker is first in line again as soon as budget
+     * frees up), and only a search that actually ran can either clear the cooldown (on success) or
+     * arm a fresh one (on failure). [search] may run more than one raw BFS internally (e.g. floor
+     * stands then belt stands) — that whole attempt still counts as a single budget unit and a
+     * single pass/fail outcome.
+     */
+    private fun attemptPlan(
+        worker: PlacedShopObject.Worker,
+        goalKind: WorkerPlanGoalKind,
+        targetId: String?,
+        deltaSeconds: Float,
+        search: () -> List<TileCoordinate>?
+    ): List<TileCoordinate>? {
+        val replanState = access.replanStateFor(worker.id)
+        val sameTarget = replanState.cooldownGoalKind == goalKind && replanState.cooldownTargetId == targetId
+        val onCooldown = sameTarget && replanState.cooldownRemainingSeconds > 0f
+        if (onCooldown) {
+            val remaining = replanState.cooldownRemainingSeconds - deltaSeconds
+            access.updateReplanState(worker.id) { it.copy(cooldownRemainingSeconds = remaining) }
+            if (remaining > 0f) {
+                return null
+            }
+        }
+
+        if (replansIssuedThisStep >= GameConfig.workerReplanBudgetPerStep) {
+            return null
+        }
+        replansIssuedThisStep += 1
+
+        val path = search()
+        if (path == null) {
+            access.updateReplanState(worker.id) {
+                WorkerReplanState(
+                    cooldownRemainingSeconds = jitteredReplanCooldownSeconds(),
+                    cooldownGoalKind = goalKind,
+                    cooldownTargetId = targetId
+                )
+            }
+            return null
+        }
+        // Unconditional, not just when sameTarget: a successful plan means the worker is moving, so
+        // any cooldown left over from a since-abandoned target is moot — clearing it here avoids a
+        // stale, never-ticked entry resurfacing with its original remaining time if the worker is
+        // ever reassigned back to that old target much later.
+        access.updateReplanState(worker.id) { WorkerReplanState() }
+        return path
+    }
+
+    private fun jitteredReplanCooldownSeconds(): Float {
+        val jitter = if (GameConfig.workerReplanCooldownJitterSeconds > 0f) {
+            (random.nextFloat() * 2f - 1f) * GameConfig.workerReplanCooldownJitterSeconds
+        } else {
+            0f
+        }
+        val cooldownSeconds = GameConfig.workerReplanCooldownBaseSeconds + jitter
+        return cooldownSeconds.coerceAtLeast(GameConfig.workerReplanCooldownFloorSeconds)
+    }
+
     private fun tryHandleRecipeIngredientFetch(
         workerIndex: Int,
-        worker: PlacedShopObject.Worker
+        worker: PlacedShopObject.Worker,
+        deltaSeconds: Float
     ): Boolean {
         val machineId = worker.assignedMachineId ?: return false
         val machine = access.findObjectById(machineId) ?: return false
@@ -105,7 +174,7 @@ internal class WorkerObjectiveSystem(
             return true
         }
 
-        return tryPlanRecipeIngredientFetch(workerIndex, worker, needed)
+        return tryPlanRecipeIngredientFetch(workerIndex, worker, needed, deltaSeconds)
     }
 
     private fun neededRecipeIngredients(
@@ -164,7 +233,8 @@ internal class WorkerObjectiveSystem(
     private fun tryPlanRecipeIngredientFetch(
         workerIndex: Int,
         worker: PlacedShopObject.Worker,
-        needed: Set<String>
+        needed: Set<String>,
+        deltaSeconds: Float
     ): Boolean {
         val candidates = mutableActiveProducts.filter { product ->
             product.holderObjectId == null &&
@@ -195,10 +265,12 @@ internal class WorkerObjectiveSystem(
 
         val pathFinder = movementStrategyResolver.strategyFor(worker).pathFinder
         val blockedTiles = access.blockedTilesForPath(ignoreWorkerId = worker.id)
-        val path = sequenceOf(floorStands, beltStands)
-            .filter { it.isNotEmpty() }
-            .mapNotNull { stands -> pathFinder.findPath(grid, worker.position, stands, blockedTiles) }
-            .firstOrNull() ?: return false
+        val path = attemptPlan(worker, WorkerPlanGoalKind.RECIPE_FETCH, worker.assignedMachineId, deltaSeconds) {
+            sequenceOf(floorStands, beltStands)
+                .filter { it.isNotEmpty() }
+                .mapNotNull { stands -> pathFinder.findPath(grid, worker.position, stands, blockedTiles) }
+                .firstOrNull()
+        } ?: return false
 
         val orientation = when {
             path.isNotEmpty() -> Orientation.between(worker.position, path.first()) ?: worker.orientation
@@ -291,7 +363,8 @@ internal class WorkerObjectiveSystem(
     private fun tryDropCarriedProduct(
         workerIndex: Int,
         worker: PlacedShopObject.Worker,
-        carriedProduct: ShopProduct
+        carriedProduct: ShopProduct,
+        deltaSeconds: Float
     ): Boolean {
         val targetBeltTile = grid.orthogonalNeighbors(worker.position)
             .firstOrNull { beltTile ->
@@ -329,18 +402,19 @@ internal class WorkerObjectiveSystem(
 
         val updatedWorker = mutablePlacedObjects[workerIndex] as? PlacedShopObject.Worker ?: return true
         if (updatedWorker.assignedMachineId != null && !access.isWorkerAtAssignedSlot(updatedWorker)) {
-            planWorkerReturnToMachine(workerIndex, updatedWorker)
+            planWorkerReturnToMachine(workerIndex, updatedWorker, deltaSeconds)
         } else if (updatedWorker.qaPostTile != null && !access.isWorkerAtQaPost(updatedWorker)) {
-            planWorkerReturnToQaPost(workerIndex, updatedWorker)
+            planWorkerReturnToQaPost(workerIndex, updatedWorker, deltaSeconds)
         }
         return true
     }
 
     private fun planWorkerDelivery(
         workerIndex: Int,
-        worker: PlacedShopObject.Worker
+        worker: PlacedShopObject.Worker,
+        deltaSeconds: Float
     ) {
-        val deliveryPlan = chooseDeliveryPlan(worker) ?: return
+        val deliveryPlan = chooseDeliveryPlan(worker, deltaSeconds) ?: return
         mutablePlacedObjects[workerIndex] = worker.copy(
             movementPath = deliveryPlan.path,
             movementProgress = 0f,
@@ -351,7 +425,7 @@ internal class WorkerObjectiveSystem(
         )
     }
 
-    private fun chooseDeliveryPlan(worker: PlacedShopObject.Worker): DeliveryPlan? {
+    private fun chooseDeliveryPlan(worker: PlacedShopObject.Worker, deltaSeconds: Float): DeliveryPlan? {
         val carried = worker.carriedProductId
         val blockedTiles = access.blockedTilesForPath(
             ignoreWorkerId = worker.id,
@@ -377,7 +451,9 @@ internal class WorkerObjectiveSystem(
 
         if (standToBelt.isEmpty()) return null
         val pathFinder = movementStrategyResolver.strategyFor(worker).pathFinder
-        val path = pathFinder.findPath(grid, worker.position, standToBelt.keys.toSet(), blockedTiles) ?: return null
+        val path = attemptPlan(worker, WorkerPlanGoalKind.DELIVERY, targetId = null, deltaSeconds = deltaSeconds) {
+            pathFinder.findPath(grid, worker.position, standToBelt.keys.toSet(), blockedTiles)
+        } ?: return null
         val standTile = if (path.isEmpty()) worker.position else path.last()
         val beltTile = standToBelt[standTile] ?: return null
         return DeliveryPlan(beltTile = beltTile, path = path)
@@ -385,7 +461,8 @@ internal class WorkerObjectiveSystem(
 
     private fun planWorkerReturnToMachine(
         workerIndex: Int,
-        worker: PlacedShopObject.Worker
+        worker: PlacedShopObject.Worker,
+        deltaSeconds: Float
     ) {
         val assignedSlot = access.assignedSlotFor(worker) ?: return
         if (assignedSlot.accessTile == worker.position) {
@@ -397,15 +474,17 @@ internal class WorkerObjectiveSystem(
             return
         }
 
-        val path = movementStrategyResolver.strategyFor(worker).pathFinder.findPath(
-            grid = grid,
-            start = worker.position,
-            goals = setOf(assignedSlot.accessTile),
-            blockedTiles = access.blockedTilesForPath(
-                ignoreWorkerId = worker.id,
-                ignoreCarriedProductId = worker.carriedProductId
+        val path = attemptPlan(worker, WorkerPlanGoalKind.RETURN_TO_MACHINE, worker.assignedMachineId, deltaSeconds) {
+            movementStrategyResolver.strategyFor(worker).pathFinder.findPath(
+                grid = grid,
+                start = worker.position,
+                goals = setOf(assignedSlot.accessTile),
+                blockedTiles = access.blockedTilesForPath(
+                    ignoreWorkerId = worker.id,
+                    ignoreCarriedProductId = worker.carriedProductId
+                )
             )
-        ) ?: return
+        } ?: return
 
         mutablePlacedObjects[workerIndex] = worker.copy(
             movementPath = path,
@@ -416,7 +495,8 @@ internal class WorkerObjectiveSystem(
 
     private fun planWorkerReturnToQaPost(
         workerIndex: Int,
-        worker: PlacedShopObject.Worker
+        worker: PlacedShopObject.Worker,
+        deltaSeconds: Float
     ) {
         val qaPostTile = worker.qaPostTile ?: return
         if (qaPostTile == worker.position) {
@@ -430,15 +510,17 @@ internal class WorkerObjectiveSystem(
             return
         }
 
-        val path = movementStrategyResolver.strategyFor(worker).pathFinder.findPath(
-            grid = grid,
-            start = worker.position,
-            goals = setOf(qaPostTile),
-            blockedTiles = access.blockedTilesForPath(
-                ignoreWorkerId = worker.id,
-                ignoreCarriedProductId = worker.carriedProductId
+        val path = attemptPlan(worker, WorkerPlanGoalKind.RETURN_TO_QA_POST, qaPostTile.toString(), deltaSeconds) {
+            movementStrategyResolver.strategyFor(worker).pathFinder.findPath(
+                grid = grid,
+                start = worker.position,
+                goals = setOf(qaPostTile),
+                blockedTiles = access.blockedTilesForPath(
+                    ignoreWorkerId = worker.id,
+                    ignoreCarriedProductId = worker.carriedProductId
+                )
             )
-        ) ?: return
+        } ?: return
 
         mutablePlacedObjects[workerIndex] = worker.copy(
             movementPath = path,

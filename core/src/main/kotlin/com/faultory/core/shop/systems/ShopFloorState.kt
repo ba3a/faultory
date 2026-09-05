@@ -93,6 +93,8 @@ internal class ShopFloorState(
     private val slotPositionsByObjectId: HashMap<String, HashMap<MachineSlotType?, List<MachineSlotPosition>>> = HashMap()
     private val workerAnimationStatesByWorkerId: HashMap<String, WorkerAnimationState> =
         HashMap(initialContent.workerAnimationStates)
+    private val workerReplanStatesByWorkerId: HashMap<String, WorkerReplanState> =
+        HashMap(initialContent.workerReplanStates)
 
     private val _placedMachines: MutableList<PlacedShopObject.Machine> = mutableListOf()
     private val _placedWorkers: MutableList<PlacedShopObject.Worker> = mutableListOf()
@@ -112,6 +114,7 @@ internal class ShopFloorState(
             }
             if (old is PlacedShopObject.Worker && new == null) {
                 workerAnimationStatesByWorkerId.remove(old.id)
+                workerReplanStatesByWorkerId.remove(old.id)
             }
             updateOperatorWorkerIndex(old, new)
             updateKindIndex(old, new)
@@ -452,6 +455,18 @@ internal class ShopFloorState(
     ): WorkerAnimationState {
         val updated = transform(workerAnimationStatesByWorkerId[workerId] ?: WorkerAnimationState())
         workerAnimationStatesByWorkerId[workerId] = updated
+        return updated
+    }
+
+    override fun replanStateFor(workerId: String): WorkerReplanState =
+        workerReplanStatesByWorkerId[workerId] ?: WorkerReplanState()
+
+    override fun updateReplanState(
+        workerId: String,
+        transform: (WorkerReplanState) -> WorkerReplanState
+    ): WorkerReplanState {
+        val updated = transform(workerReplanStatesByWorkerId[workerId] ?: WorkerReplanState())
+        workerReplanStatesByWorkerId[workerId] = updated
         return updated
     }
 

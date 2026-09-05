@@ -155,6 +155,19 @@ internal interface WorkerAnimationWrites : WorkerAnimationReads {
     ): WorkerAnimationState
 }
 
+/** Read side of a worker's pathfinding replan back-off: a short cooldown after a failed plan. */
+internal interface WorkerReplanReads {
+    fun replanStateFor(workerId: String): WorkerReplanState
+}
+
+/** Write side of per-worker pathfinding replan back-off. */
+internal interface WorkerReplanWrites : WorkerReplanReads {
+    fun updateReplanState(
+        workerId: String,
+        transform: (WorkerReplanState) -> WorkerReplanState
+    ): WorkerReplanState
+}
+
 /** Derived "is this worker standing where its job is" checks. */
 internal interface WorkerPostReads {
     fun isWorkerAtAssignedSlot(worker: PlacedShopObject.Worker): Boolean
@@ -211,7 +224,7 @@ internal interface SecurityAccess :
 
 internal interface WorkerObjectiveAccess :
     ShopWorld, PlacedObjectWrites, ProductWrites, RecipeStateWrites, OccupancyReads, AdjacencyReads,
-    WorkerPostReads, WorkerAnimationReads
+    WorkerPostReads, WorkerAnimationReads, WorkerReplanWrites
 
 internal interface CleanerAccess :
     ShopWorld, PlacedObjectWrites, ProductWrites, OccupancyReads, AdjacencyReads, WorkerAnimationWrites

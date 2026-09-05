@@ -19,5 +19,6 @@ internal data class ShopFloorInitialContent(
     val machineProductionStates: List<MachineProductionState> = emptyList(),
     val qaInspectionStates: List<QaInspectionState> = emptyList(),
     val machineRecipeStates: List<MachineRecipeState> = emptyList(),
-    val workerAnimationStates: Map<String, WorkerAnimationState> = emptyMap()
+    val workerAnimationStates: Map<String, WorkerAnimationState> = emptyMap(),
+    val workerReplanStates: Map<String, WorkerReplanState> = emptyMap()
 )

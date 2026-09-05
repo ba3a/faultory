@@ -30,6 +30,7 @@ class ShopFloor(
     initialQaInspectionStates: List<QaInspectionState> = emptyList(),
     initialMachineRecipeStates: List<MachineRecipeState> = emptyList(),
     initialWorkerAnimationStates: Map<String, WorkerAnimationState> = emptyMap(),
+    initialWorkerReplanStates: Map<String, WorkerReplanState> = emptyMap(),
     private val productDefinitionsById: Map<String, ProductDefinition> = emptyMap(),
     initialCash: Int = 0,
     private val beltSupplyFeeder: BeltSupplyFeeder? = null,
@@ -54,7 +55,8 @@ class ShopFloor(
             machineProductionStates = initialMachineProductionStates,
             qaInspectionStates = initialQaInspectionStates,
             machineRecipeStates = initialMachineRecipeStates,
-            workerAnimationStates = initialWorkerAnimationStates
+            workerAnimationStates = initialWorkerAnimationStates,
+            workerReplanStates = initialWorkerReplanStates
         ),
         initialCash = initialCash,
         events = events
