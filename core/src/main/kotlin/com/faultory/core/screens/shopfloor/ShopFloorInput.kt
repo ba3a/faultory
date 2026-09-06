@@ -198,7 +198,7 @@ class ShopFloorInput(
             hoverState.isLanguageButtonHovered = false
             bankPanel.clearHover()
             hoverState.hoveredTile = null
-            hoverState.hoveredObject = null
+            hoverState.hoveredObjectId = null
             upgradeFlow.closeModal()
             return
         }
@@ -210,7 +210,7 @@ class ShopFloorInput(
             hoverState.isBackButtonHovered = false
             hoverState.isLanguageButtonHovered = false
             hoverState.hoveredTile = null
-            hoverState.hoveredObject = null
+            hoverState.hoveredObjectId = null
             hoverState.hoveredCompletionAction = null
             return
         }
@@ -232,6 +232,6 @@ class ShopFloorInput(
             null
         }
         hoverState.hoveredTile = tile
-        hoverState.hoveredObject = tile?.let(shopFloor::objectAt)
+        hoverState.hoveredObjectId = tile?.let(shopFloor::objectAt)?.id
     }
 }

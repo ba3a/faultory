@@ -81,7 +81,8 @@ class PlacedObjectRenderer(
     private fun drawAssignmentTargetHover(renderer: ShapeRenderer) {
         if (!workerAssignment.hasPendingAssignment) return
 
-        val machine = hoverState.hoveredObject as? PlacedShopObject.Machine ?: return
+        val hoveredId = hoverState.hoveredObjectId ?: return
+        val machine = shopFloor.findObjectById(hoveredId) as? PlacedShopObject.Machine ?: return
 
         renderer.color = ASSIGNMENT_HOVER
         for (tile in shopFloor.occupiedTilesFor(machine)) {
