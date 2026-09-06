@@ -134,7 +134,13 @@ internal class ShopFloorState(
                 replaceById(_placedMachines, new)
             old is PlacedShopObject.Worker && new is PlacedShopObject.Worker -> {
                 replaceById(_placedWorkers, new)
-                if (new.workerRole == WorkerRole.SECURITY) replaceById(_placedSecurityWorkers, new)
+                // An upsert, not an insert: a worker reassigned away from SECURITY has to leave the
+                // index, or SecuritySystem keeps dispatching it and pursuing saboteurs with it.
+                if (new.workerRole == WorkerRole.SECURITY) {
+                    replaceById(_placedSecurityWorkers, new)
+                } else {
+                    removeById(_placedSecurityWorkers, new.id)
+                }
             }
             else -> {
                 when (old) {
