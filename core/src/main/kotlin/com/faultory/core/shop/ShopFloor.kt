@@ -66,9 +66,11 @@ class ShopFloor(
     private val placementSystem: PlacementSystem = PlacementSystem(state, events)
     private val assignmentSystem: AssignmentSystem =
         AssignmentSystem(state, qaPostLocator, movementStrategyResolver, events)
+    private val recipeBuffers: MachineRecipeBuffers = MachineRecipeBuffers(state)
     private val workerObjectiveSystem: WorkerObjectiveSystem =
-        WorkerObjectiveSystem(state, qaPostLocator, movementStrategyResolver, random, events)
-    private val productionSystem: ProductionSystem = ProductionSystem(state, random, events, chanceOracle)
+        WorkerObjectiveSystem(state, qaPostLocator, recipeBuffers, movementStrategyResolver, random, events)
+    private val productionSystem: ProductionSystem =
+        ProductionSystem(state, recipeBuffers, random, events, chanceOracle)
     private val cleanerSpawnSystem: CleanerSpawnSystem? = cleanerSpawnGate?.let {
         CleanerSpawnSystem(state, random, events, it)
     }
@@ -108,7 +110,7 @@ class ShopFloor(
             add(conveyorSystem)
             add(workerObjectiveSystem)
             add(cleanerSystem)
-            add(RecipeStateCleanupSystem(productionSystem))
+            add(RecipeStateCleanupSystem(recipeBuffers))
         }
     )
 

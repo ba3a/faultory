@@ -9,10 +9,8 @@ import com.faultory.core.encounters.MachineInputSource
 import com.faultory.core.encounters.ProductPickedUpEvent
 import com.faultory.core.encounters.ProductPlacedOnBeltEvent
 import com.faultory.core.encounters.ShopFloorEvents
-import com.faultory.core.shop.MachineRecipeState
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
@@ -22,6 +20,7 @@ import kotlin.random.Random
 internal class WorkerObjectiveSystem(
     private val access: WorkerObjectiveAccess,
     private val qaPostLocator: QaPostLocator,
+    private val recipeBuffers: MachineRecipeBuffers,
     private val movementStrategyResolver: MovementStrategyResolver,
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents()
@@ -165,9 +164,8 @@ internal class WorkerObjectiveSystem(
             return false
         }
 
-        val recipeState = access.mutableMachineRecipeStates.byId(machineId)
-            ?: MachineRecipeState(machineId = machineId)
-        val needed = neededRecipeIngredients(recipeState.inputBuffer, recipe)
+        val buffer = recipeBuffers.stateFor(machineId)?.inputBuffer.orEmpty()
+        val needed = neededRecipeIngredients(buffer, recipe)
         if (needed.isEmpty()) {
             return false
         }
@@ -305,17 +303,7 @@ internal class WorkerObjectiveSystem(
         val targetSpec = targetMachine?.catalogId?.let { machineSpecsById[it] }
         val recipe = targetSpec?.recipe
         if (recipe != null && recipe.inputs.any { it.productId == carriedProduct.productId }) {
-            val recipeState = ensureRecipeState(targetMachineId)
-            val current = recipeState.inputBuffer[carriedProduct.productId] ?: 0
-            replaceRecipeState(
-                recipeState.copy(
-                    inputBuffer = recipeState.inputBuffer + (carriedProduct.productId to current + 1),
-                    accumulatedInputFault = worstFault(
-                        recipeState.accumulatedInputFault,
-                        carriedProduct.faultReason
-                    )
-                )
-            )
+            recipeBuffers.addInput(targetMachineId, carriedProduct.productId, carriedProduct.faultReason)
             events.publish {
                 MachineInputLoadedEvent(
                     machineId = targetMachineId,
@@ -334,33 +322,6 @@ internal class WorkerObjectiveSystem(
             movementProgress = 0f
         )
         return true
-    }
-
-    private fun ensureRecipeState(machineId: String): MachineRecipeState {
-        access.mutableMachineRecipeStates.byId(machineId)?.let { return it }
-        val newState = MachineRecipeState(machineId = machineId)
-        access.mutableMachineRecipeStates += newState
-        return newState
-    }
-
-    private fun replaceRecipeState(recipeState: MachineRecipeState) {
-        val idx = access.mutableMachineRecipeStates.indexOfId(recipeState.machineId)
-        if (idx >= 0) {
-            access.mutableMachineRecipeStates[idx] = recipeState
-        } else {
-            access.mutableMachineRecipeStates += recipeState
-        }
-    }
-
-    private fun worstFault(
-        a: ProductFaultReason?,
-        b: ProductFaultReason?
-    ): ProductFaultReason? {
-        return when {
-            a == ProductFaultReason.SABOTAGE || b == ProductFaultReason.SABOTAGE -> ProductFaultReason.SABOTAGE
-            a == ProductFaultReason.PRODUCTION_DEFECT || b == ProductFaultReason.PRODUCTION_DEFECT -> ProductFaultReason.PRODUCTION_DEFECT
-            else -> null
-        }
     }
 
     private fun tryDropCarriedProduct(

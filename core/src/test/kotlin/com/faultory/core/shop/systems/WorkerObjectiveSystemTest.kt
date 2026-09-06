@@ -57,6 +57,7 @@ class WorkerObjectiveSystemTest {
     private fun system(state: ShopFloorState, random: Random = Random(0)) = WorkerObjectiveSystem(
         access = state,
         qaPostLocator = QaPostLocator(state, state, state),
+        recipeBuffers = MachineRecipeBuffers(state),
         movementStrategyResolver = DefaultMovementStrategyResolver,
         random = random
     )

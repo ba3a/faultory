@@ -17,7 +17,6 @@ import com.faultory.core.encounters.ProductionStartedEvent
 import com.faultory.core.encounters.SabotageCommittedEvent
 import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.shop.MachineProductionState
-import com.faultory.core.shop.MachineRecipeState
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ProductFaultReason
 import com.faultory.core.shop.QueuedMachineOutput
@@ -31,6 +30,7 @@ import kotlin.random.Random
 
 internal class ProductionSystem(
     private val access: ProductionAccess,
+    private val recipeBuffers: MachineRecipeBuffers,
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents(),
     private val chance: ChanceOracle = RandomChanceOracle(random)
@@ -71,32 +71,26 @@ internal class ProductionSystem(
         deltaSeconds: Float,
         workerProfilesById: Map<String, WorkerProfile>
     ) {
-        val recipeState = ensureRecipeState(machine.id)
+        val recipeState = recipeBuffers.ensureFor(machine.id)
         val productionIndex = mutableMachineProductionStates.indexOfId(machine.id)
 
         if (productionIndex < 0) {
             if (recipeState.outputQueue.size >= access.floorTuning.machineOutputQueueCap) {
                 return
             }
-            if (!hasInputsFor(recipeState.inputBuffer, recipe)) {
+            if (!recipeBuffers.hasInputsFor(machine.id, recipe)) {
                 return
             }
             if (!canStartRecipeProduction(machine, machineSpec, workerProfilesById)) {
                 return
             }
-            val inputFault = recipeState.accumulatedInputFault
-            replaceRecipeState(
-                recipeState.copy(
-                    inputBuffer = subtractInputs(recipeState.inputBuffer, recipe),
-                    accumulatedInputFault = null
-                )
-            )
+            val inputFault = recipeBuffers.consumeInputs(machine.id, recipe)
             val rolledFault = rollFaultReason(machine, machineSpec, recipe, workerProfilesById)
             val startedState = MachineProductionState(
                 machineId = machine.id,
                 productInstanceId = access.createProductId(),
                 productId = recipe.outputProductId,
-                faultReason = worstFault(inputFault, rolledFault),
+                faultReason = MachineRecipeBuffers.worstFault(inputFault, rolledFault),
                 progressSeconds = 0f,
                 isComplete = false
             )
@@ -136,7 +130,7 @@ internal class ProductionSystem(
                 productId = productionState.productId,
                 faultReason = productionState.faultReason
             )
-            replaceRecipeState(recipeState.copy(outputQueue = recipeState.outputQueue + queued))
+            recipeBuffers.queueOutput(machine.id, queued)
             mutableMachineProductionStates.removeAt(productionIndex)
             return
         }
@@ -153,7 +147,7 @@ internal class ProductionSystem(
                 productId = completedState.productId,
                 faultReason = completedState.faultReason
             )
-            replaceRecipeState(recipeState.copy(outputQueue = recipeState.outputQueue + queued))
+            recipeBuffers.queueOutput(machine.id, queued)
             mutableMachineProductionStates.removeAt(productionIndex)
             events.publish {
                 ProductionCompletedEvent(
@@ -171,25 +165,6 @@ internal class ProductionSystem(
             progressSeconds = updatedProgress,
             isComplete = false
         )
-    }
-
-    private fun hasInputsFor(buffer: Map<String, Int>, recipe: MachineRecipe): Boolean {
-        return recipe.inputs.all { input ->
-            (buffer[input.productId] ?: 0) >= input.quantity
-        }
-    }
-
-    private fun subtractInputs(buffer: Map<String, Int>, recipe: MachineRecipe): Map<String, Int> {
-        val result = buffer.toMutableMap()
-        for (input in recipe.inputs) {
-            val remaining = (result[input.productId] ?: 0) - input.quantity
-            if (remaining <= 0) {
-                result.remove(input.productId)
-            } else {
-                result[input.productId] = remaining
-            }
-        }
-        return result
     }
 
     private fun canStartRecipeProduction(
@@ -211,26 +186,6 @@ internal class ProductionSystem(
         return machineSpec.canAcceptOperator(workerProfile, workerProfilesById)
     }
 
-    private fun ensureRecipeState(machineId: String): MachineRecipeState {
-        mutableMachineRecipeStates.byId(machineId)?.let { return it }
-        val newState = MachineRecipeState(machineId = machineId)
-        mutableMachineRecipeStates += newState
-        return newState
-    }
-
-    private fun replaceRecipeState(recipeState: MachineRecipeState) {
-        val idx = mutableMachineRecipeStates.indexOfId(recipeState.machineId)
-        if (idx >= 0) {
-            mutableMachineRecipeStates[idx] = recipeState
-        } else {
-            mutableMachineRecipeStates += recipeState
-        }
-    }
-
-    fun pruneEmptyRecipeStates() {
-        mutableMachineRecipeStates.removeAll { it.isEmpty }
-    }
-
     fun acceptBeltInputs() {
         for (machine in placedMachines) {
             val machineSpec = machineSpecsById[machine.catalogId] ?: continue
@@ -246,20 +201,12 @@ internal class ProductionSystem(
                 val product = access.productAtBeltTile(accessTile) ?: continue
                 if (product.holderObjectId != null) continue
                 val recipeInput = recipe.inputs.firstOrNull { it.productId == product.productId } ?: continue
-                val recipeState = ensureRecipeState(machine.id)
+                val recipeState = recipeBuffers.ensureFor(machine.id)
                 val currentCount = recipeState.inputBuffer[product.productId] ?: 0
                 val cap = max(recipeInput.quantity, access.floorTuning.machineInputBufferCap)
                 if (currentCount >= cap) continue
 
-                replaceRecipeState(
-                    recipeState.copy(
-                        inputBuffer = recipeState.inputBuffer + (product.productId to currentCount + 1),
-                        accumulatedInputFault = worstFault(
-                            recipeState.accumulatedInputFault,
-                            product.faultReason
-                        )
-                    )
-                )
+                recipeBuffers.addInput(machine.id, product.productId, product.faultReason)
                 mutableActiveProducts.removeById(product.id)
                 events.publish {
                     MachineInputLoadedEvent(
@@ -291,8 +238,7 @@ internal class ProductionSystem(
             }
 
             if (placed) {
-                val current = mutableMachineRecipeStates.byId(machine.id) ?: continue
-                replaceRecipeState(current.copy(outputQueue = current.outputQueue.drop(1)))
+                recipeBuffers.dropQueuedOutputHead(machine.id)
             }
         }
     }
@@ -447,16 +393,6 @@ internal class ProductionSystem(
         }
     }
 
-    private fun worstFault(
-        a: ProductFaultReason?,
-        b: ProductFaultReason?
-    ): ProductFaultReason? {
-        return when {
-            a == ProductFaultReason.SABOTAGE || b == ProductFaultReason.SABOTAGE -> ProductFaultReason.SABOTAGE
-            a == ProductFaultReason.PRODUCTION_DEFECT || b == ProductFaultReason.PRODUCTION_DEFECT -> ProductFaultReason.PRODUCTION_DEFECT
-            else -> null
-        }
-    }
 }
 
 /**
@@ -485,8 +421,8 @@ internal class ProductionOutputSystem(private val production: ProductionSystem) 
  * Drops emptied [com.faultory.core.shop.MachineRecipeState] rows. Scheduled dead last in
  * [SimulationPhase.CLEANUP], once every system that read recipe state this frame has run.
  */
-internal class RecipeStateCleanupSystem(private val production: ProductionSystem) : SimulationSystem {
+internal class RecipeStateCleanupSystem(private val recipeBuffers: MachineRecipeBuffers) : SimulationSystem {
     override val phase = SimulationPhase.CLEANUP
 
-    override fun step(context: SystemContext) = production.pruneEmptyRecipeStates()
+    override fun step(context: SystemContext) = recipeBuffers.pruneEmpty()
 }
