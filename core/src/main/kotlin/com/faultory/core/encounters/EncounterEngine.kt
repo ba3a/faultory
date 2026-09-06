@@ -60,11 +60,7 @@ class EncounterEngine(
      */
     private fun accumulate(event: GameEvent, current: EncounterProgress): EncounterProgress {
         val scope = event.levelId ?: currentLevelId ?: GameEvent.UNKNOWN_SCOPE
-        var result = current
-        for (key in event.counterKeys(scope).distinct()) {
-            result = result.withCounter(key, 1L)
-        }
-        return result
+        return current.withCounters(event.counterKeys(scope), 1L)
     }
 
     private fun buildCtx() = EvaluationContext(
