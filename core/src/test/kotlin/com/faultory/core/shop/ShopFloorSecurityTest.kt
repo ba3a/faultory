@@ -10,6 +10,7 @@ import com.faultory.core.content.Manuality
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.content.WorkerRoleProfile
+import com.faultory.core.shop.ShopFloorSnapshot
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,13 +28,15 @@ class ShopFloorSecurityTest {
         val shopFloor = ShopFloor(
             blueprint = beltBlueprint(),
             machineSpecsById = mapOf(producer.id to producer),
-            initialPlacements = listOf(
-                machine(id = "machine-1", catalogId = producer.id, position = TileCoordinate(5, 8)),
-                operator(id = "operator-1", catalogId = operatorProfile.id, position = TileCoordinate(5, 9), assignedMachineId = "machine-1"),
-                roamingSecurity(
-                    id = "security-1",
-                    catalogId = securityProfileWorker.id,
-                    position = TileCoordinate(8, 9)
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    machine(id = "machine-1", catalogId = producer.id, position = TileCoordinate(5, 8)),
+                    operator(id = "operator-1", catalogId = operatorProfile.id, position = TileCoordinate(5, 9), assignedMachineId = "machine-1"),
+                    roamingSecurity(
+                        id = "security-1",
+                        catalogId = securityProfileWorker.id,
+                        position = TileCoordinate(8, 9)
+                    )
                 )
             ),
             random = Random(seed = 42L)
@@ -68,13 +71,15 @@ class ShopFloorSecurityTest {
         val shopFloor = ShopFloor(
             blueprint = beltBlueprint(),
             machineSpecsById = mapOf(producer.id to producer),
-            initialPlacements = listOf(
-                machine(id = "machine-1", catalogId = producer.id, position = TileCoordinate(5, 8)),
-                operator(id = "operator-1", catalogId = operatorProfile.id, position = TileCoordinate(5, 9), assignedMachineId = "machine-1"),
-                roamingSecurity(
-                    id = "security-1",
-                    catalogId = securityProfileWorker.id,
-                    position = TileCoordinate(20, 9)
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    machine(id = "machine-1", catalogId = producer.id, position = TileCoordinate(5, 8)),
+                    operator(id = "operator-1", catalogId = operatorProfile.id, position = TileCoordinate(5, 9), assignedMachineId = "machine-1"),
+                    roamingSecurity(
+                        id = "security-1",
+                        catalogId = securityProfileWorker.id,
+                        position = TileCoordinate(20, 9)
+                    )
                 )
             ),
             random = Random(seed = 7L)
@@ -99,11 +104,13 @@ class ShopFloorSecurityTest {
         val shopFloor = ShopFloor(
             blueprint = beltBlueprint(),
             machineSpecsById = emptyMap(),
-            initialPlacements = listOf(
-                roamingSecurity(
-                    id = "security-1",
-                    catalogId = securityProfileWorker.id,
-                    position = TileCoordinate(15, 9)
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    roamingSecurity(
+                        id = "security-1",
+                        catalogId = securityProfileWorker.id,
+                        position = TileCoordinate(15, 9)
+                    )
                 )
             ),
             random = Random(seed = 1L)
@@ -128,20 +135,22 @@ class ShopFloorSecurityTest {
         val shopFloor = ShopFloor(
             blueprint = beltBlueprint(),
             machineSpecsById = mapOf(producer.id to producer, cameraSpec.id to cameraSpec),
-            initialPlacements = listOf(
-                machine(id = "machine-1", catalogId = producer.id, position = TileCoordinate(5, 8)),
-                operator(id = "operator-1", catalogId = operatorProfile.id, position = TileCoordinate(5, 9), assignedMachineId = "machine-1"),
-                machine(id = "camera-1", catalogId = cameraSpec.id, position = TileCoordinate(20, 8)),
-                cameraWatcher(
-                    id = "watcher-1",
-                    catalogId = securityProfileWorker.id,
-                    position = TileCoordinate(20, 9),
-                    assignedMachineId = "camera-1"
-                ),
-                roamingSecurity(
-                    id = "patrol-1",
-                    catalogId = securityProfileWorker.id,
-                    position = TileCoordinate(8, 9)
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    machine(id = "machine-1", catalogId = producer.id, position = TileCoordinate(5, 8)),
+                    operator(id = "operator-1", catalogId = operatorProfile.id, position = TileCoordinate(5, 9), assignedMachineId = "machine-1"),
+                    machine(id = "camera-1", catalogId = cameraSpec.id, position = TileCoordinate(20, 8)),
+                    cameraWatcher(
+                        id = "watcher-1",
+                        catalogId = securityProfileWorker.id,
+                        position = TileCoordinate(20, 9),
+                        assignedMachineId = "camera-1"
+                    ),
+                    roamingSecurity(
+                        id = "patrol-1",
+                        catalogId = securityProfileWorker.id,
+                        position = TileCoordinate(8, 9)
+                    )
                 )
             ),
             random = Random(seed = 3L)
@@ -168,15 +177,17 @@ class ShopFloorSecurityTest {
         val shopFloor = ShopFloor(
             blueprint = beltBlueprint(),
             machineSpecsById = mapOf(producer.id to producer, cameraSpec.id to cameraSpec),
-            initialPlacements = listOf(
-                machine(id = "machine-1", catalogId = producer.id, position = TileCoordinate(5, 8)),
-                operator(id = "operator-1", catalogId = operatorProfile.id, position = TileCoordinate(5, 9), assignedMachineId = "machine-1"),
-                machine(id = "camera-1", catalogId = cameraSpec.id, position = TileCoordinate(20, 8)),
-                cameraWatcher(
-                    id = "watcher-1",
-                    catalogId = securityProfileWorker.id,
-                    position = TileCoordinate(20, 9),
-                    assignedMachineId = "camera-1"
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    machine(id = "machine-1", catalogId = producer.id, position = TileCoordinate(5, 8)),
+                    operator(id = "operator-1", catalogId = operatorProfile.id, position = TileCoordinate(5, 9), assignedMachineId = "machine-1"),
+                    machine(id = "camera-1", catalogId = cameraSpec.id, position = TileCoordinate(20, 8)),
+                    cameraWatcher(
+                        id = "watcher-1",
+                        catalogId = securityProfileWorker.id,
+                        position = TileCoordinate(20, 9),
+                        assignedMachineId = "camera-1"
+                    )
                 )
             ),
             random = Random(seed = 5L)

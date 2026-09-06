@@ -12,6 +12,7 @@ import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopFloor
+import com.faultory.core.shop.ShopFloorSnapshot
 import com.faultory.core.shop.TileCoordinate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -50,12 +51,14 @@ class MachineDragControllerTest {
         return ShopFloor(
             blueprint = blueprint,
             machineSpecsById = mapOf(machineSpec.id to machineSpec),
-            initialPlacements = listOf(
-                PlacedShopObject.Machine(
-                    id = "machine-1",
-                    catalogId = machineSpec.id,
-                    position = TileCoordinate(5, 5),
-                    orientation = orientation
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    PlacedShopObject.Machine(
+                        id = "machine-1",
+                        catalogId = machineSpec.id,
+                        position = TileCoordinate(5, 5),
+                        orientation = orientation
+                    )
                 )
             )
         )

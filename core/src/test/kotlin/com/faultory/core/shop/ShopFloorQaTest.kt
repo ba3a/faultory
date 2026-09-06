@@ -12,6 +12,7 @@ import com.faultory.core.content.QaMachineProfile
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.content.WorkerRoleProfile
+import com.faultory.core.shop.ShopFloorSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -28,22 +29,24 @@ class ShopFloorQaTest {
         val shopFloor = ShopFloor(
             blueprint = qaBlueprint(),
             machineSpecsById = mapOf(qaMachine.id to qaMachine),
-            initialPlacements = listOf(
-                PlacedShopObject.Machine(
-                    id = "machine-1",
-                    catalogId = qaMachine.id,
-                    position = TileCoordinate(5, 4),
-                    orientation = Orientation.NORTH
-                )
-            ),
-            initialProducts = listOf(
-                ShopProduct(
-                    id = "product-1",
-                    productId = "ceramic-mug",
-                    sourceMachineId = "bench-assembler",
-                    faultReason = ProductFaultReason.PRODUCTION_DEFECT,
-                    state = ShopProductState.ON_BELT,
-                    tile = TileCoordinate(5, 5)
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    PlacedShopObject.Machine(
+                        id = "machine-1",
+                        catalogId = qaMachine.id,
+                        position = TileCoordinate(5, 4),
+                        orientation = Orientation.NORTH
+                    )
+                ),
+                products = listOf(
+                    ShopProduct(
+                        id = "product-1",
+                        productId = "ceramic-mug",
+                        sourceMachineId = "bench-assembler",
+                        faultReason = ProductFaultReason.PRODUCTION_DEFECT,
+                        state = ShopProductState.ON_BELT,
+                        tile = TileCoordinate(5, 5)
+                    )
                 )
             )
         )
@@ -63,36 +66,38 @@ class ShopFloorQaTest {
         val shopFloor = ShopFloor(
             blueprint = qaBlueprint(),
             machineSpecsById = mapOf(qaMachine.id to qaMachine),
-            initialPlacements = listOf(
-                PlacedShopObject.Machine(
-                    id = "machine-1",
-                    catalogId = qaMachine.id,
-                    position = TileCoordinate(5, 4),
-                    orientation = Orientation.NORTH
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    PlacedShopObject.Machine(
+                        id = "machine-1",
+                        catalogId = qaMachine.id,
+                        position = TileCoordinate(5, 4),
+                        orientation = Orientation.NORTH
+                    ),
+                    PlacedShopObject.Machine(
+                        id = "machine-2",
+                        catalogId = qaMachine.id,
+                        position = TileCoordinate(7, 4),
+                        orientation = Orientation.NORTH
+                    )
                 ),
-                PlacedShopObject.Machine(
-                    id = "machine-2",
-                    catalogId = qaMachine.id,
-                    position = TileCoordinate(7, 4),
-                    orientation = Orientation.NORTH
-                )
-            ),
-            initialProducts = listOf(
-                ShopProduct(
-                    id = "product-1",
-                    productId = "ceramic-mug",
-                    sourceMachineId = "bench-assembler",
-                    faultReason = ProductFaultReason.PRODUCTION_DEFECT,
-                    state = ShopProductState.ON_BELT,
-                    tile = TileCoordinate(5, 5)
-                ),
-                ShopProduct(
-                    id = "product-2",
-                    productId = "ceramic-mug",
-                    sourceMachineId = "bench-assembler",
-                    faultReason = ProductFaultReason.PRODUCTION_DEFECT,
-                    state = ShopProductState.ON_BELT,
-                    tile = TileCoordinate(7, 5)
+                products = listOf(
+                    ShopProduct(
+                        id = "product-1",
+                        productId = "ceramic-mug",
+                        sourceMachineId = "bench-assembler",
+                        faultReason = ProductFaultReason.PRODUCTION_DEFECT,
+                        state = ShopProductState.ON_BELT,
+                        tile = TileCoordinate(5, 5)
+                    ),
+                    ShopProduct(
+                        id = "product-2",
+                        productId = "ceramic-mug",
+                        sourceMachineId = "bench-assembler",
+                        faultReason = ProductFaultReason.PRODUCTION_DEFECT,
+                        state = ShopProductState.ON_BELT,
+                        tile = TileCoordinate(7, 5)
+                    )
                 )
             )
         )
@@ -109,23 +114,25 @@ class ShopFloorQaTest {
         val shopFloor = ShopFloor(
             blueprint = qaBlueprint(),
             machineSpecsById = emptyMap(),
-            initialPlacements = listOf(
-                PlacedShopObject.Worker(
-                    id = "worker-1",
-                    catalogId = worker.id,
-                    position = TileCoordinate(5, 4),
-                    orientation = Orientation.NORTH,
-                    workerRole = WorkerRole.QA,
-                    qaPostTile = TileCoordinate(5, 4)
-                )
-            ),
-            initialProducts = listOf(
-                ShopProduct(
-                    id = "product-1",
-                    productId = "ceramic-mug",
-                    sourceMachineId = "bench-assembler",
-                    state = ShopProductState.ON_BELT,
-                    tile = TileCoordinate(5, 5)
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    PlacedShopObject.Worker(
+                        id = "worker-1",
+                        catalogId = worker.id,
+                        position = TileCoordinate(5, 4),
+                        orientation = Orientation.NORTH,
+                        workerRole = WorkerRole.QA,
+                        qaPostTile = TileCoordinate(5, 4)
+                    )
+                ),
+                products = listOf(
+                    ShopProduct(
+                        id = "product-1",
+                        productId = "ceramic-mug",
+                        sourceMachineId = "bench-assembler",
+                        state = ShopProductState.ON_BELT,
+                        tile = TileCoordinate(5, 5)
+                    )
                 )
             )
         )
@@ -158,28 +165,30 @@ class ShopFloorQaTest {
                 qaMachine.id to qaMachine,
                 automaticProducer.id to automaticProducer
             ),
-            initialPlacements = listOf(
-                PlacedShopObject.Machine(
-                    id = "qa-machine",
-                    catalogId = qaMachine.id,
-                    position = TileCoordinate(5, 4),
-                    orientation = Orientation.NORTH
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    PlacedShopObject.Machine(
+                        id = "qa-machine",
+                        catalogId = qaMachine.id,
+                        position = TileCoordinate(5, 4),
+                        orientation = Orientation.NORTH
+                    ),
+                    PlacedShopObject.Machine(
+                        id = "producer-1",
+                        catalogId = automaticProducer.id,
+                        position = TileCoordinate(8, 7),
+                        orientation = Orientation.NORTH
+                    )
                 ),
-                PlacedShopObject.Machine(
-                    id = "producer-1",
-                    catalogId = automaticProducer.id,
-                    position = TileCoordinate(8, 7),
-                    orientation = Orientation.NORTH
-                )
-            ),
-            initialProducts = listOf(
-                ShopProduct(
-                    id = "product-1",
-                    productId = "ceramic-mug",
-                    sourceMachineId = "bench-assembler",
-                    faultReason = ProductFaultReason.PRODUCTION_DEFECT,
-                    state = ShopProductState.ON_BELT,
-                    tile = TileCoordinate(5, 5)
+                products = listOf(
+                    ShopProduct(
+                        id = "product-1",
+                        productId = "ceramic-mug",
+                        sourceMachineId = "bench-assembler",
+                        faultReason = ProductFaultReason.PRODUCTION_DEFECT,
+                        state = ShopProductState.ON_BELT,
+                        tile = TileCoordinate(5, 5)
+                    )
                 )
             )
         )
@@ -201,13 +210,15 @@ class ShopFloorQaTest {
         val shopFloor = ShopFloor(
             blueprint = qaBlueprint(),
             machineSpecsById = mapOf(automaticProducer.id to automaticProducer),
-            initialPlacements = listOf(
-                PlacedShopObject.Machine(
-                    id = "producer-1",
-                    catalogId = automaticProducer.id,
-                    position = TileCoordinate(8, 7),
-                    orientation = Orientation.NORTH,
-                    faultyInventoryCount = 1
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    PlacedShopObject.Machine(
+                        id = "producer-1",
+                        catalogId = automaticProducer.id,
+                        position = TileCoordinate(8, 7),
+                        orientation = Orientation.NORTH,
+                        faultyInventoryCount = 1
+                    )
                 )
             )
         )

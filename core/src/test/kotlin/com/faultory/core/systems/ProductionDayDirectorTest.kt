@@ -1,6 +1,7 @@
 package com.faultory.core.systems
 
 import com.faultory.core.content.LevelStarThresholds
+import com.faultory.core.save.DayProgress
 import com.faultory.core.save.ProductDeliveryStats
 import com.faultory.core.shop.ProductFaultReason
 import kotlin.test.Test
@@ -13,11 +14,7 @@ class ProductionDayDirectorTest {
     fun `director tracks good deliveries stars and product distribution`() {
         val director = ProductionDayDirector(
             shiftLengthSeconds = 60f,
-            starThresholds = LevelStarThresholds(oneStar = 2, twoStar = 4, threeStar = 6),
-            initialElapsedSeconds = 0f,
-            initialDeliveredGoodProducts = 0,
-            initialDeliveredFaultyProducts = 0,
-            initialProductDeliveryStats = emptyList()
+            starThresholds = LevelStarThresholds(oneStar = 2, twoStar = 4, threeStar = 6)
         )
 
         director.recordShipment("ceramic-mug", null)
@@ -39,14 +36,16 @@ class ProductionDayDirectorTest {
         val director = ProductionDayDirector(
             shiftLengthSeconds = 45f,
             starThresholds = LevelStarThresholds(oneStar = 3, twoStar = 5, threeStar = 7),
-            initialElapsedSeconds = 44f,
-            initialDeliveredGoodProducts = 2,
-            initialDeliveredFaultyProducts = 1,
-            initialProductDeliveryStats = listOf(
-                ProductDeliveryStats(
-                    productId = "glass-jar",
-                    goodCount = 2,
-                    productionDefectCount = 1
+            initial = DayProgress(
+                elapsedSeconds = 44f,
+                deliveredGoodProducts = 2,
+                deliveredFaultyProducts = 1,
+                productDeliveryStats = listOf(
+                    ProductDeliveryStats(
+                        productId = "glass-jar",
+                        goodCount = 2,
+                        productionDefectCount = 1
+                    )
                 )
             )
         )

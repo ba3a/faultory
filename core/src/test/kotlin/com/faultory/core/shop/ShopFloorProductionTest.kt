@@ -10,6 +10,7 @@ import com.faultory.core.content.Manuality
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.content.WorkerRoleProfile
+import com.faultory.core.shop.ShopFloorSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -31,21 +32,23 @@ class ShopFloorProductionTest {
         val shopFloor = ShopFloor(
             blueprint = beltBlueprint(),
             machineSpecsById = mapOf(machineSpec.id to machineSpec),
-            initialPlacements = listOf(
-                PlacedShopObject.Machine(
-                    id = "machine-1",
-                    catalogId = machineSpec.id,
-                    position = TileCoordinate(5, 8),
-                    orientation = Orientation.NORTH
-                ),
-                PlacedShopObject.Worker(
-                    id = "worker-1",
-                    catalogId = workerProfile.id,
-                    position = TileCoordinate(5, 9),
-                    orientation = Orientation.NORTH,
-                    workerRole = WorkerRole.PRODUCER_OPERATOR,
-                    assignedMachineId = "machine-1",
-                    assignedSlotIndex = 0
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    PlacedShopObject.Machine(
+                        id = "machine-1",
+                        catalogId = machineSpec.id,
+                        position = TileCoordinate(5, 8),
+                        orientation = Orientation.NORTH
+                    ),
+                    PlacedShopObject.Worker(
+                        id = "worker-1",
+                        catalogId = workerProfile.id,
+                        position = TileCoordinate(5, 9),
+                        orientation = Orientation.NORTH,
+                        workerRole = WorkerRole.PRODUCER_OPERATOR,
+                        assignedMachineId = "machine-1",
+                        assignedSlotIndex = 0
+                    )
                 )
             )
         )
@@ -77,12 +80,14 @@ class ShopFloorProductionTest {
         val shopFloor = ShopFloor(
             blueprint = beltBlueprint(),
             machineSpecsById = mapOf(machineSpec.id to machineSpec),
-            initialPlacements = listOf(
-                PlacedShopObject.Machine(
-                    id = "machine-1",
-                    catalogId = machineSpec.id,
-                    position = TileCoordinate(5, 7),
-                    orientation = Orientation.NORTH
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    PlacedShopObject.Machine(
+                        id = "machine-1",
+                        catalogId = machineSpec.id,
+                        position = TileCoordinate(5, 7),
+                        orientation = Orientation.NORTH
+                    )
                 )
             )
         )
@@ -102,14 +107,16 @@ class ShopFloorProductionTest {
         val shopFloor = ShopFloor(
             blueprint = beltBlueprint(),
             machineSpecsById = emptyMap(),
-            initialProducts = listOf(
-                ShopProduct(
-                    id = "product-1",
-                    productId = "ceramic-mug",
-                    sourceMachineId = "machine-1",
-                    faultReason = ProductFaultReason.PRODUCTION_DEFECT,
-                    state = ShopProductState.ON_BELT,
-                    tile = TileCoordinate(39, 10)
+            snapshot = ShopFloorSnapshot(
+                products = listOf(
+                    ShopProduct(
+                        id = "product-1",
+                        productId = "ceramic-mug",
+                        sourceMachineId = "machine-1",
+                        faultReason = ProductFaultReason.PRODUCTION_DEFECT,
+                        state = ShopProductState.ON_BELT,
+                        tile = TileCoordinate(39, 10)
+                    )
                 )
             )
         )

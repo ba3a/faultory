@@ -3,6 +3,7 @@ package com.faultory.core.shop.systems
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ShopBlueprint
+import com.faultory.core.shop.ShopFloorSnapshot
 import com.faultory.core.shop.ShopGrid
 import com.faultory.core.shop.TileCoordinate
 import com.faultory.core.shop.UnitPhase
@@ -32,8 +33,10 @@ class ShopFloorStateWorkerAnimationTest {
         grid = ShopGrid(blueprint()),
         machineSpecsById = emptyMap(),
         productDefinitionsById = emptyMap(),
-        initialContent = ShopFloorInitialContent(placements = placements),
-        initialCash = 0
+        snapshot = ShopFloorSnapshot(
+            placements = placements,
+            cash = 0
+        )
     )
 
     private fun worker(id: String) = PlacedShopObject.Worker(

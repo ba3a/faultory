@@ -24,15 +24,8 @@ import kotlin.random.Random
 class ShopFloor(
     val blueprint: ShopBlueprint,
     private val machineSpecsById: Map<String, MachineSpec>,
-    initialPlacements: List<PlacedShopObject> = emptyList(),
-    initialProducts: List<ShopProduct> = emptyList(),
-    initialMachineProductionStates: List<MachineProductionState> = emptyList(),
-    initialQaInspectionStates: List<QaInspectionState> = emptyList(),
-    initialMachineRecipeStates: List<MachineRecipeState> = emptyList(),
-    initialWorkerAnimationStates: Map<String, WorkerAnimationState> = emptyMap(),
-    initialWorkerReplanStates: Map<String, WorkerReplanState> = emptyMap(),
+    snapshot: ShopFloorSnapshot = ShopFloorSnapshot(),
     private val productDefinitionsById: Map<String, ProductDefinition> = emptyMap(),
-    initialCash: Int = 0,
     private val beltSupplyFeeder: BeltSupplyFeeder? = null,
     private val movementStrategyResolver: MovementStrategyResolver = DefaultMovementStrategyResolver,
     random: Random = Random.Default,
@@ -50,20 +43,11 @@ class ShopFloor(
         machineSpecsById = machineSpecsById,
         productDefinitionsById = productDefinitionsById,
         floorTuning = blueprint.floorTuning,
-        initialContent = ShopFloorInitialContent(
-            placements = initialPlacements,
-            products = initialProducts,
-            machineProductionStates = initialMachineProductionStates,
-            qaInspectionStates = initialQaInspectionStates,
-            machineRecipeStates = initialMachineRecipeStates,
-            workerAnimationStates = initialWorkerAnimationStates,
-            workerReplanStates = initialWorkerReplanStates
-        ),
-        initialCash = initialCash,
+        snapshot = snapshot,
         events = events
     )
 
-    private val wetFloor: WetFloor = WetFloor()
+    private val wetFloor: WetFloor = WetFloor(snapshot.wetTiles)
     private val qaPostLocator: QaPostLocator =
         QaPostLocator(world = state, objects = state, occupancy = state)
     private val wetTileSystem: WetTileSystem = WetTileSystem(wetFloor, events)
@@ -174,6 +158,14 @@ class ShopFloor(
 
     fun machineRecipeStateFor(machineId: String): MachineRecipeState? =
         state.machineRecipeStateFor(machineId)
+
+    /**
+     * This floor's full persisted state — [ShopFloorState]'s slice plus the puddle map, which
+     * [ShopFloorState] does not know about. The type this class is seeded from via [snapshot] in
+     * the constructor and hands back here are the same, so a save row and a test fixture are always
+     * built the same way.
+     */
+    fun snapshot(): ShopFloorSnapshot = state.snapshot().copy(wetTiles = wetFloor.snapshotRows())
 
     fun update(
         deltaSeconds: Float,

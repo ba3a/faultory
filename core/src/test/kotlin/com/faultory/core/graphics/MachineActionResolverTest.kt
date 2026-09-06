@@ -12,6 +12,7 @@ import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.QaInspectionState
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopFloor
+import com.faultory.core.shop.ShopFloorSnapshot
 import com.faultory.core.shop.WorkerSpawnPoint
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -22,11 +23,13 @@ class MachineActionResolverTest {
         val shopFloor = ShopFloor(
             blueprint = blueprint(),
             machineSpecsById = emptyMap(),
-            initialMachineProductionStates = listOf(
-                MachineProductionState(
-                    machineId = "machine-1",
-                    productInstanceId = "product-1",
-                    productId = "ceramic-mug"
+            snapshot = ShopFloorSnapshot(
+                machineProductionStates = listOf(
+                    MachineProductionState(
+                        machineId = "machine-1",
+                        productInstanceId = "product-1",
+                        productId = "ceramic-mug"
+                    )
                 )
             )
         )
@@ -49,12 +52,14 @@ class MachineActionResolverTest {
         val shopFloor = ShopFloor(
             blueprint = blueprint(),
             machineSpecsById = emptyMap(),
-            initialMachineRecipeStates = listOf(
-                MachineRecipeState(
-                    machineId = "machine-1",
-                    outputQueue = List(FloorTuning().machineOutputQueueCap) { index ->
-                        QueuedMachineOutput(productInstanceId = "product-$index", productId = "ceramic-mug")
-                    }
+            snapshot = ShopFloorSnapshot(
+                machineRecipeStates = listOf(
+                    MachineRecipeState(
+                        machineId = "machine-1",
+                        outputQueue = List(FloorTuning().machineOutputQueueCap) { index ->
+                            QueuedMachineOutput(productInstanceId = "product-$index", productId = "ceramic-mug")
+                        }
+                    )
                 )
             )
         )
@@ -67,11 +72,13 @@ class MachineActionResolverTest {
         val shopFloor = ShopFloor(
             blueprint = blueprint(),
             machineSpecsById = emptyMap(),
-            initialMachineRecipeStates = listOf(
-                MachineRecipeState(
-                    machineId = "machine-1",
-                    outputQueue = listOf(
-                        QueuedMachineOutput(productInstanceId = "product-0", productId = "ceramic-mug")
+            snapshot = ShopFloorSnapshot(
+                machineRecipeStates = listOf(
+                    MachineRecipeState(
+                        machineId = "machine-1",
+                        outputQueue = listOf(
+                            QueuedMachineOutput(productInstanceId = "product-0", productId = "ceramic-mug")
+                        )
                     )
                 )
             )
@@ -86,19 +93,21 @@ class MachineActionResolverTest {
         val shopFloor = ShopFloor(
             blueprint = blueprint(),
             machineSpecsById = emptyMap(),
-            initialMachineProductionStates = listOf(
-                MachineProductionState(
-                    machineId = "machine-1",
-                    productInstanceId = "product-x",
-                    productId = "ceramic-mug"
-                )
-            ),
-            initialMachineRecipeStates = listOf(
-                MachineRecipeState(
-                    machineId = "machine-1",
-                    outputQueue = List(FloorTuning().machineOutputQueueCap) { index ->
-                        QueuedMachineOutput(productInstanceId = "product-$index", productId = "ceramic-mug")
-                    }
+            snapshot = ShopFloorSnapshot(
+                machineProductionStates = listOf(
+                    MachineProductionState(
+                        machineId = "machine-1",
+                        productInstanceId = "product-x",
+                        productId = "ceramic-mug"
+                    )
+                ),
+                machineRecipeStates = listOf(
+                    MachineRecipeState(
+                        machineId = "machine-1",
+                        outputQueue = List(FloorTuning().machineOutputQueueCap) { index ->
+                            QueuedMachineOutput(productInstanceId = "product-$index", productId = "ceramic-mug")
+                        }
+                    )
                 )
             )
         )
@@ -111,11 +120,13 @@ class MachineActionResolverTest {
         val shopFloor = ShopFloor(
             blueprint = blueprint(),
             machineSpecsById = emptyMap(),
-            initialQaInspectionStates = listOf(
-                QaInspectionState(
-                    inspectorObjectId = "machine-1",
-                    productId = "product-1",
-                    beltTile = com.faultory.core.shop.TileCoordinate(5, 10)
+            snapshot = ShopFloorSnapshot(
+                qaInspectionStates = listOf(
+                    QaInspectionState(
+                        inspectorObjectId = "machine-1",
+                        productId = "product-1",
+                        beltTile = com.faultory.core.shop.TileCoordinate(5, 10)
+                    )
                 )
             )
         )
@@ -128,18 +139,20 @@ class MachineActionResolverTest {
         val shopFloor = ShopFloor(
             blueprint = blueprint(),
             machineSpecsById = emptyMap(),
-            initialMachineProductionStates = listOf(
-                MachineProductionState(
-                    machineId = "machine-1",
-                    productInstanceId = "product-1",
-                    productId = "ceramic-mug"
-                )
-            ),
-            initialQaInspectionStates = listOf(
-                QaInspectionState(
-                    inspectorObjectId = "machine-1",
-                    productId = "product-2",
-                    beltTile = com.faultory.core.shop.TileCoordinate(5, 10)
+            snapshot = ShopFloorSnapshot(
+                machineProductionStates = listOf(
+                    MachineProductionState(
+                        machineId = "machine-1",
+                        productInstanceId = "product-1",
+                        productId = "ceramic-mug"
+                    )
+                ),
+                qaInspectionStates = listOf(
+                    QaInspectionState(
+                        inspectorObjectId = "machine-1",
+                        productId = "product-2",
+                        beltTile = com.faultory.core.shop.TileCoordinate(5, 10)
+                    )
                 )
             )
         )
@@ -152,11 +165,13 @@ class MachineActionResolverTest {
         val shopFloor = ShopFloor(
             blueprint = blueprint(),
             machineSpecsById = emptyMap(),
-            initialQaInspectionStates = listOf(
-                QaInspectionState(
-                    inspectorObjectId = "worker-9",
-                    productId = "product-1",
-                    beltTile = com.faultory.core.shop.TileCoordinate(5, 10)
+            snapshot = ShopFloorSnapshot(
+                qaInspectionStates = listOf(
+                    QaInspectionState(
+                        inspectorObjectId = "worker-9",
+                        productId = "product-1",
+                        beltTile = com.faultory.core.shop.TileCoordinate(5, 10)
+                    )
                 )
             )
         )

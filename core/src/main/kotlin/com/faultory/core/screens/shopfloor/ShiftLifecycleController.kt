@@ -23,10 +23,7 @@ class ShiftLifecycleController(
     val dayDirector = ProductionDayDirector(
         shiftLengthSeconds = shopFloor.blueprint.shiftLengthSeconds,
         starThresholds = level.starThresholds,
-        initialElapsedSeconds = initialSave.activeShift.elapsedSeconds,
-        initialDeliveredGoodProducts = initialSave.activeShift.deliveredGoodProducts,
-        initialDeliveredFaultyProducts = initialSave.activeShift.deliveredFaultyProducts,
-        initialProductDeliveryStats = initialSave.activeShift.productDeliveryStats
+        initial = initialSave.activeShift.day
     )
 
     var currentSave: GameSave = initialSave
@@ -123,20 +120,10 @@ class ShiftLifecycleController(
     }
 
     fun persist() {
-        // The shop-floor list properties are live views; the save row outlives this call, so it
-        // must hold its own copies rather than aliases that keep mutating with the simulation.
         currentSave = currentSave.copy(
             activeShift = currentSave.activeShift.copy(
-                elapsedSeconds = dayDirector.elapsedSeconds,
-                deliveredGoodProducts = dayDirector.deliveredGoodProducts,
-                deliveredFaultyProducts = dayDirector.deliveredFaultyProducts,
-                productDeliveryStats = dayDirector.productDeliveryStats,
-                placedObjects = shopFloor.placedObjects.toList(),
-                activeProducts = shopFloor.activeProducts.toList(),
-                machineProductionStates = shopFloor.machineProductionStates.toList(),
-                qaInspectionStates = shopFloor.qaInspectionStates.toList(),
-                cash = shopFloor.cash,
-                machineRecipeStates = shopFloor.machineRecipeStates.toList()
+                day = dayDirector.snapshot(),
+                floor = shopFloor.snapshot()
             )
         )
         host.saveRepository.save(currentSave)

@@ -3,6 +3,7 @@ package com.faultory.core.shop
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.content.WorkerRoleProfile
+import com.faultory.core.shop.ShopFloorSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -62,8 +63,10 @@ class ShopFloorBeltRideTest {
         val shopFloor = ShopFloor(
             blueprint = beltBlueprint(),
             machineSpecsById = emptyMap(),
-            initialPlacements = listOf(
-                worker(position = TileCoordinate(4, 5), movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5)))
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    worker(position = TileCoordinate(4, 5), movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5)))
+                )
             )
         )
 
@@ -81,8 +84,10 @@ class ShopFloorBeltRideTest {
         val shopFloor = ShopFloor(
             blueprint = beltBlueprint(),
             machineSpecsById = emptyMap(),
-            initialPlacements = listOf(
-                worker(position = TileCoordinate(4, 5), movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5)))
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    worker(position = TileCoordinate(4, 5), movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5)))
+                )
             )
         )
 
@@ -101,8 +106,10 @@ class ShopFloorBeltRideTest {
         val shopFloor = ShopFloor(
             blueprint = beltBlueprint(),
             machineSpecsById = emptyMap(),
-            initialPlacements = listOf(
-                worker(position = TileCoordinate(4, 5), movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5)))
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    worker(position = TileCoordinate(4, 5), movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5)))
+                )
             )
         )
 
@@ -121,8 +128,10 @@ class ShopFloorBeltRideTest {
         val shopFloor = ShopFloor(
             blueprint = beltBlueprint(),
             machineSpecsById = emptyMap(),
-            initialPlacements = listOf(
-                worker(position = TileCoordinate(4, 5), movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5)))
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    worker(position = TileCoordinate(4, 5), movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5)))
+                )
             )
         )
 
@@ -176,10 +185,12 @@ class ShopFloorBeltRideTest {
         val shopFloor = ShopFloor(
             blueprint = longBeltBlueprint(),
             machineSpecsById = emptyMap(),
-            initialPlacements = listOf(
-                worker(
-                    position = TileCoordinate(4, 5),
-                    movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5), TileCoordinate(7, 5))
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    worker(
+                        position = TileCoordinate(4, 5),
+                        movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5), TileCoordinate(7, 5))
+                    )
                 )
             )
         )
@@ -203,13 +214,15 @@ class ShopFloorBeltRideTest {
         val shopFloor = ShopFloor(
             blueprint = longBeltBlueprint(),
             machineSpecsById = emptyMap(),
-            initialPlacements = listOf(
-                PlacedShopObject.Worker(
-                    id = "security-1",
-                    catalogId = profile.id,
-                    position = TileCoordinate(4, 5),
-                    workerRole = WorkerRole.SECURITY,
-                    movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5), TileCoordinate(7, 5))
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    PlacedShopObject.Worker(
+                        id = "security-1",
+                        catalogId = profile.id,
+                        position = TileCoordinate(4, 5),
+                        workerRole = WorkerRole.SECURITY,
+                        movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5), TileCoordinate(7, 5))
+                    )
                 )
             )
         )
@@ -234,10 +247,12 @@ class ShopFloorBeltRideTest {
         val shopFloor = ShopFloor(
             blueprint = beltBlueprint(),
             machineSpecsById = emptyMap(),
-            initialPlacements = listOf(
-                worker(id = "worker-1", position = TileCoordinate(4, 5), movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5))),
-                // Blocker sits at the exit tile (6,5)
-                worker(id = "blocker", position = TileCoordinate(6, 5))
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    worker(id = "worker-1", position = TileCoordinate(4, 5), movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5))),
+                    // Blocker sits at the exit tile (6,5)
+                    worker(id = "blocker", position = TileCoordinate(6, 5))
+                )
             )
         )
 

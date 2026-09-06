@@ -20,6 +20,7 @@ import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.graphics.SkinReferences
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopFloor
+import com.faultory.core.shop.ShopFloorSnapshot
 import com.faultory.core.shop.ShopGrid
 import com.faultory.core.shop.TileCoordinate
 import com.faultory.core.shop.systems.CleanerConditionSpawnGate
@@ -159,7 +160,7 @@ class BootScreen(
             unlockedMachineIds = level.availableMachineIds,
             startingCash = level.startingCash
         )
-        val beltSupplyFeeder = buildBeltSupplyFeeder(level, shopBlueprint, save.activeShift.elapsedSeconds)
+        val beltSupplyFeeder = buildBeltSupplyFeeder(level, shopBlueprint, save.activeShift.day.elapsedSeconds)
         val conditionLibrary = if (game.assetManager.isLoaded(AssetPaths.conditionLibrary)) {
             game.assetManager.get(AssetPaths.conditionLibrary, ConditionLibrary::class.java)
         } else ConditionLibrary()
@@ -173,13 +174,8 @@ class BootScreen(
         val shopFloor = ShopFloor(
             blueprint = shopBlueprint,
             machineSpecsById = shopCatalog.machines.associateBy { it.id },
-            initialPlacements = save.activeShift.placedObjects,
-            initialProducts = save.activeShift.activeProducts,
-            initialMachineProductionStates = save.activeShift.machineProductionStates,
-            initialQaInspectionStates = save.activeShift.qaInspectionStates,
-            initialMachineRecipeStates = save.activeShift.machineRecipeStates,
+            snapshot = save.activeShift.floor,
             productDefinitionsById = shopCatalog.products.associateBy { it.id },
-            initialCash = save.activeShift.cash,
             beltSupplyFeeder = beltSupplyFeeder,
             random = captureRuntime.simulationRandom,
             chanceOracle = captureRuntime.chanceOracle,

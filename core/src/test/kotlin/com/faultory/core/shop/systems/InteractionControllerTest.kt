@@ -7,6 +7,7 @@ import com.faultory.core.graphics.InteractionIds
 import com.faultory.core.shop.InteractionRole
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ShopBlueprint
+import com.faultory.core.shop.ShopFloorSnapshot
 import com.faultory.core.shop.ShopGrid
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
@@ -172,7 +173,7 @@ class InteractionControllerTest {
             grid = ShopGrid(blueprint()),
             machineSpecsById = emptyMap(),
             productDefinitionsById = emptyMap(),
-            initialContent = ShopFloorInitialContent(
+            snapshot = ShopFloorSnapshot(
                 placements = placements,
                 products = listOf(
                     ShopProduct(
@@ -183,9 +184,9 @@ class InteractionControllerTest {
                         carrierWorkerId = GIVER,
                         holderObjectId = GIVER
                     )
-                )
-            ),
-            initialCash = 0
+                ),
+                cash = 0
+            )
         )
         return Fixture(state, InteractionController(state, state, state, catalogProvider = { catalog }))
     }

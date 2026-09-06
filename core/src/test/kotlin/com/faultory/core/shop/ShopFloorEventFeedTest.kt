@@ -23,6 +23,7 @@ import com.faultory.core.encounters.ProductionStartedEvent
 import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.encounters.WorkerAssignmentKind
 import com.faultory.core.encounters.WorkerAssignmentRejectedEvent
+import com.faultory.core.shop.ShopFloorSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -42,12 +43,14 @@ class ShopFloorEventFeedTest {
         val shopFloor = ShopFloor(
             blueprint = beltBlueprint(),
             machineSpecsById = mapOf(machineSpec.id to machineSpec),
-            initialPlacements = listOf(
-                PlacedShopObject.Machine(
-                    id = "machine-1",
-                    catalogId = machineSpec.id,
-                    position = TileCoordinate(5, 9),
-                    orientation = Orientation.NORTH
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    PlacedShopObject.Machine(
+                        id = "machine-1",
+                        catalogId = machineSpec.id,
+                        position = TileCoordinate(5, 9),
+                        orientation = Orientation.NORTH
+                    )
                 )
             ),
             productDefinitionsById = mapOf(
@@ -86,7 +89,7 @@ class ShopFloorEventFeedTest {
         val shopFloor = ShopFloor(
             blueprint = beltBlueprint(),
             machineSpecsById = mapOf(machineSpec.id to machineSpec),
-            initialCash = 100,
+            snapshot = ShopFloorSnapshot(cash = 100),
             events = recorder.events
         )
 

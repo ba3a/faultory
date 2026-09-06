@@ -9,6 +9,7 @@ import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopFloor
+import com.faultory.core.shop.ShopFloorSnapshot
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
@@ -93,8 +94,10 @@ class ShopFloorFrameFactoryTest {
     ): ShopFloor = ShopFloor(
         blueprint = blueprint(),
         machineSpecsById = mapOf(cameraSpec.id to cameraSpec),
-        initialPlacements = placements,
-        initialProducts = products
+        snapshot = ShopFloorSnapshot(
+            placements = placements,
+            products = products
+        )
     )
 
     private fun worker(id: String, tile: TileCoordinate): PlacedShopObject.Worker = PlacedShopObject.Worker(

@@ -11,6 +11,7 @@ import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.QaInspectionState
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopFloor
+import com.faultory.core.shop.ShopFloorSnapshot
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
@@ -237,11 +238,13 @@ class SkinActionCatalogTest {
             workerSpawnPoints = emptyList()
         ),
         machineSpecsById = emptyMap(),
-        initialPlacements = placements,
-        initialProducts = products,
-        initialQaInspectionStates = inspections,
-        initialMachineProductionStates = productionStates,
-        initialMachineRecipeStates = recipeStates,
-        initialWorkerAnimationStates = workerAnimations
+        snapshot = ShopFloorSnapshot(
+            placements = placements,
+            products = products,
+            machineProductionStates = productionStates,
+            qaInspectionStates = inspections,
+            machineRecipeStates = recipeStates,
+            workerAnimationStates = workerAnimations
+        )
     )
 }

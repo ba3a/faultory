@@ -12,6 +12,7 @@ import com.faultory.core.encounters.ProductHandedOverEvent
 import com.faultory.core.encounters.ProductPickedUpEvent
 import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.encounters.UnitFellEvent
+import com.faultory.core.shop.ShopFloorSnapshot
 import com.faultory.core.shop.systems.StaticCleanerSpawnGate
 import kotlin.random.Random
 import kotlin.test.Test
@@ -70,12 +71,14 @@ class ShopFloorCleanerTest {
         val shopFloor = ShopFloor(
             blueprint = simpleBlueprint(),
             machineSpecsById = emptyMap(),
-            initialPlacements = listOf(
-                cleaner(id = "cleaner-1", catalogId = cleanerProfile.id, position = cleanerStart)
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    cleaner(id = "cleaner-1", catalogId = cleanerProfile.id, position = cleanerStart)
+                )
             ),
             random = Random(seed = 11L),
             events = events.shopFloorEvents,
-            cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false),
+            cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false)
         )
 
         // Cleaner immediately wets its own tile on its first tick.
@@ -103,13 +106,15 @@ class ShopFloorCleanerTest {
         val shopFloor = ShopFloor(
             blueprint = simpleBlueprint(),
             machineSpecsById = emptyMap(),
-            initialPlacements = listOf(
-                cleaner(id = "cleaner-1", catalogId = cleanerProfile.id, position = cleanerStart)
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    cleaner(id = "cleaner-1", catalogId = cleanerProfile.id, position = cleanerStart)
+                ),
+                products = listOf(product)
             ),
-            initialProducts = listOf(product),
             random = Random(seed = 99L),
             events = events.shopFloorEvents,
-            cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false),
+            cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false)
         )
 
         shopFloor.update(0.05f, mapOf(cleanerProfile.id to cleanerProfile))
@@ -138,19 +143,21 @@ class ShopFloorCleanerTest {
         val shopFloor = ShopFloor(
             blueprint = simpleBlueprint(),
             machineSpecsById = emptyMap(),
-            initialPlacements = listOf(
-                cleaner(
-                    id = "cleaner-1",
-                    catalogId = cleanerProfile.id,
-                    position = cleanerStart,
-                    carriedProductId = "product-1"
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    cleaner(
+                        id = "cleaner-1",
+                        catalogId = cleanerProfile.id,
+                        position = cleanerStart,
+                        carriedProductId = "product-1"
+                    ),
+                    idleWorker(id = "worker-1", catalogId = recipientProfile.id, position = recipientTile)
                 ),
-                idleWorker(id = "worker-1", catalogId = recipientProfile.id, position = recipientTile)
+                products = listOf(carriedProduct)
             ),
-            initialProducts = listOf(carriedProduct),
             random = Random(seed = 5L),
             events = events.shopFloorEvents,
-            cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false),
+            cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false)
         )
 
         val profiles = mapOf(
@@ -212,18 +219,20 @@ class ShopFloorCleanerTest {
         val shopFloor = ShopFloor(
             blueprint = simpleBlueprint(),
             machineSpecsById = emptyMap(),
-            initialPlacements = listOf(
-                cleaner(
-                    id = "cleaner-1",
-                    catalogId = cleanerProfile.id,
-                    position = cleanerStart,
-                    carriedProductId = "product-1"
-                )
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    cleaner(
+                        id = "cleaner-1",
+                        catalogId = cleanerProfile.id,
+                        position = cleanerStart,
+                        carriedProductId = "product-1"
+                    )
+                ),
+                products = listOf(carriedProduct)
             ),
-            initialProducts = listOf(carriedProduct),
             random = Random(seed = 5L),
             events = events.shopFloorEvents,
-            cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false),
+            cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false)
         )
 
         // One tick to enter the destroying phase.
@@ -258,10 +267,11 @@ class ShopFloorCleanerTest {
         val shopFloor = ShopFloor(
             blueprint = simpleBlueprint(),
             machineSpecsById = emptyMap(),
-            initialPlacements = listOf(worker),
-            random = Random(seed = 1L), // first nextFloat() ≈ 0.73 — must be > slipBase+jitter to avoid slip. Force slip below.
+            snapshot = ShopFloorSnapshot(placements = listOf(worker)),
+            random = Random(seed = 1L),
+            // first nextFloat() ≈ 0.73 — must be > slipBase+jitter to avoid slip. Force slip below.
             events = events.shopFloorEvents,
-            cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false),
+            cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false)
         )
         // Pre-wet the destination tile via a synthetic cleaner trail isn't accessible from outside,
         // so we instead spawn a cleaner adjacent that wets the tile first.
@@ -295,10 +305,10 @@ class ShopFloorCleanerTest {
         val shopFloor2 = ShopFloor(
             blueprint = simpleBlueprint(),
             machineSpecsById = emptyMap(),
-            initialPlacements = listOf(cleaner, worker2),
+            snapshot = ShopFloorSnapshot(placements = listOf(cleaner, worker2)),
             random = Random(seed = 3L),
             events = events2.shopFloorEvents,
-            cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false),
+            cleanerSpawnGate = StaticCleanerSpawnGate(shouldSpawn = false)
         )
 
         // Tick once: the cleaner wets wetTile2 (its own position), worker advances onto wetTile2.
@@ -326,11 +336,13 @@ class ShopFloorCleanerTest {
         val shopFloor = ShopFloor(
             blueprint = simpleBlueprint(),
             machineSpecsById = emptyMap(),
-            initialPlacements = listOf(faller),
-            initialWorkerAnimationStates = mapOf(
-                "worker-1" to WorkerAnimationState(
-                    unitPhase = UnitPhase.FALLING,
-                    unitPhaseDurationSeconds = FloorTuning().unitFallSeconds
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(faller),
+                workerAnimationStates = mapOf(
+                    "worker-1" to WorkerAnimationState(
+                        unitPhase = UnitPhase.FALLING,
+                        unitPhaseDurationSeconds = FloorTuning().unitFallSeconds
+                    )
                 )
             ),
             random = Random(seed = 0L),

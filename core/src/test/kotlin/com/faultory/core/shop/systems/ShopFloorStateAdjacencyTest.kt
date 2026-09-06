@@ -10,6 +10,7 @@ import com.faultory.core.shop.ConveyorBelt
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ShopBlueprint
+import com.faultory.core.shop.ShopFloorSnapshot
 import com.faultory.core.shop.ShopGrid
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
@@ -47,8 +48,11 @@ class ShopFloorStateAdjacencyTest {
         grid = grid(),
         machineSpecsById = machineSpecsById,
         productDefinitionsById = emptyMap(),
-        initialContent = ShopFloorInitialContent(placements = placements, products = products),
-        initialCash = 0
+        snapshot = ShopFloorSnapshot(
+            placements = placements,
+            products = products,
+            cash = 0
+        )
     )
 
     private fun worker(id: String, tile: TileCoordinate) = PlacedShopObject.Worker(

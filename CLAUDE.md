@@ -238,6 +238,14 @@ When a refactor clears out a mistake that could be made again, leave something b
   one system depend on another for a helper — extract a shared collaborator (as `QaPostLocator` /
   `WetFloor` did).
 - Do not add simulation logic directly to `ShopFloor` — it wires systems, runs the `schedule`, and delegates; it contains no rules. New `update*` behaviour belongs in one of the focused system classes (`ConveyorSystem`, `ProductionSystem`, `QaSystem`, `WorkerObjectiveSystem`, `WorkerMovementSystem`, `SecuritySystem`) or in a new system class if the responsibility is genuinely distinct. A new system implements `SimulationSystem`, declares its `SimulationPhase` (add one — with its rationale in the KDoc — if none fits), and is registered in `ShopFloor.schedule`; `SimulationScheduleTest` locks that order. Placement / rotation / upgrade rules go in `PlacementSystem`, worker→machine/QA assignment in `AssignmentSystem` (both command handlers, not scheduled); a new UI command handled by `ShopFloor` is a one-line delegate to one of these. `ShopFloor` must remain a thin facade.
+- State that goes in the save is captured and restored by its owner through a slice on
+  `ShopFloorSnapshot` (`core.shop`) or `DayProgress` (`core.save`) — a system with persisted state
+  exposes `snapshot()` and takes its initial state as a constructor parameter, the way
+  `ShopFloorState`/`WetFloor`/`ProductionDayDirector` do. Do not add a field to `ShiftSnapshot`,
+  a line to `ShiftLifecycleController.persist()`, or a seed parameter to `ShopFloor`/`BootScreen`
+  to persist a system's state — that is exactly the fan-out this shape exists to avoid. Per-frame
+  state that must never persist (`WorkerAnimationState`, `WorkerReplanState`) is marked
+  `@Transient` on its field in `ShopFloorSnapshot`, not merely documented.
 - Do not cite a `CODE_REVIEW.md` paragraph number (`CODE_REVIEW 2.3`, `1.5`, …) in a code comment
   or a commit message. The file is local, gitignored, and renumbers as items land — the citation
   goes stale almost immediately and points at nothing for anyone without that exact local snapshot.

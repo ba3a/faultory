@@ -3,10 +3,14 @@ package com.faultory.core.screens.shopfloor
 import com.faultory.core.config.GameConfig
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.LevelStarThresholds
+import com.faultory.core.content.WorkerRole
 import com.faultory.core.save.GameSave
 import com.faultory.core.save.SaveRepository
+import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopFloor
+import com.faultory.core.shop.ShopFloorSnapshot
+import com.faultory.core.shop.TileCoordinate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -131,6 +135,30 @@ class ShiftLifecycleControllerTest {
         ctrl.persist()
 
         assertEquals(1, host.savedGames.size)
+    }
+
+    @Test
+    fun `persist writes both the day and floor slices onto the saved shift`() {
+        val placedWorker = PlacedShopObject.Worker(
+            id = "worker-1",
+            catalogId = "line-inspector",
+            position = TileCoordinate(1, 1),
+            workerRole = WorkerRole.PRODUCER_OPERATOR
+        )
+        val (ctrl, host) = controller(
+            shopFloor = ShopFloor(
+                blueprint = blueprint,
+                machineSpecsById = emptyMap(),
+                snapshot = ShopFloorSnapshot(placements = listOf(placedWorker))
+            )
+        )
+
+        ctrl.tick(3f)
+        ctrl.persist()
+
+        val savedShift = host.savedGames.last().activeShift
+        assertEquals(3f, savedShift.day.elapsedSeconds, absoluteTolerance = 0.001f)
+        assertEquals(listOf(placedWorker), savedShift.floor.placements)
     }
 
     @Test

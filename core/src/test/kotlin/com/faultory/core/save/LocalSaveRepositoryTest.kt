@@ -8,6 +8,7 @@ import com.faultory.core.content.WorkerRole
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ProductFaultReason
+import com.faultory.core.shop.ShopFloorSnapshot
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
@@ -33,11 +34,13 @@ class LocalSaveRepositoryTest {
             unlockedMachineIds = listOf("bench-assembler")
         ).copy(
             activeShift = ShiftSnapshot.fresh("tutorial-shop").copy(
-                elapsedSeconds = 30f,
-                deliveredGoodProducts = 3,
-                deliveredFaultyProducts = 1,
-                productDeliveryStats = listOf(
-                    ProductDeliveryStats(productId = "ceramic-mug", goodCount = 3, sabotageCount = 1)
+                day = DayProgress(
+                    elapsedSeconds = 30f,
+                    deliveredGoodProducts = 3,
+                    deliveredFaultyProducts = 1,
+                    productDeliveryStats = listOf(
+                        ProductDeliveryStats(productId = "ceramic-mug", goodCount = 3, sabotageCount = 1)
+                    )
                 )
             ),
             lastCompletedRun = CompletedRunStats(
@@ -54,9 +57,9 @@ class LocalSaveRepositoryTest {
 
         val replayed = original.resetForReplay("tutorial-shop")
 
-        assertEquals(0f, replayed.activeShift.elapsedSeconds)
-        assertEquals(0, replayed.activeShift.deliveredGoodProducts)
-        assertTrue(replayed.activeShift.productDeliveryStats.isEmpty())
+        assertEquals(0f, replayed.activeShift.day.elapsedSeconds)
+        assertEquals(0, replayed.activeShift.day.deliveredGoodProducts)
+        assertTrue(replayed.activeShift.day.productDeliveryStats.isEmpty())
         assertNotNull(replayed.lastCompletedRun)
         assertEquals(2, replayed.lastCompletedRun.starsEarned)
     }
@@ -80,7 +83,6 @@ class LocalSaveRepositoryTest {
                   },
                   "activeShift": {
                     "shopId": "tutorial-shop",
-                    "dayNumber": 1,
                     "deliveredGoodProducts": 12,
                     "deliveredFaultyProducts": 1
                   }
@@ -126,60 +128,64 @@ class LocalSaveRepositoryTest {
                     unlockedWorkerIds = listOf("line-inspector"),
                     unlockedMachineIds = listOf("bench-assembler", "camera-gate")
                 ).activeShift.copy(
-                    elapsedSeconds = 27.5f,
-                    deliveredGoodProducts = 2,
-                    deliveredFaultyProducts = 1,
-                    productDeliveryStats = listOf(
-                        ProductDeliveryStats(
-                            productId = "ceramic-mug",
-                            goodCount = 2,
-                            sabotageCount = 1
+                    day = DayProgress(
+                        elapsedSeconds = 27.5f,
+                        deliveredGoodProducts = 2,
+                        deliveredFaultyProducts = 1,
+                        productDeliveryStats = listOf(
+                            ProductDeliveryStats(
+                                productId = "ceramic-mug",
+                                goodCount = 2,
+                                sabotageCount = 1
+                            )
                         )
                     ),
-                    placedObjects = listOf(
-                        PlacedShopObject.Worker(
-                            id = "worker-1",
-                            catalogId = "line-inspector",
-                            position = TileCoordinate(6, 9),
-                            orientation = Orientation.EAST,
-                            workerRole = WorkerRole.QA,
-                            assignedMachineId = "machine-7",
-                            assignedSlotIndex = 0,
-                            qaPostTile = TileCoordinate(6, 9),
-                            carriedProductId = "product-3",
-                            movementPath = listOf(TileCoordinate(7, 9), TileCoordinate(8, 9)),
-                            movementProgress = 0.35f
-                        )
-                    ),
-                    activeProducts = listOf(
-                        ShopProduct(
-                            id = "product-3",
-                            productId = "ceramic-mug",
-                            sourceMachineId = "machine-7",
-                            faultReason = ProductFaultReason.SABOTAGE,
-                            state = ShopProductState.CARRIED,
-                            carrierWorkerId = "worker-1",
-                            holderObjectId = "worker-1",
-                            reworkTargetMachineId = "machine-7"
-                        )
-                    ),
-                    machineProductionStates = listOf(
-                        MachineProductionState(
-                            machineId = "machine-9",
-                            productInstanceId = "product-4",
-                            productId = "glass-jar",
-                            faultReason = ProductFaultReason.PRODUCTION_DEFECT,
-                            progressSeconds = 0.8f,
-                            isComplete = false
-                        )
-                    ),
-                    qaInspectionStates = listOf(
-                        QaInspectionState(
-                            inspectorObjectId = "worker-1",
-                            productId = "product-3",
-                            beltTile = TileCoordinate(6, 10),
-                            progressSeconds = 0.4f,
-                            isComplete = false
+                    floor = ShopFloorSnapshot(
+                        placements = listOf(
+                            PlacedShopObject.Worker(
+                                id = "worker-1",
+                                catalogId = "line-inspector",
+                                position = TileCoordinate(6, 9),
+                                orientation = Orientation.EAST,
+                                workerRole = WorkerRole.QA,
+                                assignedMachineId = "machine-7",
+                                assignedSlotIndex = 0,
+                                qaPostTile = TileCoordinate(6, 9),
+                                carriedProductId = "product-3",
+                                movementPath = listOf(TileCoordinate(7, 9), TileCoordinate(8, 9)),
+                                movementProgress = 0.35f
+                            )
+                        ),
+                        products = listOf(
+                            ShopProduct(
+                                id = "product-3",
+                                productId = "ceramic-mug",
+                                sourceMachineId = "machine-7",
+                                faultReason = ProductFaultReason.SABOTAGE,
+                                state = ShopProductState.CARRIED,
+                                carrierWorkerId = "worker-1",
+                                holderObjectId = "worker-1",
+                                reworkTargetMachineId = "machine-7"
+                            )
+                        ),
+                        machineProductionStates = listOf(
+                            MachineProductionState(
+                                machineId = "machine-9",
+                                productInstanceId = "product-4",
+                                productId = "glass-jar",
+                                faultReason = ProductFaultReason.PRODUCTION_DEFECT,
+                                progressSeconds = 0.8f,
+                                isComplete = false
+                            )
+                        ),
+                        qaInspectionStates = listOf(
+                            QaInspectionState(
+                                inspectorObjectId = "worker-1",
+                                productId = "product-3",
+                                beltTile = TileCoordinate(6, 10),
+                                progressSeconds = 0.4f,
+                                isComplete = false
+                            )
                         )
                     )
                 ),
@@ -210,17 +216,19 @@ class LocalSaveRepositoryTest {
                     unlockedWorkerIds = listOf("float-tech"),
                     unlockedMachineIds = listOf("bench-assembler", "camera-gate")
                 ).activeShift.copy(
-                    elapsedSeconds = 41f,
-                    placedObjects = listOf(
-                        PlacedShopObject.Machine(
-                            id = "machine-7",
-                            catalogId = "bench-assembler",
-                            position = TileCoordinate(12, 11),
-                            orientation = Orientation.WEST,
-                            faultyInventoryCount = 2
-                        )
-                    ),
-                    qaInspectionStates = emptyList()
+                    day = DayProgress(elapsedSeconds = 41f),
+                    floor = ShopFloorSnapshot(
+                        placements = listOf(
+                            PlacedShopObject.Machine(
+                                id = "machine-7",
+                                catalogId = "bench-assembler",
+                                position = TileCoordinate(12, 11),
+                                orientation = Orientation.WEST,
+                                faultyInventoryCount = 2
+                            )
+                        ),
+                        qaInspectionStates = emptyList()
+                    )
                 )
             )
 
@@ -232,35 +240,37 @@ class LocalSaveRepositoryTest {
 
             assertEquals("morning-shift", loadedMorningShift.slotId)
             assertEquals("tutorial-shop", loadedMorningShift.activeShift.shopId)
-            assertEquals(27.5f, loadedMorningShift.activeShift.elapsedSeconds)
-            assertEquals(2, loadedMorningShift.activeShift.deliveredGoodProducts)
-            assertEquals(1, loadedMorningShift.activeShift.deliveredFaultyProducts)
-            assertEquals(1, loadedMorningShift.activeShift.productDeliveryStats.size)
-            assertEquals(2, loadedMorningShift.activeShift.productDeliveryStats.single().goodCount)
-            assertEquals(1, loadedMorningShift.activeShift.placedObjects.size)
-            val loadedWorker = loadedMorningShift.activeShift.placedObjects.single() as PlacedShopObject.Worker
+            assertEquals(27.5f, loadedMorningShift.activeShift.day.elapsedSeconds)
+            assertEquals(2, loadedMorningShift.activeShift.day.deliveredGoodProducts)
+            assertEquals(1, loadedMorningShift.activeShift.day.deliveredFaultyProducts)
+            assertEquals(1, loadedMorningShift.activeShift.day.productDeliveryStats.size)
+            assertEquals(2, loadedMorningShift.activeShift.day.productDeliveryStats.single().goodCount)
+            assertEquals(1, loadedMorningShift.activeShift.floor.placements.size)
+            val loadedWorker = loadedMorningShift.activeShift.floor.placements.single() as PlacedShopObject.Worker
             assertEquals(TileCoordinate(6, 9), loadedWorker.position)
             assertEquals("machine-7", loadedWorker.assignedMachineId)
             assertEquals(0, loadedWorker.assignedSlotIndex)
             assertEquals(TileCoordinate(6, 9), loadedWorker.qaPostTile)
             assertEquals("product-3", loadedWorker.carriedProductId)
             assertEquals(0.35f, loadedWorker.movementProgress)
-            assertEquals(1, loadedMorningShift.activeShift.activeProducts.size)
-            assertEquals(ProductFaultReason.SABOTAGE, loadedMorningShift.activeShift.activeProducts.single().faultReason)
-            assertEquals("worker-1", loadedMorningShift.activeShift.activeProducts.single().holderObjectId)
-            assertEquals(1, loadedMorningShift.activeShift.machineProductionStates.size)
-            assertEquals(0.8f, loadedMorningShift.activeShift.machineProductionStates.single().progressSeconds)
-            assertEquals(1, loadedMorningShift.activeShift.qaInspectionStates.size)
-            assertEquals(TileCoordinate(6, 10), loadedMorningShift.activeShift.qaInspectionStates.single().beltTile)
+            assertEquals(1, loadedMorningShift.activeShift.floor.products.size)
+            val loadedProduct = loadedMorningShift.activeShift.floor.products.single()
+            assertEquals(ProductFaultReason.SABOTAGE, loadedProduct.faultReason)
+            assertEquals("worker-1", loadedProduct.holderObjectId)
+            assertEquals(1, loadedMorningShift.activeShift.floor.machineProductionStates.size)
+            assertEquals(0.8f, loadedMorningShift.activeShift.floor.machineProductionStates.single().progressSeconds)
+            assertEquals(1, loadedMorningShift.activeShift.floor.qaInspectionStates.size)
+            val loadedInspection = loadedMorningShift.activeShift.floor.qaInspectionStates.single()
+            assertEquals(TileCoordinate(6, 10), loadedInspection.beltTile)
             assertNotNull(loadedMorningShift.lastCompletedRun)
             assertEquals(2, loadedMorningShift.lastCompletedRun.starsEarned)
             assertEquals(4, loadedMorningShift.lastCompletedRun.goodProductsDelivered)
 
             assertEquals("evening-shift", loadedEveningShift.slotId)
             assertEquals("tutorial-shop", loadedEveningShift.activeShift.shopId)
-            assertEquals(41f, loadedEveningShift.activeShift.elapsedSeconds)
-            assertEquals(1, loadedEveningShift.activeShift.placedObjects.size)
-            val loadedMachine = loadedEveningShift.activeShift.placedObjects.single() as PlacedShopObject.Machine
+            assertEquals(41f, loadedEveningShift.activeShift.day.elapsedSeconds)
+            assertEquals(1, loadedEveningShift.activeShift.floor.placements.size)
+            val loadedMachine = loadedEveningShift.activeShift.floor.placements.single() as PlacedShopObject.Machine
             assertEquals("bench-assembler", loadedMachine.catalogId)
             assertEquals(Orientation.WEST, loadedMachine.orientation)
             assertEquals(2, loadedMachine.faultyInventoryCount)

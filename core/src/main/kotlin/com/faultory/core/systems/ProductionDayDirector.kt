@@ -2,30 +2,28 @@ package com.faultory.core.systems
 
 import com.faultory.core.content.LevelStarThresholds
 import com.faultory.core.save.CompletedRunStats
+import com.faultory.core.save.DayProgress
 import com.faultory.core.save.ProductDeliveryStats
 import com.faultory.core.shop.ProductFaultReason
 
 class ProductionDayDirector(
     private val shiftLengthSeconds: Float,
     private val starThresholds: LevelStarThresholds,
-    initialElapsedSeconds: Float,
-    initialDeliveredGoodProducts: Int,
-    initialDeliveredFaultyProducts: Int,
-    initialProductDeliveryStats: List<ProductDeliveryStats>
+    initial: DayProgress = DayProgress()
 ) {
     private val deliveryStatsByProductId = linkedMapOf<String, ProductDeliveryStats>().apply {
-        for (stats in initialProductDeliveryStats) {
+        for (stats in initial.productDeliveryStats) {
             put(stats.productId, stats)
         }
     }
 
-    var elapsedSeconds: Float = initialElapsedSeconds
+    var elapsedSeconds: Float = initial.elapsedSeconds
         private set
 
-    var deliveredGoodProducts: Int = initialDeliveredGoodProducts
+    var deliveredGoodProducts: Int = initial.deliveredGoodProducts
         private set
 
-    var deliveredFaultyProducts: Int = initialDeliveredFaultyProducts
+    var deliveredFaultyProducts: Int = initial.deliveredFaultyProducts
         private set
 
     val shiftProgress: Float
@@ -70,6 +68,14 @@ class ProductionDayDirector(
         }
         deliveryStatsByProductId[productId] = updated
     }
+
+    /** This director's own slice of a [com.faultory.core.save.ShiftSnapshot]. */
+    fun snapshot(): DayProgress = DayProgress(
+        elapsedSeconds = elapsedSeconds,
+        deliveredGoodProducts = deliveredGoodProducts,
+        deliveredFaultyProducts = deliveredFaultyProducts,
+        productDeliveryStats = productDeliveryStats
+    )
 
     fun completedRunStats(): CompletedRunStats {
         return CompletedRunStats(

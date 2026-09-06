@@ -11,6 +11,7 @@ import com.faultory.core.content.RecipeInput
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.content.WorkerRoleProfile
+import com.faultory.core.shop.ShopFloorSnapshot
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,17 +28,19 @@ class ShopFloorRecipeFetchTest {
         val shopFloor = ShopFloor(
             blueprint = singleBeltBlueprint(),
             machineSpecsById = mapOf(machineSpec.id to machineSpec),
-            initialPlacements = listOf(
-                machinePlacement(machineSpec.id),
-                workerAtOperatorSlot(workerProfile.id)
-            ),
-            initialProducts = listOf(
-                ShopProduct(
-                    id = "ingredient-1",
-                    productId = "ceramic-mug",
-                    sourceMachineId = "external",
-                    state = ShopProductState.ON_BELT,
-                    tile = TileCoordinate(15, 10)
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    machinePlacement(machineSpec.id),
+                    workerAtOperatorSlot(workerProfile.id)
+                ),
+                products = listOf(
+                    ShopProduct(
+                        id = "ingredient-1",
+                        productId = "ceramic-mug",
+                        sourceMachineId = "external",
+                        state = ShopProductState.ON_BELT,
+                        tile = TileCoordinate(15, 10)
+                    )
                 )
             ),
             random = Random(1)
@@ -61,17 +64,19 @@ class ShopFloorRecipeFetchTest {
         val shopFloor = ShopFloor(
             blueprint = singleBeltBlueprint(),
             machineSpecsById = mapOf(machineSpec.id to machineSpec),
-            initialPlacements = listOf(
-                machinePlacement(machineSpec.id),
-                workerAtOperatorSlot(workerProfile.id)
-            ),
-            initialProducts = listOf(
-                ShopProduct(
-                    id = "ingredient-1",
-                    productId = "ceramic-mug",
-                    sourceMachineId = "external",
-                    state = ShopProductState.ON_FLOOR,
-                    tile = TileCoordinate(13, 8)
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    machinePlacement(machineSpec.id),
+                    workerAtOperatorSlot(workerProfile.id)
+                ),
+                products = listOf(
+                    ShopProduct(
+                        id = "ingredient-1",
+                        productId = "ceramic-mug",
+                        sourceMachineId = "external",
+                        state = ShopProductState.ON_FLOOR,
+                        tile = TileCoordinate(13, 8)
+                    )
                 )
             ),
             random = Random(2)
@@ -94,16 +99,18 @@ class ShopFloorRecipeFetchTest {
         val shopFloor = ShopFloor(
             blueprint = singleBeltBlueprint(),
             machineSpecsById = mapOf(machineSpec.id to machineSpec),
-            initialPlacements = listOf(
-                machinePlacement(machineSpec.id)
-            ),
-            initialProducts = listOf(
-                ShopProduct(
-                    id = "ingredient-1",
-                    productId = "ceramic-mug",
-                    sourceMachineId = "external",
-                    state = ShopProductState.ON_BELT,
-                    tile = TileCoordinate(15, 10)
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    machinePlacement(machineSpec.id)
+                ),
+                products = listOf(
+                    ShopProduct(
+                        id = "ingredient-1",
+                        productId = "ceramic-mug",
+                        sourceMachineId = "external",
+                        state = ShopProductState.ON_BELT,
+                        tile = TileCoordinate(15, 10)
+                    )
                 )
             ),
             random = Random(3)
@@ -148,21 +155,23 @@ class ShopFloorRecipeFetchTest {
         val shopFloor = ShopFloor(
             blueprint = singleBeltBlueprint(),
             machineSpecsById = mapOf(machineSpec.id to machineSpec),
-            initialPlacements = listOf(
-                PlacedShopObject.Machine(
-                    id = "press-1",
-                    catalogId = machineSpec.id,
-                    position = TileCoordinate(10, 9),
-                    orientation = Orientation.NORTH
-                ),
-                PlacedShopObject.Worker(
-                    id = "worker-1",
-                    catalogId = workerProfile.id,
-                    position = TileCoordinate(11, 9),
-                    orientation = Orientation.WEST,
-                    workerRole = WorkerRole.PRODUCER_OPERATOR,
-                    assignedMachineId = "press-1",
-                    assignedSlotIndex = 0
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    PlacedShopObject.Machine(
+                        id = "press-1",
+                        catalogId = machineSpec.id,
+                        position = TileCoordinate(10, 9),
+                        orientation = Orientation.NORTH
+                    ),
+                    PlacedShopObject.Worker(
+                        id = "worker-1",
+                        catalogId = workerProfile.id,
+                        position = TileCoordinate(11, 9),
+                        orientation = Orientation.WEST,
+                        workerRole = WorkerRole.PRODUCER_OPERATOR,
+                        assignedMachineId = "press-1",
+                        assignedSlotIndex = 0
+                    )
                 )
             ),
             random = Random(4)
@@ -181,50 +190,33 @@ class ShopFloorRecipeFetchTest {
     @Test
     fun `recipe machine without belt input but with belt output places output directly`() {
         val workerProfile = operatorProfile()
-        val machineSpec = MachineSpec(
-            id = "tea-blender-belt-out",
-            level = 1,
-            type = MachineType.PRODUCER,
-            manuality = Manuality.HUMAN_OPERATED,
-            skin = "machine_servo_assembler",
-            shape = listOf(MachineShapeTile(0, 0)),
-            slots = listOf(
-                MachineSlotSpec(0, 0, Orientation.EAST, MachineSlotType.OPERATOR),
-                MachineSlotSpec(0, 0, Orientation.NORTH, MachineSlotType.BELT_OUTPUT)
-            ),
-            minimumOperatorWorkerIds = listOf(workerProfile.id),
-            installCost = 200,
-            operationDurationSeconds = 0.5f,
-            recipe = MachineRecipe(
-                inputs = listOf(RecipeInput("ceramic-mug", 1)),
-                outputProductId = "tea-kettle",
-                durationSeconds = 0.5f
-            )
-        )
+        val machineSpec = recipeBeltOutputSpec(workerProfile.id)
         val shopFloor = ShopFloor(
             blueprint = singleBeltBlueprint(),
             machineSpecsById = mapOf(machineSpec.id to machineSpec),
-            initialPlacements = listOf(
-                PlacedShopObject.Machine(
-                    id = "blender-1",
-                    catalogId = machineSpec.id,
-                    position = TileCoordinate(10, 9),
-                    orientation = Orientation.NORTH
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    PlacedShopObject.Machine(
+                        id = "blender-1",
+                        catalogId = machineSpec.id,
+                        position = TileCoordinate(10, 9),
+                        orientation = Orientation.NORTH
+                    ),
+                    PlacedShopObject.Worker(
+                        id = "worker-1",
+                        catalogId = workerProfile.id,
+                        position = TileCoordinate(11, 9),
+                        orientation = Orientation.WEST,
+                        workerRole = WorkerRole.PRODUCER_OPERATOR,
+                        assignedMachineId = "blender-1",
+                        assignedSlotIndex = 0
+                    )
                 ),
-                PlacedShopObject.Worker(
-                    id = "worker-1",
-                    catalogId = workerProfile.id,
-                    position = TileCoordinate(11, 9),
-                    orientation = Orientation.WEST,
-                    workerRole = WorkerRole.PRODUCER_OPERATOR,
-                    assignedMachineId = "blender-1",
-                    assignedSlotIndex = 0
-                )
-            ),
-            initialMachineRecipeStates = listOf(
-                MachineRecipeState(
-                    machineId = "blender-1",
-                    inputBuffer = mapOf("ceramic-mug" to 1)
+                machineRecipeStates = listOf(
+                    MachineRecipeState(
+                        machineId = "blender-1",
+                        inputBuffer = mapOf("ceramic-mug" to 1)
+                    )
                 )
             ),
             random = Random(5)
@@ -238,6 +230,29 @@ class ShopFloorRecipeFetchTest {
         val worker = assertNotNull(shopFloor.findObjectById("worker-1") as? PlacedShopObject.Worker)
         assertNull(worker.carriedProductId)
         assertEquals(TileCoordinate(11, 9), worker.position)
+    }
+
+    private fun recipeBeltOutputSpec(operatorWorkerId: String): MachineSpec {
+        return MachineSpec(
+            id = "tea-blender-belt-out",
+            level = 1,
+            type = MachineType.PRODUCER,
+            manuality = Manuality.HUMAN_OPERATED,
+            skin = "machine_servo_assembler",
+            shape = listOf(MachineShapeTile(0, 0)),
+            slots = listOf(
+                MachineSlotSpec(0, 0, Orientation.EAST, MachineSlotType.OPERATOR),
+                MachineSlotSpec(0, 0, Orientation.NORTH, MachineSlotType.BELT_OUTPUT)
+            ),
+            minimumOperatorWorkerIds = listOf(operatorWorkerId),
+            installCost = 200,
+            operationDurationSeconds = 0.5f,
+            recipe = MachineRecipe(
+                inputs = listOf(RecipeInput("ceramic-mug", 1)),
+                outputProductId = "tea-kettle",
+                durationSeconds = 0.5f
+            )
+        )
     }
 
     private fun recipeNoBeltInputSpec(): MachineSpec {

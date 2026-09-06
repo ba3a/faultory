@@ -6,6 +6,7 @@ import com.faultory.core.shop.ConveyorBelt
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ShopBlueprint
+import com.faultory.core.shop.ShopFloorSnapshot
 import com.faultory.core.shop.ShopGrid
 import com.faultory.core.shop.TileCoordinate
 import kotlin.test.Test
@@ -37,8 +38,10 @@ class QaPostLocatorTest {
             grid = grid(),
             machineSpecsById = emptyMap(),
             productDefinitionsById = emptyMap(),
-            initialContent = ShopFloorInitialContent(placements = placements),
-            initialCash = 0
+            snapshot = ShopFloorSnapshot(
+                placements = placements,
+                cash = 0
+            )
         )
         return QaPostLocator(state, state, state)
     }

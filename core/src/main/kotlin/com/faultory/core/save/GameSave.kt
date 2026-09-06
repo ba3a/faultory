@@ -1,10 +1,6 @@
 package com.faultory.core.save
 
-import com.faultory.core.shop.MachineProductionState
-import com.faultory.core.shop.MachineRecipeState
-import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.QaInspectionState
-import com.faultory.core.shop.ShopProduct
+import com.faultory.core.shop.ShopFloorSnapshot
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
@@ -21,7 +17,7 @@ data class GameSave(
     val lastCompletedRun: CompletedRunStats? = null
 ) {
     companion object {
-        const val CURRENT_VERSION = 13
+        const val CURRENT_VERSION = 14
 
         fun forLevel(
             slotId: String,
@@ -56,40 +52,37 @@ data class PlayerProgress(
     val unlockedMachineIds: List<String>
 )
 
+/**
+ * One level's save row: [shopId] plus one slice per owner — [DayProgress] from
+ * [com.faultory.core.systems.ProductionDayDirector], [ShopFloorSnapshot] from
+ * [com.faultory.core.shop.ShopFloor]. Adding persisted state to a system means a field on that
+ * system's own slice and a line in that system's `snapshot()` — never a field here. See the
+ * `Constraints` section of `CLAUDE.md`.
+ */
 @Serializable
 data class ShiftSnapshot(
     val shopId: String,
-    val dayNumber: Int,
-    val elapsedSeconds: Float,
-    val deliveredGoodProducts: Int,
-    val deliveredFaultyProducts: Int,
-    val productDeliveryStats: List<ProductDeliveryStats>,
-    val placedObjects: List<PlacedShopObject>,
-    val activeProducts: List<ShopProduct>,
-    val machineProductionStates: List<MachineProductionState>,
-    val qaInspectionStates: List<QaInspectionState>,
-    val cash: Int = 0,
-    val machineRecipeStates: List<MachineRecipeState> = emptyList()
- ) {
+    val day: DayProgress = DayProgress(),
+    val floor: ShopFloorSnapshot = ShopFloorSnapshot()
+) {
     companion object {
         fun fresh(shopId: String, startingCash: Int = 0): ShiftSnapshot {
             return ShiftSnapshot(
                 shopId = shopId,
-                dayNumber = 1,
-                elapsedSeconds = 0f,
-                deliveredGoodProducts = 0,
-                deliveredFaultyProducts = 0,
-                productDeliveryStats = emptyList(),
-                placedObjects = emptyList(),
-                activeProducts = emptyList(),
-                machineProductionStates = emptyList(),
-                qaInspectionStates = emptyList(),
-                cash = startingCash,
-                machineRecipeStates = emptyList()
+                floor = ShopFloorSnapshot(cash = startingCash)
             )
         }
     }
 }
+
+/** [com.faultory.core.systems.ProductionDayDirector]'s own slice of a [ShiftSnapshot]. */
+@Serializable
+data class DayProgress(
+    val elapsedSeconds: Float = 0f,
+    val deliveredGoodProducts: Int = 0,
+    val deliveredFaultyProducts: Int = 0,
+    val productDeliveryStats: List<ProductDeliveryStats> = emptyList()
+)
 
 @Serializable
 data class ProductDeliveryStats(

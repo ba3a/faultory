@@ -8,6 +8,7 @@ import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.MachineType
 import com.faultory.core.content.Manuality
 import com.faultory.core.content.RecipeInput
+import com.faultory.core.shop.ShopFloorSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -22,28 +23,30 @@ class ShopFloorRecipeTest {
         val shopFloor = ShopFloor(
             blueprint = chainedBeltBlueprint(),
             machineSpecsById = mapOf(recipeMachine.id to recipeMachine),
-            initialPlacements = listOf(
-                PlacedShopObject.Machine(
-                    id = "blender-1",
-                    catalogId = recipeMachine.id,
-                    position = TileCoordinate(10, 10),
-                    orientation = Orientation.NORTH
-                )
-            ),
-            initialProducts = listOf(
-                ShopProduct(
-                    id = "input-mug",
-                    productId = "ceramic-mug",
-                    sourceMachineId = "external",
-                    state = ShopProductState.ON_BELT,
-                    tile = TileCoordinate(9, 10)
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    PlacedShopObject.Machine(
+                        id = "blender-1",
+                        catalogId = recipeMachine.id,
+                        position = TileCoordinate(10, 10),
+                        orientation = Orientation.NORTH
+                    )
                 ),
-                ShopProduct(
-                    id = "input-jar",
-                    productId = "glass-jar",
-                    sourceMachineId = "external",
-                    state = ShopProductState.ON_BELT,
-                    tile = TileCoordinate(8, 10)
+                products = listOf(
+                    ShopProduct(
+                        id = "input-mug",
+                        productId = "ceramic-mug",
+                        sourceMachineId = "external",
+                        state = ShopProductState.ON_BELT,
+                        tile = TileCoordinate(9, 10)
+                    ),
+                    ShopProduct(
+                        id = "input-jar",
+                        productId = "glass-jar",
+                        sourceMachineId = "external",
+                        state = ShopProductState.ON_BELT,
+                        tile = TileCoordinate(8, 10)
+                    )
                 )
             )
         )
@@ -63,29 +66,31 @@ class ShopFloorRecipeTest {
         val shopFloor = ShopFloor(
             blueprint = chainedBeltBlueprint(),
             machineSpecsById = mapOf(recipeMachine.id to recipeMachine),
-            initialPlacements = listOf(
-                PlacedShopObject.Machine(
-                    id = "blender-1",
-                    catalogId = recipeMachine.id,
-                    position = TileCoordinate(10, 10),
-                    orientation = Orientation.NORTH
-                )
-            ),
-            initialProducts = listOf(
-                ShopProduct(
-                    id = "input-mug",
-                    productId = "ceramic-mug",
-                    sourceMachineId = "external",
-                    faultReason = ProductFaultReason.PRODUCTION_DEFECT,
-                    state = ShopProductState.ON_BELT,
-                    tile = TileCoordinate(9, 10)
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    PlacedShopObject.Machine(
+                        id = "blender-1",
+                        catalogId = recipeMachine.id,
+                        position = TileCoordinate(10, 10),
+                        orientation = Orientation.NORTH
+                    )
                 ),
-                ShopProduct(
-                    id = "input-jar",
-                    productId = "glass-jar",
-                    sourceMachineId = "external",
-                    state = ShopProductState.ON_BELT,
-                    tile = TileCoordinate(8, 10)
+                products = listOf(
+                    ShopProduct(
+                        id = "input-mug",
+                        productId = "ceramic-mug",
+                        sourceMachineId = "external",
+                        faultReason = ProductFaultReason.PRODUCTION_DEFECT,
+                        state = ShopProductState.ON_BELT,
+                        tile = TileCoordinate(9, 10)
+                    ),
+                    ShopProduct(
+                        id = "input-jar",
+                        productId = "glass-jar",
+                        sourceMachineId = "external",
+                        state = ShopProductState.ON_BELT,
+                        tile = TileCoordinate(8, 10)
+                    )
                 )
             )
         )
@@ -102,30 +107,32 @@ class ShopFloorRecipeTest {
         val shopFloor = ShopFloor(
             blueprint = chainedBeltBlueprint(),
             machineSpecsById = mapOf(recipeMachine.id to recipeMachine),
-            initialPlacements = listOf(
-                PlacedShopObject.Machine(
-                    id = "blender-1",
-                    catalogId = recipeMachine.id,
-                    position = TileCoordinate(10, 10),
-                    orientation = Orientation.NORTH
-                )
-            ),
-            initialProducts = listOf(
-                ShopProduct(
-                    id = "input-mug",
-                    productId = "ceramic-mug",
-                    sourceMachineId = "external",
-                    faultReason = ProductFaultReason.SABOTAGE,
-                    state = ShopProductState.ON_BELT,
-                    tile = TileCoordinate(9, 10)
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    PlacedShopObject.Machine(
+                        id = "blender-1",
+                        catalogId = recipeMachine.id,
+                        position = TileCoordinate(10, 10),
+                        orientation = Orientation.NORTH
+                    )
                 ),
-                ShopProduct(
-                    id = "input-jar",
-                    productId = "glass-jar",
-                    sourceMachineId = "external",
-                    faultReason = ProductFaultReason.PRODUCTION_DEFECT,
-                    state = ShopProductState.ON_BELT,
-                    tile = TileCoordinate(8, 10)
+                products = listOf(
+                    ShopProduct(
+                        id = "input-mug",
+                        productId = "ceramic-mug",
+                        sourceMachineId = "external",
+                        faultReason = ProductFaultReason.SABOTAGE,
+                        state = ShopProductState.ON_BELT,
+                        tile = TileCoordinate(9, 10)
+                    ),
+                    ShopProduct(
+                        id = "input-jar",
+                        productId = "glass-jar",
+                        sourceMachineId = "external",
+                        faultReason = ProductFaultReason.PRODUCTION_DEFECT,
+                        state = ShopProductState.ON_BELT,
+                        tile = TileCoordinate(8, 10)
+                    )
                 )
             )
         )
@@ -142,29 +149,31 @@ class ShopFloorRecipeTest {
         val shopFloor = ShopFloor(
             blueprint = chainedBeltBlueprint(),
             machineSpecsById = mapOf(recipeMachine.id to recipeMachine),
-            initialPlacements = listOf(
-                PlacedShopObject.Machine(
-                    id = "blender-1",
-                    catalogId = recipeMachine.id,
-                    position = TileCoordinate(10, 10),
-                    orientation = Orientation.NORTH
-                )
-            ),
-            initialMachineRecipeStates = listOf(
-                MachineRecipeState(
-                    machineId = "blender-1",
-                    inputBuffer = mapOf(
-                        "ceramic-mug" to FloorTuning().machineInputBufferCap
+            snapshot = ShopFloorSnapshot(
+                placements = listOf(
+                    PlacedShopObject.Machine(
+                        id = "blender-1",
+                        catalogId = recipeMachine.id,
+                        position = TileCoordinate(10, 10),
+                        orientation = Orientation.NORTH
                     )
-                )
-            ),
-            initialProducts = listOf(
-                ShopProduct(
-                    id = "stuck-mug",
-                    productId = "ceramic-mug",
-                    sourceMachineId = "external",
-                    state = ShopProductState.ON_BELT,
-                    tile = TileCoordinate(9, 10)
+                ),
+                products = listOf(
+                    ShopProduct(
+                        id = "stuck-mug",
+                        productId = "ceramic-mug",
+                        sourceMachineId = "external",
+                        state = ShopProductState.ON_BELT,
+                        tile = TileCoordinate(9, 10)
+                    )
+                ),
+                machineRecipeStates = listOf(
+                    MachineRecipeState(
+                        machineId = "blender-1",
+                        inputBuffer = mapOf(
+                            "ceramic-mug" to FloorTuning().machineInputBufferCap
+                        )
+                    )
                 )
             )
         )
@@ -180,13 +189,15 @@ class ShopFloorRecipeTest {
         val shopFloor = ShopFloor(
             blueprint = deadEndBlueprint(),
             machineSpecsById = emptyMap(),
-            initialProducts = listOf(
-                ShopProduct(
-                    id = "p1",
-                    productId = "ceramic-mug",
-                    sourceMachineId = "m",
-                    state = ShopProductState.ON_BELT,
-                    tile = TileCoordinate(11, 10)
+            snapshot = ShopFloorSnapshot(
+                products = listOf(
+                    ShopProduct(
+                        id = "p1",
+                        productId = "ceramic-mug",
+                        sourceMachineId = "m",
+                        state = ShopProductState.ON_BELT,
+                        tile = TileCoordinate(11, 10)
+                    )
                 )
             )
         )

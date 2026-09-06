@@ -20,6 +20,7 @@ import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopFloor
+import com.faultory.core.shop.ShopFloorSnapshot
 import com.faultory.core.shop.TileCoordinate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -82,7 +83,7 @@ class WorkerAssignmentControllerTest {
     private fun shopFloor(vararg objects: PlacedShopObject): ShopFloor = ShopFloor(
         blueprint = blueprint,
         machineSpecsById = mapOf(machineSpec.id to machineSpec),
-        initialPlacements = objects.toList()
+        snapshot = ShopFloorSnapshot(placements = objects.toList())
     )
 
     private fun controller(

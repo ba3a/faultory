@@ -19,6 +19,7 @@ import com.faultory.core.save.SaveRepository
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopFloor
+import com.faultory.core.shop.ShopFloorSnapshot
 import com.faultory.core.shop.TileCoordinate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -72,7 +73,7 @@ class PlacementControllerTest {
             workerSpawnPoints = emptyList()
         ),
         machineSpecsById = mapOf(machine.id to machine),
-        initialCash = cash
+        snapshot = ShopFloorSnapshot(cash = cash)
     )
 
     private fun stubLifecycle(shopFloor: ShopFloor): ShiftLifecycleController {
@@ -171,7 +172,7 @@ class PlacementControllerTest {
                 workerSpawnPoints = emptyList()
             ),
             machineSpecsById = mapOf(qaSpec.id to qaSpec),
-            initialCash = 500
+            snapshot = ShopFloorSnapshot(cash = 500)
         )
         val qaCatalog = CatalogLookup(ShopCatalog(workers = emptyList(), machines = listOf(qaSpec), products = emptyList()))
         val bankPanel = BankPanel(qaCatalog).also {

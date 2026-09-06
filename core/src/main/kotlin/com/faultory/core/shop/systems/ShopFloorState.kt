@@ -16,6 +16,7 @@ import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.QaInspectionState
 import com.faultory.core.shop.ShipmentEvent
+import com.faultory.core.shop.ShopFloorSnapshot
 import com.faultory.core.shop.ShopGrid
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
@@ -33,8 +34,7 @@ internal class ShopFloorState(
     override val machineSpecsById: Map<String, MachineSpec>,
     override val productDefinitionsById: Map<String, ProductDefinition>,
     override val floorTuning: FloorTuning = FloorTuning.default(),
-    initialContent: ShopFloorInitialContent = ShopFloorInitialContent(),
-    initialCash: Int,
+    snapshot: ShopFloorSnapshot = ShopFloorSnapshot(),
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) : CleanerSpawnAccess,
     UnitPhaseAccess,
@@ -47,34 +47,34 @@ internal class ShopFloorState(
     CleanerAccess,
     PlacementAccess,
     AssignmentAccess {
-    var cash: Int = initialCash
+    var cash: Int = snapshot.cash
         private set
 
     // Exposed as the concrete type so systems can reach id→index in O(1) (indexOfId / replaceById)
     // instead of an `indexOfFirst { it.id == … }` scan on the per-frame path.
     private val placedObjectsIndex: IdIndexedMutableList<PlacedShopObject> =
-        IdIndexedMutableList(initialContent.placements) { it.id }
+        IdIndexedMutableList(snapshot.placements) { it.id }
     override val mutablePlacedObjects: IdIndexedMutableList<PlacedShopObject> = placedObjectsIndex
     override val placedObjects: List<PlacedShopObject> get() = placedObjectsIndex
 
     private val activeProductsIndex: IdIndexedMutableList<ShopProduct> =
-        IdIndexedMutableList(initialContent.products) { it.id }
+        IdIndexedMutableList(snapshot.products) { it.id }
     override val mutableActiveProducts: IdIndexedMutableList<ShopProduct> = activeProductsIndex
     override val activeProducts: List<ShopProduct> get() = activeProductsIndex
 
     private val machineProductionStatesIndex: IdIndexedMutableList<MachineProductionState> =
-        IdIndexedMutableList(initialContent.machineProductionStates) { it.machineId }
+        IdIndexedMutableList(snapshot.machineProductionStates) { it.machineId }
     override val mutableMachineProductionStates: IdIndexedMutableList<MachineProductionState> =
         machineProductionStatesIndex
     override val machineProductionStates: List<MachineProductionState> get() = machineProductionStatesIndex
 
     private val qaInspectionStatesIndex: IdIndexedMutableList<QaInspectionState> =
-        IdIndexedMutableList(initialContent.qaInspectionStates) { it.inspectorObjectId }
+        IdIndexedMutableList(snapshot.qaInspectionStates) { it.inspectorObjectId }
     override val mutableQaInspectionStates: IdIndexedMutableList<QaInspectionState> = qaInspectionStatesIndex
     override val qaInspectionStates: List<QaInspectionState> get() = qaInspectionStatesIndex
 
     private val machineRecipeStatesIndex: IdIndexedMutableList<MachineRecipeState> =
-        IdIndexedMutableList(initialContent.machineRecipeStates) { it.machineId }
+        IdIndexedMutableList(snapshot.machineRecipeStates) { it.machineId }
     override val mutableMachineRecipeStates: IdIndexedMutableList<MachineRecipeState> = machineRecipeStatesIndex
     override val machineRecipeStates: List<MachineRecipeState> get() = machineRecipeStatesIndex
 
@@ -84,7 +84,7 @@ internal class ShopFloorState(
         pendingShipmentEvents += shipment
     }
 
-    override var cleanerSpawnedThisShift: Boolean = false
+    override var cleanerSpawnedThisShift: Boolean = snapshot.cleanerSpawnedThisShift
 
     private val operatorWorkerByMachineId: HashMap<String, PlacedShopObject.Worker> = HashMap()
     private val productByBeltTile: HashMap<TileCoordinate, ShopProduct> = HashMap()
@@ -94,9 +94,9 @@ internal class ShopFloorState(
     private val occupiedTilesByObjectId: HashMap<String, Set<TileCoordinate>> = HashMap()
     private val slotPositionsByObjectId: HashMap<String, HashMap<MachineSlotType?, List<MachineSlotPosition>>> = HashMap()
     private val workerAnimationStatesByWorkerId: HashMap<String, WorkerAnimationState> =
-        HashMap(initialContent.workerAnimationStates)
+        HashMap(snapshot.workerAnimationStates)
     private val workerReplanStatesByWorkerId: HashMap<String, WorkerReplanState> =
-        HashMap(initialContent.workerReplanStates)
+        HashMap(snapshot.workerReplanStates)
 
     private val _placedMachines: MutableList<PlacedShopObject.Machine> = mutableListOf()
     private val _placedWorkers: MutableList<PlacedShopObject.Worker> = mutableListOf()
@@ -250,21 +250,39 @@ internal class ShopFloorState(
         }
     }
 
-    var nextObjectSequence: Int = initialContent.placements
+    var nextObjectSequence: Int = snapshot.placements
         .mapNotNull { sequenceOf(it.id) }
         .maxOrNull()
         ?.plus(1)
         ?: 1
 
     var nextProductSequence: Int = buildList {
-        addAll(initialContent.products.mapNotNull { sequenceOf(it.id) })
-        addAll(initialContent.machineProductionStates.mapNotNull { sequenceOf(it.productInstanceId) })
+        addAll(snapshot.products.mapNotNull { sequenceOf(it.id) })
+        addAll(snapshot.machineProductionStates.mapNotNull { sequenceOf(it.productInstanceId) })
         addAll(
-            initialContent.machineRecipeStates.flatMap { state ->
+            snapshot.machineRecipeStates.flatMap { state ->
                 state.outputQueue.mapNotNull { sequenceOf(it.productInstanceId) }
             }
         )
     }.maxOrNull()?.plus(1) ?: 1
+
+    /**
+     * This state's own slice of a [ShopFloorSnapshot] — everything except [ShopFloorSnapshot.wetTiles],
+     * which [ShopFloor] composes in separately since the puddle map lives on [WetFloor], not here.
+     * The five tables are read through their `IdIndexedMutableList`s as `.toList()` copies: those
+     * lists are live views (see [placedObjects]), and a save row must outlive the tick that took it.
+     */
+    fun snapshot(): ShopFloorSnapshot = ShopFloorSnapshot(
+        placements = placedObjectsIndex.toList(),
+        products = activeProductsIndex.toList(),
+        machineProductionStates = machineProductionStatesIndex.toList(),
+        qaInspectionStates = qaInspectionStatesIndex.toList(),
+        machineRecipeStates = machineRecipeStatesIndex.toList(),
+        cash = cash,
+        cleanerSpawnedThisShift = cleanerSpawnedThisShift,
+        workerAnimationStates = workerAnimationStatesByWorkerId.toMap(),
+        workerReplanStates = workerReplanStatesByWorkerId.toMap()
+    )
 
     /** The one place money leaves the bank, and so the one place a spend is published. */
     override fun tryDeductCash(amount: Int, reason: CashFlowReason): Boolean {

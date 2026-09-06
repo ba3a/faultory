@@ -1,6 +1,7 @@
 package com.faultory.core.shop.systems
 
 import com.faultory.core.shop.TileCoordinate
+import com.faultory.core.shop.WetTileSnapshot
 
 /**
  * The puddle map: which floor tiles are wet and for how much longer.
@@ -13,10 +14,17 @@ import com.faultory.core.shop.TileCoordinate
  * Deliberately event-free: [mark] and [dry] report what changed so the caller publishes the
  * `TileWettedEvent` / `TileDriedEvent`, which keeps this class testable without an event bus.
  */
-internal class WetFloor : WetFloorReads, WetFloorWrites {
-    private val wetByTile: MutableMap<TileCoordinate, Float> = HashMap()
+internal class WetFloor(initial: List<WetTileSnapshot> = emptyList()) : WetFloorReads, WetFloorWrites {
+    // Seeded straight into the map, not through mark(): mark() has "a shorter duration never
+    // shortens a puddle" gameplay semantics that a restore has no use for — it just wants the exact
+    // remaining time back.
+    private val wetByTile: MutableMap<TileCoordinate, Float> =
+        initial.associateTo(HashMap()) { it.tile to it.remainingSeconds }
 
     val wetTiles: Map<TileCoordinate, Float> get() = wetByTile
+
+    /** This puddle map's own slice of a [com.faultory.core.shop.ShopFloorSnapshot]. */
+    fun snapshotRows(): List<WetTileSnapshot> = wetByTile.map { (tile, remaining) -> WetTileSnapshot(tile, remaining) }
 
     override fun isWet(tile: TileCoordinate): Boolean = wetByTile.containsKey(tile)
 
