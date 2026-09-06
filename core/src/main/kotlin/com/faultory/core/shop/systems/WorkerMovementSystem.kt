@@ -121,8 +121,8 @@ internal class WorkerMovementSystem(
                     WorkerBoardedBeltEvent(objectId = placedObject.id, tile = currentPosition, levelId = it)
                 }
             } else if (remainingPath.isEmpty()) {
-                currentOrientation = orientationAtAssignedSlot(placedObject.copy(position = currentPosition))
-                    ?: orientationAtQaPost(placedObject.copy(position = currentPosition))
+                currentOrientation = orientationAtAssignedSlot(placedObject, at = currentPosition)
+                    ?: orientationAtQaPost(placedObject)
                     ?: currentOrientation
                 mutablePlacedObjects[index] = placedObject.copy(
                     position = currentPosition,
@@ -214,7 +214,9 @@ internal class WorkerMovementSystem(
             return
         }
         val finalOrientation = if (worker.movementPath.isEmpty()) {
-            orientationAtAssignedSlot(worker) ?: orientationAtQaPost(worker) ?: worker.orientation
+            orientationAtAssignedSlot(worker, at = worker.position)
+                ?: orientationAtQaPost(worker)
+                ?: worker.orientation
         } else {
             worker.orientation
         }
@@ -232,14 +234,21 @@ internal class WorkerMovementSystem(
         return (access.floorTuning.wetTileSlipBaseChance + jitter).coerceIn(0f, 1f)
     }
 
-    private fun orientationAtAssignedSlot(worker: PlacedShopObject.Worker): Orientation? {
+    /**
+     * [at] is the tile the worker has just arrived on, which is not yet the tile on its record —
+     * the record is written once, after the facing is resolved.
+     */
+    private fun orientationAtAssignedSlot(
+        worker: PlacedShopObject.Worker,
+        at: TileCoordinate
+    ): Orientation? {
         val machineId = worker.assignedMachineId ?: return null
         val machine = access.findObjectById(machineId) ?: return null
         val slotIndex = worker.assignedSlotIndex
         return access.slotPositionsFor(machine, MachineSlotType.OPERATOR)
             .firstOrNull { slotPosition ->
                 slotPosition.slotIndex == slotIndex ||
-                    (slotIndex == null && slotPosition.accessTile == worker.position)
+                    (slotIndex == null && slotPosition.accessTile == at)
             }
             ?.side
             ?.opposite()

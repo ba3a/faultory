@@ -171,6 +171,7 @@ internal class PlacementSystem(
         if (machine.orientation == orientation) return true
         if (!machineHasNoActiveWork(machineId)) return false
 
+        // A detached probe, never installed: canPlaceObject asks whether the rotated footprint fits.
         val rotated = machine.copy(orientation = orientation)
         if (!canPlaceObject(rotated, ignoreObjectId = machine.id)) return false
 
@@ -237,6 +238,8 @@ internal class PlacementSystem(
     ): Boolean {
         val upgradedSpec = machineSpecsById[targetCatalogId] ?: return false
         if (upgradedSpec.shape.isEmpty()) return false
+        // A detached probe, never installed: the copy exists only to ask canPlaceObject about the
+        // upgraded shape.
         return canPlaceObject(current.copy(catalogId = targetCatalogId), ignoreObjectId = current.id)
     }
 

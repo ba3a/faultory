@@ -511,7 +511,7 @@ internal class WorkerObjectiveSystem(
     ) {
         val qaPostTile = worker.qaPostTile ?: return
         if (qaPostTile == worker.position) {
-            val beltTile = qaPostLocator.beltTileInspectedBy(worker.copy(position = qaPostTile))
+            val beltTile = qaPostLocator.beltTileInspectedBy(worker)
             val orientation = beltTile?.let { Orientation.between(qaPostTile, it) } ?: worker.orientation
             mutablePlacedObjects[workerIndex] = worker.copy(
                 movementPath = emptyList(),
