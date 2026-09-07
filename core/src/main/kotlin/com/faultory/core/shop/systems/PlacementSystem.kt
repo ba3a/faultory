@@ -3,7 +3,10 @@ package com.faultory.core.shop.systems
 import com.faultory.core.content.MachineSlotType
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.MachineType
+import com.faultory.core.content.WorkerProfile
+import com.faultory.core.content.WorkerRole
 import com.faultory.core.encounters.CashFlowReason
+import com.faultory.core.encounters.EvaluationContext
 import com.faultory.core.encounters.ObjectPlacedEvent
 import com.faultory.core.encounters.ObjectRotatedEvent
 import com.faultory.core.encounters.ObjectUpgradedEvent
@@ -11,10 +14,14 @@ import com.faultory.core.encounters.ProductSuppliedEvent
 import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
+import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ProductFaultReason
+import com.faultory.core.shop.PurchaseFailureReason
+import com.faultory.core.shop.PurchaseResult
 import com.faultory.core.shop.ShopProduct
 import com.faultory.core.shop.ShopProductState
 import com.faultory.core.shop.TileCoordinate
+import com.faultory.core.shop.UpgradeOption
 
 /**
  * The rules for putting things on the grid and changing them there: can an object stand on these
@@ -23,10 +30,14 @@ import com.faultory.core.shop.TileCoordinate
  *
  * This is a command handler the screen controllers ([com.faultory.core.screens.shopfloor.PlacementController],
  * [com.faultory.core.screens.shopfloor.MachineDragController],
- * [com.faultory.core.screens.shopfloor.UpgradeFlowController]) call through the [com.faultory.core.shop.ShopFloor]
- * facade — **not** a scheduled [SimulationSystem]. It has no [SimulationPhase] and never runs on the
- * per-frame tick; the one exception is [trySpawnSuppliedProduct], which [com.faultory.core.shop.ShopFloor]
- * hands to [BeltSupplyFeederSystem] as a spawn callback.
+ * [com.faultory.core.screens.shopfloor.UpgradeFlowController]) and a headless caller
+ * ([com.faultory.core.headless.HeadlessLevelSession]) both call through the
+ * [com.faultory.core.shop.ShopFloor] facade — **not** a scheduled [SimulationSystem]. It has no
+ * [SimulationPhase] and never runs on the per-frame tick; the one exception is
+ * [trySpawnSuppliedProduct], which [com.faultory.core.shop.ShopFloor] hands to
+ * [BeltSupplyFeederSystem] as a spawn callback. [purchaseAndPlace] and [upgradeOptionsFor] are the
+ * one path for the purchase and upgrade rules — a screen controller and headless code must never
+ * reimplement them, so the two cannot drift.
  */
 internal class PlacementSystem(
     private val access: PlacementAccess,
@@ -161,6 +172,98 @@ internal class PlacementSystem(
         return true
     }
 
+    /**
+     * Every orientation of [catalogId] worth trying at [tile] for a purchase or a placement
+     * preview — one candidate for a worker (it has no shape to rotate), one per [Orientation] for a
+     * machine that cares about facing (a QA gate, a recipe machine, or anything with belt slots),
+     * otherwise the single default facing. Unfiltered by [canPlaceObject]; the caller picks.
+     */
+    fun placementCandidates(
+        kind: PlacedShopObjectKind,
+        catalogId: String,
+        tile: TileCoordinate,
+        objectId: String,
+        workersById: Map<String, WorkerProfile>
+    ): List<PlacedShopObject> {
+        return when (kind) {
+            PlacedShopObjectKind.WORKER -> {
+                val worker = workersById[catalogId] ?: return emptyList()
+                listOf(
+                    PlacedShopObject.Worker(
+                        id = objectId,
+                        catalogId = worker.id,
+                        position = tile,
+                        orientation = Orientation.SOUTH,
+                        workerRole = defaultRoleFor(worker)
+                    )
+                )
+            }
+
+            PlacedShopObjectKind.MACHINE -> {
+                val machine = machineSpecsById[catalogId] ?: return emptyList()
+                val needsOrientationChoice = machine.type == MachineType.QA ||
+                    machine.recipe != null ||
+                    machine.hasBeltSlots()
+                val orientations = if (needsOrientationChoice) Orientation.entries else listOf(Orientation.NORTH)
+                orientations.map { orientation ->
+                    PlacedShopObject.Machine(
+                        id = objectId,
+                        catalogId = machine.id,
+                        position = tile,
+                        orientation = orientation
+                    )
+                }
+            }
+        }
+    }
+
+    private fun defaultRoleFor(worker: WorkerProfile): WorkerRole =
+        worker.profileFor(WorkerRole.QA)?.role ?: worker.roleProfiles.first().role
+
+    /**
+     * Buys [catalogId] at [kind]'s catalog price and places it at [tile]: looks up the cost, checks
+     * the bank can cover it, resolves the first orientation from [placementCandidates] that
+     * [canPlaceObject] accepts, deducts the cash, and places it — refunding if placement rejects
+     * after all (a race the caller could not have seen coming, e.g. a slot another command just
+     * filled). The one purchase path; [com.faultory.core.screens.shopfloor.PlacementController] and
+     * a headless driver both call through here so the rules never drift between them.
+     */
+    fun purchaseAndPlace(
+        kind: PlacedShopObjectKind,
+        catalogId: String,
+        tile: TileCoordinate,
+        workersById: Map<String, WorkerProfile>
+    ): PurchaseResult {
+        val cost = costFor(kind, catalogId, workersById)
+            ?: return PurchaseResult.Failure(PurchaseFailureReason.UNKNOWN_CATALOG_ID)
+        if (access.cash < cost) {
+            return PurchaseResult.Failure(PurchaseFailureReason.INSUFFICIENT_CASH)
+        }
+
+        val objectId = access.createObjectId(kind)
+        val candidates = placementCandidates(kind, catalogId, tile, objectId, workersById)
+        val placedObject = candidates.firstOrNull(::canPlaceObject)
+            ?: return PurchaseResult.Failure(PurchaseFailureReason.NO_VALID_PLACEMENT)
+
+        if (!access.tryDeductCash(cost, CashFlowReason.PLACEMENT)) {
+            return PurchaseResult.Failure(PurchaseFailureReason.INSUFFICIENT_CASH)
+        }
+        if (!placeObject(placedObject)) {
+            access.creditCash(cost, CashFlowReason.REFUND)
+            return PurchaseResult.Failure(PurchaseFailureReason.NO_VALID_PLACEMENT)
+        }
+        return PurchaseResult.Success(placedObject)
+    }
+
+    private fun costFor(
+        kind: PlacedShopObjectKind,
+        catalogId: String,
+        workersById: Map<String, WorkerProfile>
+    ): Int? = when (kind) {
+        PlacedShopObjectKind.WORKER -> workersById[catalogId]?.hireCost
+        PlacedShopObjectKind.MACHINE -> machineSpecsById[catalogId]?.installCost
+    }
+
     fun rotateMachine(
         machineId: String,
         orientation: Orientation
@@ -240,6 +343,51 @@ internal class PlacementSystem(
         // A detached probe, never installed: the copy exists only to ask canPlaceObject about the
         // upgraded shape.
         return canPlaceObject(current.copy(catalogId = targetCatalogId), ignoreObjectId = current.id)
+    }
+
+    /**
+     * Every catalog id [objectId] could upgrade to, gated by [EvaluationContext.currentLevelId]'s
+     * unlock condition when [evaluationContext] is given. Empty when the object has no upgrade tree,
+     * an upgrade target is missing from the catalog, or nothing is unlocked yet. `null` skips the
+     * unlock check entirely — a headless caller with no player save behind it.
+     */
+    fun upgradeOptionsFor(
+        objectId: String,
+        workersById: Map<String, WorkerProfile>,
+        evaluationContext: EvaluationContext? = null
+    ): List<UpgradeOption> {
+        val current = access.findObjectById(objectId) ?: return emptyList()
+        return when (current) {
+            is PlacedShopObject.Worker -> {
+                val profile = workersById[current.catalogId] ?: return emptyList()
+                profile.upgradeTree?.upgradeIds().orEmpty().mapNotNull { upgradeId ->
+                    val upgraded = workersById[upgradeId] ?: return@mapNotNull null
+                    if (evaluationContext != null && !upgraded.unlockCondition.evaluate(evaluationContext)) {
+                        return@mapNotNull null
+                    }
+                    UpgradeOption(
+                        targetCatalogId = upgraded.id,
+                        kind = PlacedShopObjectKind.WORKER,
+                        cost = upgraded.hireCost
+                    )
+                }
+            }
+
+            is PlacedShopObject.Machine -> {
+                val spec = machineSpecsById[current.catalogId] ?: return emptyList()
+                spec.upgradeTree?.upgradeIds().orEmpty().mapNotNull { upgradeId ->
+                    val upgraded = machineSpecsById[upgradeId] ?: return@mapNotNull null
+                    if (evaluationContext != null && !upgraded.unlockCondition.evaluate(evaluationContext)) {
+                        return@mapNotNull null
+                    }
+                    UpgradeOption(
+                        targetCatalogId = upgraded.id,
+                        kind = PlacedShopObjectKind.MACHINE,
+                        cost = upgraded.installCost
+                    )
+                }
+            }
+        }
     }
 
     /**

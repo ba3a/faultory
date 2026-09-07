@@ -3,6 +3,7 @@ package com.faultory.core.screens.shopfloor
 import com.faultory.core.config.GameConfig
 import com.faultory.core.config.UiMetrics
 import com.faultory.core.shop.PlacedShopObjectKind
+import com.faultory.core.shop.UpgradeOption
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

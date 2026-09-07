@@ -4,10 +4,15 @@ import com.badlogic.gdx.math.Rectangle
 import com.faultory.core.config.GameConfig
 import com.faultory.core.config.UiMetrics
 import com.faultory.core.encounters.EvaluationContext
-import com.faultory.core.shop.PlacedShopObject
 import com.faultory.core.shop.PlacedShopObjectKind
 import com.faultory.core.shop.ShopFloor
+import com.faultory.core.shop.UpgradeOption
 
+/**
+ * Thin adapter over the upgrade modal's pointer/hover state — the option list and unlock gating
+ * come from [ShopFloor.upgradeOptionsFor] ([com.faultory.core.shop.systems.PlacementSystem] owns
+ * that rule), so headless code sees the same options a player would.
+ */
 class UpgradeFlowController(
     private val shopFloor: ShopFloor,
     private val catalogLookup: CatalogLookup,
@@ -27,10 +32,7 @@ class UpgradeFlowController(
         hoveredOptionIndex = null
     }
 
-    fun hasUpgradesFor(objectId: String): Boolean {
-        val obj = shopFloor.findObjectById(objectId) ?: return false
-        return upgradeOptionsFor(obj).isNotEmpty()
-    }
+    fun hasUpgradesFor(objectId: String): Boolean = optionsFor(objectId).isNotEmpty()
 
     /**
      * Opens the upgrade modal when there are two branches; otherwise applies
@@ -38,11 +40,11 @@ class UpgradeFlowController(
      */
     fun beginUpgrade(objectId: String) {
         val obj = shopFloor.findObjectById(objectId) ?: return
-        val options = upgradeOptionsFor(obj)
+        val options = optionsFor(objectId)
         when (options.size) {
             0 -> return
-            1 -> applyUpgrade(objectId, options.first())
-            else -> openModal(obj, options)
+            1 -> options.first().let { applyUpgrade(objectId, it.targetCatalogId, it.cost) }
+            else -> openModal(obj.id, obj.kind, options)
         }
     }
 
@@ -58,7 +60,7 @@ class UpgradeFlowController(
         val current = modal ?: return false
         val option = current.options.firstOrNull { it.bounds.contains(worldX, worldY) }
         if (option != null) {
-            applyUpgrade(current.objectId, option)
+            applyUpgrade(current.objectId, option.targetCatalogId, option.cost)
             closeModal()
             return true
         }
@@ -70,61 +72,37 @@ class UpgradeFlowController(
         return true
     }
 
-    private fun applyUpgrade(objectId: String, option: UpgradeOption) {
-        if (shopFloor.tryUpgradeObject(objectId, option.targetCatalogId, option.cost)) {
+    private fun optionsFor(objectId: String): List<UpgradeOption> =
+        shopFloor.upgradeOptionsFor(objectId, catalogLookup.workerProfilesById, evaluationContext)
+
+    private fun applyUpgrade(objectId: String, targetCatalogId: String, cost: Int) {
+        if (shopFloor.tryUpgradeObject(objectId, targetCatalogId, cost)) {
             shiftLifecycle.markDirty()
         }
     }
 
-    private fun upgradeOptionsFor(obj: PlacedShopObject): List<UpgradeOption> {
-        val ctx = evaluationContext
-        return when (obj) {
-            is PlacedShopObject.Worker -> {
-                val profile = catalogLookup.workerProfilesById[obj.catalogId] ?: return emptyList()
-                profile.upgradeTree?.upgradeIds().orEmpty().mapNotNull { upgradeId ->
-                    val upgraded = catalogLookup.workerProfilesById[upgradeId] ?: return@mapNotNull null
-                    if (ctx != null && !upgraded.unlockCondition.evaluate(ctx)) return@mapNotNull null
-                    UpgradeOption(
-                        targetCatalogId = upgraded.id,
-                        kind = PlacedShopObjectKind.WORKER,
-                        cost = upgraded.hireCost
-                    )
-                }
-            }
-
-            is PlacedShopObject.Machine -> {
-                val spec = catalogLookup.machineSpecsById[obj.catalogId] ?: return emptyList()
-                spec.upgradeTree?.upgradeIds().orEmpty().mapNotNull { upgradeId ->
-                    val upgraded = catalogLookup.machineSpecsById[upgradeId] ?: return@mapNotNull null
-                    if (ctx != null && !upgraded.unlockCondition.evaluate(ctx)) return@mapNotNull null
-                    UpgradeOption(
-                        targetCatalogId = upgraded.id,
-                        kind = PlacedShopObjectKind.MACHINE,
-                        cost = upgraded.installCost
-                    )
-                }
-            }
-        }
-    }
-
-    private fun openModal(obj: PlacedShopObject, options: List<UpgradeOption>) {
-        modal = UpgradeModalLayout.build(obj.id, obj.kind, options)
+    private fun openModal(objectId: String, kind: PlacedShopObjectKind, options: List<UpgradeOption>) {
+        modal = UpgradeModalLayout.build(objectId, kind, options)
         hoveredOptionIndex = null
     }
 }
 
-data class UpgradeOption(
+/** [UpgradeOption] laid out on the modal grid — the pure option plus this screen's own bounds. */
+data class LaidOutUpgradeOption(
     val targetCatalogId: String,
     val kind: PlacedShopObjectKind,
     val cost: Int,
     val bounds: Rectangle = Rectangle()
 )
 
+private fun UpgradeOption.laidOutAt(bounds: Rectangle): LaidOutUpgradeOption =
+    LaidOutUpgradeOption(targetCatalogId, kind, cost, bounds)
+
 data class UpgradeModalState(
     val objectId: String,
     val kind: PlacedShopObjectKind,
     val bounds: Rectangle,
-    val options: List<UpgradeOption>
+    val options: List<LaidOutUpgradeOption>
 )
 
 object UpgradeModalLayout {
@@ -146,8 +124,8 @@ object UpgradeModalLayout {
         val cardsStartX = x + (width - cardsTotal) / 2f
         val cardsY = y + UiMetrics.upgradeModalVerticalPadding
         val laidOut = options.mapIndexed { index, option ->
-            option.copy(
-                bounds = Rectangle(
+            option.laidOutAt(
+                Rectangle(
                     cardsStartX + index * (UiMetrics.upgradeModalCardWidth + UiMetrics.upgradeModalCardGap),
                     cardsY,
                     UiMetrics.upgradeModalCardWidth,

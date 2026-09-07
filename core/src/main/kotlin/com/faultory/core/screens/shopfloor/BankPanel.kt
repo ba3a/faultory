@@ -4,6 +4,8 @@ import com.badlogic.gdx.math.Rectangle
 import com.faultory.core.config.GameConfig
 import com.faultory.core.config.UiMetrics
 import com.faultory.core.content.LevelDefinition
+import com.faultory.core.content.PurchaseOffer
+import com.faultory.core.content.PurchaseOfferResolver
 import com.faultory.core.encounters.EvaluationContext
 import com.faultory.core.shop.PlacedShopObjectKind
 
@@ -11,26 +13,21 @@ class BankPanel(private val catalogLookup: CatalogLookup) {
     private val mutableEntries = mutableListOf<BankEntry>()
     val entries: List<BankEntry> get() = mutableEntries
 
-    var selectedKey: BankEntryKey? = null
+    var selectedKey: PurchaseOffer? = null
         private set
-    var hoveredKey: BankEntryKey? = null
+    var hoveredKey: PurchaseOffer? = null
         private set
 
     fun rebuild(level: LevelDefinition, ctx: EvaluationContext) {
         mutableEntries.clear()
-        for (workerId in level.availableWorkerIds) {
-            val worker = catalogLookup.workerProfilesById[workerId] ?: continue
-            if (!worker.unlockCondition.evaluate(ctx)) continue
-            mutableEntries += BankEntry(
-                key = BankEntryKey(PlacedShopObjectKind.WORKER, worker.id)
-            )
-        }
-        for (machineId in level.availableMachineIds) {
-            val machine = catalogLookup.machineSpecsById[machineId] ?: continue
-            if (!machine.unlockCondition.evaluate(ctx)) continue
-            mutableEntries += BankEntry(
-                key = BankEntryKey(PlacedShopObjectKind.MACHINE, machine.id)
-            )
+        val offers = PurchaseOfferResolver.offersFor(
+            level = level,
+            workerProfilesById = catalogLookup.workerProfilesById,
+            machineSpecsById = catalogLookup.machineSpecsById,
+            evaluationContext = ctx
+        )
+        for (offer in offers) {
+            mutableEntries += BankEntry(key = offer)
         }
     }
 
@@ -45,7 +42,7 @@ class BankPanel(private val catalogLookup: CatalogLookup) {
         )
     }
 
-    fun toggleSelect(key: BankEntryKey) {
+    fun toggleSelect(key: PurchaseOffer) {
         selectedKey = if (selectedKey == key) null else key
     }
 
@@ -77,11 +74,6 @@ class BankPanel(private val catalogLookup: CatalogLookup) {
 }
 
 data class BankEntry(
-    val key: BankEntryKey,
+    val key: PurchaseOffer,
     val bounds: Rectangle = Rectangle()
-)
-
-data class BankEntryKey(
-    val kind: PlacedShopObjectKind,
-    val catalogId: String
 )

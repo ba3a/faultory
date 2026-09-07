@@ -47,7 +47,7 @@ internal class ShopFloorState(
     CleanerAccess,
     PlacementAccess,
     AssignmentAccess {
-    var cash: Int = snapshot.cash
+    override var cash: Int = snapshot.cash
         private set
 
     // Exposed as the concrete type so systems can reach id→index in O(1) (indexOfId / replaceById)

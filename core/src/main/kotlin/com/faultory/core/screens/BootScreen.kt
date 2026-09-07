@@ -19,14 +19,7 @@ import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.graphics.SkinDefinition
 import com.faultory.core.graphics.SkinReferences
 import com.faultory.core.shop.ShopBlueprint
-import com.faultory.core.shop.ShopFloor
-import com.faultory.core.shop.ShopFloorSnapshot
-import com.faultory.core.shop.ShopGrid
-import com.faultory.core.shop.TileCoordinate
-import com.faultory.core.shop.systems.CleanerConditionSpawnGate
-import com.faultory.core.systems.BeltSupplyFeeder
-import com.faultory.core.systems.BeltSupplySchedule
-import kotlin.random.Random
+import com.faultory.core.shop.ShopFloorFactory
 
 class BootScreen(
     private val game: FaultoryGame,
@@ -160,66 +153,25 @@ class BootScreen(
             unlockedMachineIds = level.availableMachineIds,
             startingCash = level.startingCash
         )
-        val beltSupplyFeeder = buildBeltSupplyFeeder(level, shopBlueprint, save.activeShift.day.elapsedSeconds)
         val conditionLibrary = if (game.assetManager.isLoaded(AssetPaths.conditionLibrary)) {
             game.assetManager.get(AssetPaths.conditionLibrary, ConditionLibrary::class.java)
         } else ConditionLibrary()
         val captureRuntime = CaptureRuntime.forLevel(level.id)
-        val realCleanerSpawnGate = CleanerConditionSpawnGate(
+        val shopFloor = ShopFloorFactory.forLevel(
+            level = level,
+            shopCatalog = shopCatalog,
+            blueprint = shopBlueprint,
+            save = save,
             saveRepository = game.saveRepository,
             conditionLibrary = conditionLibrary,
             random = captureRuntime.simulationRandom,
-            currentLevelIdProvider = { level.id }
-        )
-        val shopFloor = ShopFloor(
-            blueprint = shopBlueprint,
-            machineSpecsById = shopCatalog.machines.associateBy { it.id },
-            snapshot = save.activeShift.floor,
-            productDefinitionsById = shopCatalog.products.associateBy { it.id },
-            beltSupplyFeeder = beltSupplyFeeder,
-            random = captureRuntime.simulationRandom,
             chanceOracle = captureRuntime.chanceOracle,
             events = ShopFloorEvents(game.eventBus) { level.id },
-            cleanerSpawnGate = captureRuntime.cleanerSpawnGate ?: realCleanerSpawnGate,
+            cleanerSpawnGateOverride = captureRuntime.cleanerSpawnGate,
             interactionCatalogProvider = game::interactionCatalog
         )
 
         game.setScreen(ShopFloorScreen(game, level, nextLevel, shopFloor, save, shopCatalog, captureRuntime))
-    }
-
-    private fun buildBeltSupplyFeeder(
-        level: LevelDefinition,
-        blueprint: ShopBlueprint,
-        initialElapsedSeconds: Float
-    ): BeltSupplyFeeder? {
-        if (level.supplyingLevelIds.isEmpty()) return null
-        val feederBeltStarts = leftEdgeBeltStartsTopDown(blueprint)
-        if (feederBeltStarts.isEmpty()) return null
-
-        val schedules = level.supplyingLevelIds
-            .zip(feederBeltStarts)
-            .mapNotNull { (supplyingLevelId, beltStartTile) ->
-                val supplierSave = game.saveRepository.load(supplyingLevelId) ?: return@mapNotNull null
-                val stats = supplierSave.lastCompletedRun?.productDeliveryStats ?: return@mapNotNull null
-                if (stats.sumOf { it.totalCount } <= 0) return@mapNotNull null
-                BeltSupplySchedule(
-                    supplyingLevelId = supplyingLevelId,
-                    beltStartTile = beltStartTile,
-                    shiftLengthSeconds = blueprint.shiftLengthSeconds,
-                    stats = stats,
-                    random = Random(BeltSupplyFeeder.deterministicSeed(supplyingLevelId, beltStartTile))
-                )
-            }
-        if (schedules.isEmpty()) return null
-        return BeltSupplyFeeder(schedules, initialElapsedSeconds)
-    }
-
-    private fun leftEdgeBeltStartsTopDown(blueprint: ShopBlueprint): List<TileCoordinate> {
-        val grid = ShopGrid(blueprint)
-        return grid.orderedBeltPaths
-            .mapNotNull { path -> path.firstOrNull() }
-            .filter { it.x == 0 }
-            .sortedByDescending { it.y }
     }
 
     private fun drawProgress(progress: Float) {

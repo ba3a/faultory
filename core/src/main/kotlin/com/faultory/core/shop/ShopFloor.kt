@@ -2,6 +2,7 @@ package com.faultory.core.shop
 
 import com.faultory.core.content.*
 import com.faultory.core.encounters.CashFlowReason
+import com.faultory.core.encounters.EvaluationContext
 import com.faultory.core.encounters.ShopFloorEvents
 import com.faultory.core.graphics.InteractionCatalog
 import com.faultory.core.graphics.InteractionDefinition
@@ -219,7 +220,8 @@ class ShopFloor(
 
     fun createObjectId(kind: PlacedShopObjectKind): String = state.createObjectId(kind)
 
-    // --- UI command delegators: the rules live in the systems, this class only forwards. ---
+    // --- Command delegators: the rules live in the systems, this class only forwards. Called by
+    // the screen controllers and by a headless caller (com.faultory.core.headless) alike. ---
 
     fun canPlaceObject(
         placedObject: PlacedShopObject,
@@ -227,6 +229,23 @@ class ShopFloor(
     ): Boolean = placementSystem.canPlaceObject(placedObject, ignoreObjectId)
 
     fun placeObject(placedObject: PlacedShopObject): Boolean = placementSystem.placeObject(placedObject)
+
+    /** Every orientation of [catalogId] worth trying at [tile]; see [PlacementSystem.placementCandidates]. */
+    fun placementCandidates(
+        kind: PlacedShopObjectKind,
+        catalogId: String,
+        tile: TileCoordinate,
+        objectId: String,
+        workersById: Map<String, WorkerProfile>
+    ): List<PlacedShopObject> = placementSystem.placementCandidates(kind, catalogId, tile, objectId, workersById)
+
+    /** Buys [catalogId] at [kind]'s catalog price and places it at [tile]; see [PlacementSystem.purchaseAndPlace]. */
+    fun purchaseAndPlace(
+        kind: PlacedShopObjectKind,
+        catalogId: String,
+        tile: TileCoordinate,
+        workersById: Map<String, WorkerProfile>
+    ): PurchaseResult = placementSystem.purchaseAndPlace(kind, catalogId, tile, workersById)
 
     fun rotateMachine(
         machineId: String,
@@ -238,6 +257,13 @@ class ShopFloor(
         targetCatalogId: String,
         cost: Int
     ): Boolean = placementSystem.tryUpgradeObject(objectId, targetCatalogId, cost)
+
+    /** Every catalog id [objectId] could upgrade to; see [PlacementSystem.upgradeOptionsFor]. */
+    fun upgradeOptionsFor(
+        objectId: String,
+        workersById: Map<String, WorkerProfile>,
+        evaluationContext: EvaluationContext? = null
+    ): List<UpgradeOption> = placementSystem.upgradeOptionsFor(objectId, workersById, evaluationContext)
 
     fun assignWorkerToMachine(
         workerId: String,

@@ -1,15 +1,15 @@
 package com.faultory.core.screens.shopfloor
 
-import com.faultory.core.content.MachineType
-import com.faultory.core.content.WorkerProfile
-import com.faultory.core.content.WorkerRole
-import com.faultory.core.encounters.CashFlowReason
-import com.faultory.core.shop.Orientation
 import com.faultory.core.shop.PlacedShopObject
-import com.faultory.core.shop.PlacedShopObjectKind
+import com.faultory.core.shop.PurchaseResult
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.TileCoordinate
 
+/**
+ * Thin adapter over the bank panel's selection: resolves what's selected into a purchase or a
+ * preview and calls through [ShopFloor] — [com.faultory.core.shop.systems.PlacementSystem] owns
+ * the candidate-orientation and purchase rules, so headless code hits the same path.
+ */
 class PlacementController(
     private val shopFloor: ShopFloor,
     private val catalogLookup: CatalogLookup,
@@ -17,97 +17,23 @@ class PlacementController(
     private val shiftLifecycle: ShiftLifecycleController
 ) {
     fun previewPlacementObject(tile: TileCoordinate): PlacedShopObject? {
-        val key = bankPanel.selectedKey ?: return null
-        return resolvedPlacementObject(key, tile, "preview-${key.catalogId}", allowFallback = true)
+        val offer = bankPanel.selectedKey ?: return null
+        val candidates = shopFloor.placementCandidates(
+            offer.kind,
+            offer.catalogId,
+            tile,
+            "preview-${offer.catalogId}",
+            catalogLookup.workerProfilesById
+        )
+        return candidates.firstOrNull(shopFloor::canPlaceObject) ?: candidates.firstOrNull()
     }
 
     fun attemptPlacement(tile: TileCoordinate): Boolean {
-        val key = bankPanel.selectedKey ?: return false
-        val cost = costFor(key) ?: return false
-        if (shopFloor.cash < cost) {
-            return false
-        }
-        val placedObject = placeablePlacementObject(key, tile) ?: return false
-        if (!shopFloor.tryDeductCash(cost, CashFlowReason.PLACEMENT)) {
-            return false
-        }
-        if (!shopFloor.placeObject(placedObject)) {
-            shopFloor.creditCash(cost, CashFlowReason.REFUND)
-            return false
-        }
+        val offer = bankPanel.selectedKey ?: return false
+        val result = shopFloor.purchaseAndPlace(offer.kind, offer.catalogId, tile, catalogLookup.workerProfilesById)
+        if (result !is PurchaseResult.Success) return false
         shiftLifecycle.markDirty()
         bankPanel.clearSelection()
         return true
-    }
-
-    private fun costFor(key: BankEntryKey): Int? {
-        return when (key.kind) {
-            PlacedShopObjectKind.WORKER ->
-                catalogLookup.workerProfilesById[key.catalogId]?.hireCost
-            PlacedShopObjectKind.MACHINE ->
-                catalogLookup.machineSpecsById[key.catalogId]?.installCost
-        }
-    }
-
-    private fun placeablePlacementObject(
-        key: BankEntryKey,
-        tile: TileCoordinate
-    ): PlacedShopObject? {
-        val objectId = shopFloor.createObjectId(key.kind)
-        return resolvedPlacementObject(key, tile, objectId, allowFallback = false)
-    }
-
-    private fun resolvedPlacementObject(
-        key: BankEntryKey,
-        tile: TileCoordinate,
-        objectId: String,
-        allowFallback: Boolean
-    ): PlacedShopObject? {
-        val candidates = placementCandidates(key, tile, objectId)
-        return candidates.firstOrNull(shopFloor::canPlaceObject)
-            ?: if (allowFallback) candidates.firstOrNull() else null
-    }
-
-    private fun placementCandidates(
-        key: BankEntryKey,
-        tile: TileCoordinate,
-        objectId: String
-    ): List<PlacedShopObject> {
-        return when (key.kind) {
-            PlacedShopObjectKind.WORKER -> {
-                val worker = catalogLookup.workerProfilesById[key.catalogId] ?: return emptyList()
-                listOf(
-                    PlacedShopObject.Worker(
-                        id = objectId,
-                        catalogId = worker.id,
-                        position = tile,
-                        orientation = Orientation.SOUTH,
-                        workerRole = defaultRoleFor(worker)
-                    )
-                )
-            }
-
-            PlacedShopObjectKind.MACHINE -> {
-                val machine = catalogLookup.machineSpecsById[key.catalogId] ?: return emptyList()
-                val orientations = if (machine.type == MachineType.QA || machine.recipe != null || machine.hasBeltSlots()) {
-                    Orientation.entries
-                } else {
-                    listOf(Orientation.NORTH)
-                }
-                orientations.map { orientation ->
-                    PlacedShopObject.Machine(
-                        id = objectId,
-                        catalogId = machine.id,
-                        position = tile,
-                        orientation = orientation
-                    )
-                }
-            }
-        }
-    }
-
-    private fun defaultRoleFor(worker: WorkerProfile): WorkerRole {
-        return worker.profileFor(WorkerRole.QA)?.role
-            ?: worker.roleProfiles.first().role
     }
 }

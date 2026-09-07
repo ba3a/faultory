@@ -7,6 +7,7 @@ import com.faultory.core.config.UiMetrics
 import com.faultory.core.i18n.CatalogMessageKey
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.MachineType
+import com.faultory.core.content.PurchaseOffer
 import com.faultory.core.i18n.LocaleManager
 import com.faultory.core.i18n.Messages
 import com.faultory.core.i18n.UiMessageKey
@@ -26,7 +27,7 @@ class HudRenderer(
     private var selectedItemTextDirty: Boolean = true
     private var lastIsShiftEnded: Boolean = false
     private var lastAssignmentWorkerId: String? = null
-    private var lastSelectedKey: BankEntryKey? = null
+    private var lastSelectedKey: PurchaseOffer? = null
     override fun drawFill(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
         val backButtonBounds = backButtonBounds()

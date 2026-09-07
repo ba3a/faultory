@@ -1,10 +1,8 @@
 package com.faultory.core.graphics
 
+import com.faultory.core.TestAssets
 import com.faultory.core.assets.AssetPaths
 import com.faultory.core.config.FaultoryJson
-import java.nio.file.Path
-import java.nio.file.Paths
-import kotlin.io.path.isRegularFile
 import kotlin.io.path.readText
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -68,17 +66,7 @@ class InteractionCatalogAssetTest {
      * breakage that matters.
      */
     private fun shippedCatalog(): InteractionCatalog =
-        FaultoryJson.instance.decodeFromString(shippedAssetPath().readText(Charsets.UTF_8))
-
-    private fun shippedAssetPath(): Path {
-        var directory: Path? = Paths.get("").toAbsolutePath()
-        while (directory != null) {
-            val candidate = directory.resolve("assets").resolve(AssetPaths.interactionCatalog)
-            if (candidate.isRegularFile()) {
-                return candidate
-            }
-            directory = directory.parent
-        }
-        error("Could not find assets/${AssetPaths.interactionCatalog} above ${Paths.get("").toAbsolutePath()}")
-    }
+        FaultoryJson.instance.decodeFromString(
+            TestAssets.root.resolve(AssetPaths.interactionCatalog).readText(Charsets.UTF_8)
+        )
 }

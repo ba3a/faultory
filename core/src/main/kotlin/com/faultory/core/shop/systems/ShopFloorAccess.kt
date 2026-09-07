@@ -207,8 +207,13 @@ internal interface WorkerPostReads {
     fun assignedSlotFor(worker: PlacedShopObject.Worker): MachineSlotPosition?
 }
 
+/** Current bank balance. */
+internal interface EconomyReads {
+    val cash: Int
+}
+
 /** The only two ways money moves; each publishes its own cash-flow event. */
-internal interface EconomyWrites {
+internal interface EconomyWrites : EconomyReads {
     fun tryDeductCash(amount: Int, reason: CashFlowReason): Boolean
     fun creditCash(amount: Int, reason: CashFlowReason)
 }
