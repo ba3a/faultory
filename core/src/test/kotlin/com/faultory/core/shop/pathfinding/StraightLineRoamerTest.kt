@@ -67,4 +67,37 @@ class StraightLineRoamerTest {
         assertTrue(path.isNotEmpty(), "belt-trip should produce a path")
         assertTrue(path.last() in grid.beltTiles, "belt-trip must end on a belt tile")
     }
+
+    @Test
+    fun `AVOID's straight-line branch stops at the belt edge instead of crossing it`() {
+        // (6,8) is directly south of the mid-belt tile (6,5); a long enough straight line north
+        // would cross the belt under a belt-riding traversal, but AVOID must stop one tile short.
+        val roamer = StraightLineRoamer(
+            pathFinder = ShortestPathFinder(BeltTraversal.AVOID),
+            minSteps = 1,
+            maxSteps = 6,
+            beltTripChance = 0f
+        )
+
+        repeat(50) { seed ->
+            val path = roamer.nextRoam(grid, TileCoordinate(6, 8), emptySet(), Random(seed.toLong()))
+            assertTrue(path.none { it in grid.beltTiles }, "seed=$seed: path touched a belt tile: $path")
+        }
+    }
+
+    @Test
+    fun `AVOID's forced belt-trip roll falls through to a belt-free straight line`() {
+        // beltTripChance = 1 forces the roll every time, but pickBeltTrip is a no-op under AVOID —
+        // there is no belt to trip to — so nextRoam must fall through to a normal straight line.
+        val roamer = StraightLineRoamer(
+            pathFinder = ShortestPathFinder(BeltTraversal.AVOID),
+            minSteps = 1,
+            maxSteps = 6,
+            beltTripChance = 1f
+        )
+
+        val path = roamer.nextRoam(grid, TileCoordinate(6, 8), emptySet(), Random(42))
+        assertTrue(path.isNotEmpty(), "expected a straight-line fallback, got no path at all")
+        assertTrue(path.none { it in grid.beltTiles }, "fallback path touched a belt tile: $path")
+    }
 }
