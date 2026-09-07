@@ -45,7 +45,6 @@ internal class QaSystem(
     private val mutablePlacedObjects get() = access.mutablePlacedObjects
     private val placedMachines get() = access.placedMachines
     private val placedWorkers get() = access.placedWorkers
-    private val mutableActiveProducts get() = access.mutableActiveProducts
     private val mutableQaInspectionStates get() = access.mutableQaInspectionStates
     private val machineSpecsById get() = access.machineSpecsById
     private val grid get() = access.grid
@@ -218,13 +217,11 @@ internal class QaSystem(
 
     private fun holdProductForInspection(productId: String, holderObjectId: String) {
         val holderWorker = access.findObjectById(holderObjectId) as? PlacedShopObject.Worker
-        mutableActiveProducts.replaceById(productId) { product ->
-            product.copy(
-                state = ShopProductState.CARRIED,
-                tile = null,
-                carrierWorkerId = if (holderWorker != null) holderObjectId else null,
-                holderObjectId = holderObjectId
-            )
+        access.updateProduct(productId) { product ->
+            product.state = ShopProductState.CARRIED
+            product.tile = null
+            product.carrierWorkerId = if (holderWorker != null) holderObjectId else null
+            product.holderObjectId = holderObjectId
         } ?: return
         if (holderWorker != null) {
             mutablePlacedObjects.replaceById(holderWorker.id) {
@@ -240,14 +237,12 @@ internal class QaSystem(
     ): Boolean {
         if (access.isOccupied(beltTile, ignoreProductId = productId)) return false
 
-        val returned = mutableActiveProducts.replaceById(productId) {
-            it.copy(
-                state = ShopProductState.ON_BELT,
-                tile = beltTile,
-                carrierWorkerId = null,
-                holderObjectId = null,
-                reworkTargetMachineId = null
-            )
+        val returned = access.updateProduct(productId) {
+            it.state = ShopProductState.ON_BELT
+            it.tile = beltTile
+            it.carrierWorkerId = null
+            it.holderObjectId = null
+            it.reworkTargetMachineId = null
         } ?: return false
         access.clearWorkerHold(inspectorId)
         events.publish {
@@ -263,13 +258,13 @@ internal class QaSystem(
     }
 
     private fun destroyHeldProduct(productId: String, inspectorId: String): Boolean {
-        if (mutableActiveProducts.byId(productId) == null) return false
+        if (access.productById(productId) == null) return false
 
         val inspectorIndex = mutablePlacedObjects.indexOfId(inspectorId)
             .takeIf { it >= 0 && mutablePlacedObjects[it] is PlacedShopObject.Worker } ?: -1
         if (inspectorIndex < 0) {
             // Machine inspector — destroy instantly.
-            val destroyed = mutableActiveProducts.removeById(productId) ?: return false
+            val destroyed = access.removeProduct(productId) ?: return false
             events.publish {
                 ProductDestroyedEvent(
                     objectId = inspectorId,
@@ -296,8 +291,7 @@ internal class QaSystem(
         inspector: PlacedShopObject,
         beltTile: TileCoordinate
     ): Boolean {
-        val productIndex = mutableActiveProducts.indexOfId(productId)
-        if (productIndex < 0) return false
+        if (access.productById(productId) == null) return false
 
         val targetTile = grid.orthogonalNeighbors(beltTile)
             .filter { candidate ->
@@ -310,14 +304,13 @@ internal class QaSystem(
                     .thenBy { it.y }
             ) ?: return false
 
-        val discarded = mutableActiveProducts[productIndex].copy(
-            state = ShopProductState.ON_FLOOR,
-            tile = targetTile,
-            carrierWorkerId = null,
-            holderObjectId = null,
-            reworkTargetMachineId = null
-        )
-        mutableActiveProducts[productIndex] = discarded
+        val discarded = access.updateProduct(productId) {
+            it.state = ShopProductState.ON_FLOOR
+            it.tile = targetTile
+            it.carrierWorkerId = null
+            it.holderObjectId = null
+            it.reworkTargetMachineId = null
+        } ?: return false
         access.clearWorkerHold(inspector.id)
         events.publish {
             ProductPlacedOnFloorEvent(
@@ -336,21 +329,19 @@ internal class QaSystem(
         inspector: PlacedShopObject,
         originTile: TileCoordinate
     ): Boolean {
-        val productIndex = mutableActiveProducts.indexOfId(productId)
-        if (productIndex < 0) return false
+        if (access.productById(productId) == null) return false
 
         val targetWorker = nearestAvailableProducerWorker(originTile)
         if (targetWorker != null) {
             val workerIndex = mutablePlacedObjects.indexOfId(targetWorker.id)
             if (workerIndex >= 0) {
-                val handed = mutableActiveProducts[productIndex].copy(
-                    state = ShopProductState.CARRIED,
-                    tile = null,
-                    carrierWorkerId = targetWorker.id,
-                    holderObjectId = targetWorker.id,
-                    reworkTargetMachineId = targetWorker.assignedMachineId
-                )
-                mutableActiveProducts[productIndex] = handed
+                val handed = access.updateProduct(productId) {
+                    it.state = ShopProductState.CARRIED
+                    it.tile = null
+                    it.carrierWorkerId = targetWorker.id
+                    it.holderObjectId = targetWorker.id
+                    it.reworkTargetMachineId = targetWorker.assignedMachineId
+                } ?: return false
                 mutablePlacedObjects[workerIndex] = targetWorker.copy(
                     carriedProductId = productId,
                     movementPath = emptyList(),
@@ -379,8 +370,7 @@ internal class QaSystem(
                 mutablePlacedObjects[machineIndex] = automaticProducer.copy(
                     faultyInventoryCount = automaticProducer.faultyInventoryCount + 1
                 )
-                val stored = mutableActiveProducts[productIndex]
-                mutableActiveProducts.removeAt(productIndex)
+                val stored = access.removeProduct(productId) ?: return false
                 access.clearWorkerHold(inspector.id)
                 events.publish {
                     FaultyProductStoredEvent(
@@ -490,10 +480,10 @@ internal class QaSystem(
     }
 
     private fun markProductInspectedBy(productId: String, inspectorId: String) {
-        val product = mutableActiveProducts.byId(productId) ?: return
+        val product = access.productById(productId) ?: return
         if (inspectorId in product.inspectedByObjectIds) return
-        mutableActiveProducts.replaceById(productId) {
-            it.copy(inspectedByObjectIds = it.inspectedByObjectIds + inspectorId)
+        access.updateProduct(productId) {
+            it.inspectedByObjectIds = it.inspectedByObjectIds + inspectorId
         }
     }
 }

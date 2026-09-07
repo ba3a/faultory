@@ -15,7 +15,6 @@ internal class ConveyorSystem(
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) : SimulationSystem {
     private val grid get() = access.grid
-    private val mutableActiveProducts get() = access.mutableActiveProducts
     private val placedObjects get() = access.placedObjects
     private val productDefinitionsById get() = access.productDefinitionsById
     private val machineSpecsById get() = access.machineSpecsById
@@ -53,7 +52,7 @@ internal class ConveyorSystem(
             if (!grid.isShippingEdge(tile)) {
                 return
             }
-            mutableActiveProducts.removeById(product.id)
+            access.removeProduct(product.id)
             if (!product.isFaulty) {
                 productDefinitionsById[product.productId]?.saleValue?.let { saleValue ->
                     access.creditCash(saleValue, CashFlowReason.PRODUCT_SALE)
@@ -77,7 +76,7 @@ internal class ConveyorSystem(
             return
         }
 
-        mutableActiveProducts.replaceById(product.id) { it.copy(tile = nextTile) }
+        access.updateProduct(product.id) { it.tile = nextTile }
     }
 
     private fun qualityOf(faultReason: ProductFaultReason?): ProductQuality = when (faultReason) {

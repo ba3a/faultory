@@ -35,7 +35,6 @@ internal class PlacementSystem(
     private val grid get() = access.grid
     private val machineSpecsById get() = access.machineSpecsById
     private val mutablePlacedObjects get() = access.mutablePlacedObjects
-    private val mutableActiveProducts get() = access.mutableActiveProducts
 
     fun canPlaceObject(
         placedObject: PlacedShopObject,
@@ -257,7 +256,7 @@ internal class PlacementSystem(
         if (access.isOccupied(beltStartTile)) return false
 
         val instanceId = access.createSupplyProductId()
-        mutableActiveProducts += ShopProduct(
+        val supplied = ShopProduct(
             id = instanceId,
             productId = productId,
             sourceMachineId = "supply",
@@ -265,6 +264,7 @@ internal class PlacementSystem(
             state = ShopProductState.ON_BELT,
             tile = beltStartTile
         )
+        access.addProduct(supplied)
         events.publish {
             ProductSuppliedEvent(
                 productInstanceId = instanceId,

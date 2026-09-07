@@ -26,7 +26,6 @@ internal class WorkerObjectiveSystem(
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) : SimulationSystem {
     private val mutablePlacedObjects get() = access.mutablePlacedObjects
-    private val mutableActiveProducts get() = access.mutableActiveProducts
     private val machineSpecsById get() = access.machineSpecsById
     private val grid get() = access.grid
 
@@ -200,15 +199,13 @@ internal class WorkerObjectiveSystem(
         } ?: return false
 
         val productTile = candidate.tile ?: return false
-        mutableActiveProducts.replaceById(candidate.id) {
-            it.copy(
-                state = ShopProductState.CARRIED,
-                tile = null,
-                beltProgress = 0f,
-                carrierWorkerId = worker.id,
-                holderObjectId = worker.id,
-                reworkTargetMachineId = machineId
-            )
+        access.updateProduct(candidate.id) {
+            it.state = ShopProductState.CARRIED
+            it.tile = null
+            it.beltProgress = 0f
+            it.carrierWorkerId = worker.id
+            it.holderObjectId = worker.id
+            it.reworkTargetMachineId = machineId
         } ?: return false
         val orientation = Orientation.between(worker.position, productTile) ?: worker.orientation
         mutablePlacedObjects[workerIndex] = worker.copy(
@@ -237,7 +234,7 @@ internal class WorkerObjectiveSystem(
         deltaSeconds: Float,
         workerProfilesById: Map<String, WorkerProfile>
     ): Boolean {
-        val candidates = mutableActiveProducts.filter { product ->
+        val candidates = access.activeProducts.filter { product ->
             product.holderObjectId == null &&
                 product.state != ShopProductState.CARRIED &&
                 product.productId in needed &&
@@ -295,7 +292,7 @@ internal class WorkerObjectiveSystem(
             return false
         }
 
-        if (mutableActiveProducts.byId(carriedProduct.id) == null) {
+        if (access.productById(carriedProduct.id) == null) {
             return false
         }
 
@@ -315,7 +312,7 @@ internal class WorkerObjectiveSystem(
             }
         }
 
-        mutableActiveProducts.removeById(carriedProduct.id)
+        access.removeProduct(carriedProduct.id)
         mutablePlacedObjects[workerIndex] = worker.copy(
             carriedProductId = null,
             movementPath = emptyList(),
@@ -337,19 +334,14 @@ internal class WorkerObjectiveSystem(
                     !access.isOccupied(beltTile, ignoreObjectId = worker.id, ignoreProductId = carriedProduct.id)
             } ?: return false
 
-        val productIndex = mutableActiveProducts.indexOfId(carriedProduct.id)
-        if (productIndex < 0) {
-            return false
-        }
-
-        mutableActiveProducts[productIndex] = carriedProduct.copy(
-            state = ShopProductState.ON_BELT,
-            tile = targetBeltTile,
-            beltProgress = 0f,
-            carrierWorkerId = null,
-            holderObjectId = null,
-            reworkTargetMachineId = null
-        )
+        access.updateProduct(carriedProduct.id) {
+            it.state = ShopProductState.ON_BELT
+            it.tile = targetBeltTile
+            it.beltProgress = 0f
+            it.carrierWorkerId = null
+            it.holderObjectId = null
+            it.reworkTargetMachineId = null
+        } ?: return false
         mutablePlacedObjects[workerIndex] = worker.copy(
             carriedProductId = null,
             movementPath = emptyList(),

@@ -14,7 +14,6 @@ internal class UnitPhaseSystem(
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) : SimulationSystem {
     private val mutablePlacedObjects get() = access.mutablePlacedObjects
-    private val mutableActiveProducts get() = access.mutableActiveProducts
 
     override val phase = SimulationPhase.ANIMATION
 
@@ -69,7 +68,7 @@ internal class UnitPhaseSystem(
     private fun completeDestroyProduct(index: Int, placed: PlacedShopObject.Worker) {
         val productId = placed.carriedProductId
         if (productId != null) {
-            val destroyed = mutableActiveProducts.removeById(productId)
+            val destroyed = access.removeProduct(productId)
             if (destroyed != null) {
                 events.publish {
                     ProductDestroyedEvent(

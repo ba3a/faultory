@@ -53,7 +53,6 @@ internal class InteractionController(
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) : InteractionStarter {
     private val mutablePlacedObjects get() = objects.mutablePlacedObjects
-    private val mutableActiveProducts get() = products.mutableActiveProducts
 
     fun advanceAll(deltaSeconds: Float) {
         val noneInteracting = mutablePlacedObjects.none {
@@ -137,14 +136,11 @@ internal class InteractionController(
             return
         }
 
-        val productIndex = mutableActiveProducts.indexOfId(productId)
-        if (productIndex >= 0) {
-            mutableActiveProducts[productIndex] = mutableActiveProducts[productIndex].copy(
-                state = ShopProductState.CARRIED,
-                tile = null,
-                carrierWorkerId = interaction.partnerObjectId,
-                holderObjectId = interaction.partnerObjectId
-            )
+        val handed = products.updateProduct(productId) {
+            it.state = ShopProductState.CARRIED
+            it.tile = null
+            it.carrierWorkerId = interaction.partnerObjectId
+            it.holderObjectId = interaction.partnerObjectId
         }
 
         val taker = mutablePlacedObjects[takerIndex] as? PlacedShopObject.Worker ?: return
@@ -154,8 +150,7 @@ internal class InteractionController(
 
         // Reported here rather than where the interaction was requested: this is the frame the
         // product actually changes hands, partway through the clip.
-        if (productIndex >= 0) {
-            val handed = mutableActiveProducts[productIndex]
+        if (handed != null) {
             events.publish {
                 ProductHandedOverEvent(
                     objectId = giver.id,

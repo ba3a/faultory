@@ -38,7 +38,6 @@ internal class ProductionSystem(
     private val grid get() = access.grid
     private val mutablePlacedObjects get() = access.mutablePlacedObjects
     private val placedMachines get() = access.placedMachines
-    private val mutableActiveProducts get() = access.mutableActiveProducts
     private val mutableMachineProductionStates get() = access.mutableMachineProductionStates
     private val mutableMachineRecipeStates get() = access.mutableMachineRecipeStates
     private val machineSpecsById get() = access.machineSpecsById
@@ -207,7 +206,7 @@ internal class ProductionSystem(
                 if (currentCount >= cap) continue
 
                 recipeBuffers.addInput(machine.id, product.productId, product.faultReason)
-                mutableActiveProducts.removeById(product.id)
+                access.removeProduct(product.id)
                 events.publish {
                     MachineInputLoadedEvent(
                         machineId = machine.id,
@@ -256,7 +255,7 @@ internal class ProductionSystem(
         if (accessTile !in grid.beltTiles) return false
         if (access.isOccupied(accessTile)) return false
 
-        mutableActiveProducts += ShopProduct(
+        val placedOnBelt = ShopProduct(
             id = head.productInstanceId,
             productId = head.productId,
             sourceMachineId = machine.id,
@@ -264,6 +263,7 @@ internal class ProductionSystem(
             state = ShopProductState.ON_BELT,
             tile = accessTile
         )
+        access.addProduct(placedOnBelt)
         events.publish {
             ProductPlacedOnBeltEvent(
                 productInstanceId = head.productInstanceId,
@@ -287,7 +287,7 @@ internal class ProductionSystem(
         val workerIndex = mutablePlacedObjects.indexOfId(worker.id)
         if (workerIndex < 0) return false
 
-        mutableActiveProducts += ShopProduct(
+        val handedOver = ShopProduct(
             id = head.productInstanceId,
             productId = head.productId,
             sourceMachineId = machine.id,
@@ -296,6 +296,7 @@ internal class ProductionSystem(
             carrierWorkerId = worker.id,
             holderObjectId = worker.id
         )
+        access.addProduct(handedOver)
         mutablePlacedObjects[workerIndex] = worker.copy(
             carriedProductId = head.productInstanceId,
             movementPath = emptyList(),
@@ -323,7 +324,7 @@ internal class ProductionSystem(
         if (access.isOccupied(outputTile)) return false
 
         val ontoBelt = outputTile in grid.beltTiles
-        mutableActiveProducts += ShopProduct(
+        val dispensed = ShopProduct(
             id = head.productInstanceId,
             productId = head.productId,
             sourceMachineId = machine.id,
@@ -331,6 +332,7 @@ internal class ProductionSystem(
             state = if (ontoBelt) ShopProductState.ON_BELT else ShopProductState.ON_FLOOR,
             tile = outputTile
         )
+        access.addProduct(dispensed)
         events.publish {
             if (ontoBelt) {
                 ProductPlacedOnBeltEvent(

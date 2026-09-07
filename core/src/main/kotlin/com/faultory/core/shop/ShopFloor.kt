@@ -123,8 +123,6 @@ class ShopFloor(
 
     private val mutablePlacedObjects: MutableList<PlacedShopObject>
         get() = state.mutablePlacedObjects
-    private val mutableActiveProducts: MutableList<ShopProduct>
-        get() = state.mutableActiveProducts
     private val mutableMachineProductionStates: MutableList<MachineProductionState>
         get() = state.mutableMachineProductionStates
     private val mutableQaInspectionStates: MutableList<QaInspectionState>
@@ -144,7 +142,7 @@ class ShopFloor(
 
     /** A live, read-only view; see [placedObjects] for the snapshot caveat. */
     val activeProducts: List<ShopProduct>
-        get() = mutableActiveProducts
+        get() = state.activeProducts
 
     val machineProductionStates: List<MachineProductionState>
         get() = mutableMachineProductionStates

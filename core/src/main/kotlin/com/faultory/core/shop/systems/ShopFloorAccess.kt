@@ -68,15 +68,25 @@ internal interface ProductReads {
     fun productAtBeltTile(tile: TileCoordinate): ShopProduct?
 }
 
-/** Write side of the active-product table. */
+/**
+ * Write side of the active-product table.
+ *
+ * Products are mutated in place, and [ShopFloorState] derives its tile and belt-tile occupancy
+ * indexes from `tile` and `state`, so it has to see the values those fields held before the change.
+ * [updateProduct] brackets the mutation and reconciles the indexes around it. Assigning a field on
+ * a product obtained from [ProductReads] instead leaves the indexes pointing at the old tile —
+ * silently, until something asks what is standing there.
+ */
 internal interface ProductWrites : ProductReads {
-    val mutableActiveProducts: IdIndexedMutableList<ShopProduct>
+    fun updateProduct(productId: String, mutate: (ShopProduct) -> Unit): ShopProduct?
+    fun addProduct(product: ShopProduct)
+    fun removeProduct(productId: String): ShopProduct?
 }
 
 /**
  * Reads the occupancy indexes for the four tiles orthogonally adjacent to a tile — cheaper than a
- * `mutableActiveProducts.firstOrNull { it.tile in neighbours }` scan of the whole table on every
- * idle worker, every frame.
+ * `activeProducts.firstOrNull { it.tile in neighbours }` scan of the whole table on every idle
+ * worker, every frame.
  */
 internal interface AdjacencyReads {
     /** Distinct placed objects standing on a tile orthogonally adjacent to [tile]. */

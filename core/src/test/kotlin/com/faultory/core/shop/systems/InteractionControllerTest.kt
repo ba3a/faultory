@@ -219,7 +219,7 @@ class InteractionControllerTest {
         fun animationOf(id: String): WorkerAnimationState = state.animationStateFor(id)
 
         fun productById(id: String): ShopProduct? =
-            state.mutableActiveProducts.firstOrNull { it.id == id }
+            state.productById(id)
 
         fun setCarried(id: String, productId: String?) {
             val index = state.mutablePlacedObjects.indexOfFirst { it.id == id }

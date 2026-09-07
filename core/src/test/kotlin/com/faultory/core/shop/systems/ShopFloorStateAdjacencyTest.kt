@@ -153,13 +153,17 @@ class ShopFloorStateAdjacencyTest {
         val state = state(products = listOf(product("box", tile, ShopProductState.ON_FLOOR)))
         assertTrue(state.isOccupied(tile))
 
-        state.mutableActiveProducts.replaceById("box") {
-            it.copy(state = ShopProductState.CARRIED, tile = null, holderObjectId = "someone")
+        state.updateProduct("box") {
+            it.state = ShopProductState.CARRIED
+            it.tile = null
+            it.holderObjectId = "someone"
         }
         assertFalse(state.isOccupied(tile))
 
-        state.mutableActiveProducts.replaceById("box") {
-            it.copy(state = ShopProductState.ON_FLOOR, tile = tile, holderObjectId = null)
+        state.updateProduct("box") {
+            it.state = ShopProductState.ON_FLOOR
+            it.tile = tile
+            it.holderObjectId = null
         }
         assertTrue(state.isOccupied(tile))
     }

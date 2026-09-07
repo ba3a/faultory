@@ -22,7 +22,6 @@ internal class CleanerSystem(
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) : SimulationSystem {
     private val mutablePlacedObjects get() = access.mutablePlacedObjects
-    private val mutableActiveProducts get() = access.mutableActiveProducts
     private val grid get() = access.grid
 
     private val previousPositionByCleanerId: HashMap<String, TileCoordinate> = HashMap()
@@ -90,15 +89,13 @@ internal class CleanerSystem(
         } ?: return false
 
         val productTile = candidate.tile ?: return false
-        mutableActiveProducts.replaceById(candidate.id) {
-            it.copy(
-                state = ShopProductState.CARRIED,
-                tile = null,
-                beltProgress = 0f,
-                carrierWorkerId = cleaner.id,
-                holderObjectId = cleaner.id,
-                reworkTargetMachineId = null
-            )
+        access.updateProduct(candidate.id) {
+            it.state = ShopProductState.CARRIED
+            it.tile = null
+            it.beltProgress = 0f
+            it.carrierWorkerId = cleaner.id
+            it.holderObjectId = cleaner.id
+            it.reworkTargetMachineId = null
         } ?: return false
         val orientation = Orientation.between(cleaner.position, productTile) ?: cleaner.orientation
         mutablePlacedObjects[cleanerIndex] = cleaner.copy(
@@ -131,7 +128,7 @@ internal class CleanerSystem(
                     other.carriedProductId == null
             } ?: return false
 
-        if (mutableActiveProducts.byId(productId) == null) return false
+        if (access.productById(productId) == null) return false
 
         // The product does not change hands here any more - InteractionController moves it partway
         // through the give/take clip, so both workers get to play their half of the exchange.

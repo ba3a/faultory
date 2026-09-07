@@ -59,7 +59,6 @@ internal class ShopFloorState(
 
     private val activeProductsIndex: IdIndexedMutableList<ShopProduct> =
         IdIndexedMutableList(snapshot.products.map { it.detached() }) { it.id }
-    override val mutableActiveProducts: IdIndexedMutableList<ShopProduct> = activeProductsIndex
     override val activeProducts: List<ShopProduct> get() = activeProductsIndex
 
     private val machineProductionStatesIndex: IdIndexedMutableList<MachineProductionState> =
@@ -121,9 +120,11 @@ internal class ShopFloorState(
             updateOperatorWorkerIndex(old, new)
             updateKindIndex(old, new)
         }
+        // Only structural events reach this listener now — a field change goes through
+        // [updateProduct], which calls the same two primitives with the pre-change values.
         activeProductsIndex.addMutationListener { old, new ->
-            updateProductTileIndex(old, new)
-            updateProductByBeltTileIndex(old, new)
+            if (old != null) unindexProduct(old.id, old.tile, old.state)
+            if (new != null) indexProduct(new)
         }
         rebuildSecondaryIndicesFromScratch()
     }
@@ -189,19 +190,6 @@ internal class ShopFloorState(
         }
     }
 
-    private fun updateProductByBeltTileIndex(old: ShopProduct?, new: ShopProduct?) {
-        val oldTile = old?.tile
-        if (oldTile != null && old.state == ShopProductState.ON_BELT) {
-            if (productByBeltTile[oldTile]?.id == old.id) {
-                productByBeltTile.remove(oldTile)
-            }
-        }
-        val newTile = new?.tile
-        if (newTile != null && new.state == ShopProductState.ON_BELT) {
-            productByBeltTile[newTile] = new
-        }
-    }
-
     private fun updatePlacedObjectTileIndex(old: PlacedShopObject?, new: PlacedShopObject?) {
         if (old != null) {
             for (tile in computeOccupiedTiles(old)) {
@@ -215,16 +203,50 @@ internal class ShopFloorState(
         }
     }
 
-    private fun updateProductTileIndex(old: ShopProduct?, new: ShopProduct?) {
-        val oldTile = old?.tile
-        if (oldTile != null && old.state != ShopProductState.CARRIED) {
-            if (productIdByTile[oldTile] == old.id) productIdByTile.remove(oldTile)
+    /**
+     * Adds [product] to the tile and belt-tile indexes according to where it is and what it is
+     * doing. Paired with [unindexProduct], which takes the same two facts as loose values because
+     * the record no longer carries a pre-change copy of them.
+     */
+    private fun indexProduct(product: ShopProduct) {
+        val tile = product.tile ?: return
+        if (product.state != ShopProductState.CARRIED) {
+            productIdByTile[tile] = product.id
         }
-        val newTile = new?.tile
-        if (newTile != null && new.state != ShopProductState.CARRIED) {
-            productIdByTile[newTile] = new.id
+        if (product.state == ShopProductState.ON_BELT) {
+            productByBeltTile[tile] = product
         }
     }
+
+    private fun unindexProduct(productId: String, tile: TileCoordinate?, state: ShopProductState) {
+        if (tile == null) return
+        if (state != ShopProductState.CARRIED && productIdByTile[tile] == productId) {
+            productIdByTile.remove(tile)
+        }
+        if (state == ShopProductState.ON_BELT && productByBeltTile[tile]?.id == productId) {
+            productByBeltTile.remove(tile)
+        }
+    }
+
+    override fun updateProduct(productId: String, mutate: (ShopProduct) -> Unit): ShopProduct? {
+        val product = activeProductsIndex.byId(productId) ?: return null
+        val previousTile = product.tile
+        val previousState = product.state
+
+        mutate(product)
+
+        if (product.tile != previousTile || product.state != previousState) {
+            unindexProduct(productId, previousTile, previousState)
+            indexProduct(product)
+        }
+        return product
+    }
+
+    override fun addProduct(product: ShopProduct) {
+        activeProductsIndex += product
+    }
+
+    override fun removeProduct(productId: String): ShopProduct? = activeProductsIndex.removeById(productId)
 
     private fun rebuildSecondaryIndicesFromScratch() {
         operatorWorkerByMachineId.clear()
@@ -251,13 +273,7 @@ internal class ShopFloorState(
         productByBeltTile.clear()
         productIdByTile.clear()
         for (product in activeProductsIndex) {
-            val tile = product.tile ?: continue
-            if (product.state == ShopProductState.ON_BELT) {
-                productByBeltTile[tile] = product
-            }
-            if (product.state != ShopProductState.CARRIED) {
-                productIdByTile[tile] = product.id
-            }
+            indexProduct(product)
         }
     }
 
