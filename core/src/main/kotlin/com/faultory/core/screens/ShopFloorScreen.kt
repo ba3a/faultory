@@ -175,6 +175,10 @@ class ShopFloorScreen(
         captureRuntime.input?.let { captureInput -> InputMultiplexer(captureInput, input) } ?: input
     private var lastAppliedRecordingState = false
 
+    // Refilled at the end of every render to prune the orientation memory; a fresh set per frame is
+    // one allocation per frame for a set that never leaves this method.
+    private val liveProductIds: MutableSet<String> = mutableSetOf()
+
     override fun show() {
         viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
         // The live view, deliberately: both of these outlive this call — the context is held by
@@ -245,7 +249,9 @@ class ShopFloorScreen(
         captureRuntime.captureFrameIfRecording()
         captureRuntime.overlay?.render(game.renderContext.spriteBatch, game.renderContext.uiFont)
         frameLookup.endFrame()
-        productOrientations.retain(shopFloor.activeProducts.mapTo(mutableSetOf()) { it.id })
+        liveProductIds.clear()
+        shopFloor.activeProducts.mapTo(liveProductIds) { it.id }
+        productOrientations.retain(liveProductIds)
     }
 
     override fun resize(width: Int, height: Int) {

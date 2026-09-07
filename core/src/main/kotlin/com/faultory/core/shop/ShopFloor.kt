@@ -160,6 +160,12 @@ class ShopFloor(
     fun machineProductionStateFor(machineId: String): MachineProductionState? =
         state.machineProductionStateFor(machineId)
 
+    /** Whether [objectId] is currently running a QA inspection. O(1); asked per machine per frame. */
+    fun isInspecting(objectId: String): Boolean = state.isInspecting(objectId)
+
+    /** Whether [productId] is currently being inspected. O(1); asked per product per frame. */
+    fun isUnderInspection(productId: String): Boolean = state.isUnderInspection(productId)
+
     fun machineRecipeStateFor(machineId: String): MachineRecipeState? =
         state.machineRecipeStateFor(machineId)
 

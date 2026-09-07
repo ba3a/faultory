@@ -43,7 +43,7 @@ object ProductActionResolver {
             holderWorker != null &&
                 shopFloor.workerAnimationState(holderWorker.id).unitPhase == UnitPhase.DESTROYING_PRODUCT ->
                 SpriteAction.DESTROYING.id
-            shopFloor.qaInspectionStates.any { it.productId == product.id } -> SpriteAction.INSPECTED.id
+            shopFloor.isUnderInspection(product.id) -> SpriteAction.INSPECTED.id
             else -> SpriteAction.CARRIED.id
         }
     }

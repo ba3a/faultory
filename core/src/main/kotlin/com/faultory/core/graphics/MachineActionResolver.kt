@@ -11,7 +11,7 @@ object MachineActionResolver {
 
         // A QA machine holds the product it is checking, which is a working state of its own: the
         // product already plays `inspected`, and the gate scanning it should not read as idle.
-        if (shopFloor.qaInspectionStates.any { it.inspectorObjectId == placedObject.id }) {
+        if (shopFloor.isInspecting(placedObject.id)) {
             return SpriteAction.INSPECT.id
         }
 

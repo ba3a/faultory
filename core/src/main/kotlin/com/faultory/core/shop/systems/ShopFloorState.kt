@@ -87,6 +87,7 @@ internal class ShopFloorState(
     private val operatorWorkerByMachineId: HashMap<String, PlacedShopObject.Worker> = HashMap()
     private val productByBeltTile: HashMap<TileCoordinate, ShopProduct> = HashMap()
 
+    private val inspectedProductIds: HashSet<String> = HashSet()
     private val placedObjectIdByTile: HashMap<TileCoordinate, String> = HashMap()
     private val productIdByTile: HashMap<TileCoordinate, String> = HashMap()
     private val occupiedTilesByObjectId: HashMap<String, Set<TileCoordinate>> = HashMap()
@@ -115,6 +116,10 @@ internal class ShopFloorState(
         }
         // Only structural events reach this listener now — a field change goes through
         // [updateProduct], which calls the same two primitives with the pre-change values.
+        qaInspectionStatesIndex.addMutationListener { old, new ->
+            if (old != null) inspectedProductIds.remove(old.productId)
+            if (new != null) inspectedProductIds += new.productId
+        }
         activeProductsIndex.addMutationListener { old, new ->
             if (old != null) unindexProduct(old.id, old.tile, old.state)
             if (new != null) indexProduct(new)
@@ -316,7 +321,8 @@ internal class ShopFloorState(
         operatorWorkerIdByMachineId = operatorWorkerByMachineId.mapValues { (_, worker) -> worker.id },
         machineIds = _placedMachines.map { it.id },
         workerIds = _placedWorkers.map { it.id },
-        securityWorkerIds = _placedSecurityWorkers.map { it.id }
+        securityWorkerIds = _placedSecurityWorkers.map { it.id },
+        inspectedProductIds = inspectedProductIds.toSet()
     )
 
     internal data class SecondaryIndexSnapshot(
@@ -326,7 +332,8 @@ internal class ShopFloorState(
         val operatorWorkerIdByMachineId: Map<String, String>,
         val machineIds: List<String>,
         val workerIds: List<String>,
-        val securityWorkerIds: List<String>
+        val securityWorkerIds: List<String>,
+        val inspectedProductIds: Set<String>
     )
 
     internal fun rebuildSecondaryIndicesFromScratch() {
@@ -342,6 +349,10 @@ internal class ShopFloorState(
         productIdByTile.clear()
         for (product in activeProductsIndex) {
             indexProduct(product)
+        }
+        inspectedProductIds.clear()
+        for (inspection in qaInspectionStatesIndex) {
+            inspectedProductIds += inspection.productId
         }
     }
 
@@ -414,6 +425,15 @@ internal class ShopFloorState(
 
     override fun machineProductionStateFor(machineId: String): MachineProductionState? =
         machineProductionStatesIndex.byId(machineId)
+
+    /**
+     * Inspection membership, O(1). Both are asked once per machine and once per product per rendered
+     * frame by the action resolvers, which used to scan the whole inspection table for each.
+     * [qaInspectionStatesIndex] is already keyed by inspector id; only the product side needs a map.
+     */
+    fun isInspecting(objectId: String): Boolean = qaInspectionStatesIndex.byId(objectId) != null
+
+    fun isUnderInspection(productId: String): Boolean = inspectedProductIds.contains(productId)
 
     override fun machineRecipeStateFor(machineId: String): MachineRecipeState? =
         machineRecipeStatesIndex.byId(machineId)
