@@ -43,8 +43,12 @@ object MovementStrategies {
 
     /**
      * Cleaner: belt-avoiding shortest path, short straight-line roams so 90° turns happen
-     * frequently between segments. Cleaner never rides belts (the ride policy is unused) and never
-     * trips on a belt regardless of [roleProfile] content.
+     * frequently between segments. [BeltTraversal.AVOID] makes belts *walls*, not just
+     * un-rideable: they are excluded from the search — even as a goal — a straight-line roam
+     * stops at the belt edge, and `WorkerMovementSystem` never starts a ride. `beltTripChance` is
+     * read for symmetry with [securityStrategy] but is inert under [BeltTraversal.AVOID]: there is
+     * no belt for a cleaner to trip to, so authoring it on the cleaner's [roleProfile] does
+     * nothing.
      */
     fun cleanerStrategy(roleProfile: WorkerRoleProfile?): MovementStrategy = MovementStrategy(
         pathFinder = cleanerPathFinder,
@@ -52,7 +56,7 @@ object MovementStrategies {
             pathFinder = cleanerPathFinder,
             minSteps = roleProfile?.roamMinSteps ?: 1,
             maxSteps = roleProfile?.roamMaxSteps ?: 4,
-            beltTripChance = 0f
+            beltTripChance = roleProfile?.beltTripChance ?: 0f
         )
     )
 }

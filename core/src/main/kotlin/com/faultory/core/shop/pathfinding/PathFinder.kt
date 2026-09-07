@@ -58,8 +58,7 @@ class ShortestPathFinder(
         }
         return when (beltTraversal) {
             BeltTraversal.ONE_TILE_RIDE -> beltAwareBfs(grid, start, goals, blockedTiles)
-            BeltTraversal.LONG_RIDE -> plainBfs(grid, start, goals, blockedTiles, allowBelts = true)
-            BeltTraversal.AVOID -> plainBfs(grid, start, goals, blockedTiles, allowBelts = false)
+            BeltTraversal.LONG_RIDE, BeltTraversal.AVOID -> plainBfs(grid, start, goals, blockedTiles)
         }
     }
 
@@ -67,8 +66,7 @@ class ShortestPathFinder(
         grid: ShopGrid,
         start: TileCoordinate,
         goals: Set<TileCoordinate>,
-        blockedTiles: Set<TileCoordinate>,
-        allowBelts: Boolean
+        blockedTiles: Set<TileCoordinate>
     ): List<TileCoordinate>? {
         val queue = plainQueue
         val previousByTile = plainPreviousByTile
@@ -82,7 +80,10 @@ class ShortestPathFinder(
             for (neighbor in grid.orthogonalNeighbors(current)) {
                 if (neighbor in previousByTile) continue
                 if (neighbor in blockedTiles && neighbor !in goals) continue
-                if (!allowBelts && neighbor in grid.beltTiles && neighbor !in goals) continue
+                // No `!in goals` escape here, unlike the occupancy check above: a traversal that
+                // cannot occupy a belt tile must not reach one even as a destination, or a cleaner
+                // routed onto a belt as a delivery target would stand there — see PathFinder's KDoc.
+                if (!beltTraversal.canOccupy(grid, neighbor)) continue
 
                 previousByTile[neighbor] = current
                 if (neighbor in goals) {
