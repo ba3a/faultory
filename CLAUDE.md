@@ -239,6 +239,17 @@ When a refactor clears out a mistake that could be made again, leave something b
   in the renderer: `AnimationState`, `PlannedSprite` and `SpritePlacement` are reused across frames
   and are valid only for the frame that planned them, and a `ShopFloorFrame` freezes list membership
   and resolved positions, not field values.
+- **Belt behaviour for an agent comes from exactly one place: the `BeltTraversal` on its
+  `MovementStrategy`'s `PathFinder`.** `MovementStrategy.beltTraversal` derives from the
+  `pathFinder`, and the search (`ShortestPathFinder`), the roamer (`StraightLineRoamer`) and the
+  boarding/ride-phase decisions in `WorkerMovementSystem` all read that one value — do not
+  re-derive belt policy from `workerRole`, a `WorkerRoleProfile` field, or a fresh inline
+  `grid.beltTiles` test at a new movement call site; that is exactly how a cleaner ended up riding
+  belts despite `cleanerStrategy` already using `BeltTraversal.AVOID`; the roamer simply never
+  consulted it. `BeltTraversalAgreementTest` is exhaustive over both `BeltTraversal.entries` and
+  `WorkerRole.entries` and fails when either is added half-wired. `CleanerSpawnSystem`'s inline
+  belt check is the one deliberate exception: it runs before the worker, and therefore before any
+  strategy, exists.
 - Do not introduce new dependencies without strong justification; add via `gradle/libs.versions.toml` and the relevant `build.gradle.kts`.
 - Do not introduce Spring, Ktor, Hibernate, or any backend framework speculatively.
 - Tests live in the module they exercise: `core/src/test/kotlin/com/faultory/core/...` for runtime

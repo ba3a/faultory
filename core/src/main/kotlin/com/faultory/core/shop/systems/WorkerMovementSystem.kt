@@ -54,6 +54,10 @@ internal class WorkerMovementSystem(
             }
 
             val workerProfile = workerProfilesById[placedObject.catalogId] ?: continue
+            // Resolved once per worker, not once per tile the advance loop below crosses: the
+            // traversal is the same for every tile in this frame's advance, and strategyFor builds
+            // a fresh MovementStrategy for the roaming roles.
+            val beltTraversal = movementStrategyResolver.strategyFor(placedObject, workerProfile).beltTraversal
             var progress = placedObject.movementProgress +
                 (workerProfile.walkSpeed * deltaSeconds / GameConfig.tileSize)
             var remainingPath = placedObject.movementPath
@@ -83,7 +87,7 @@ internal class WorkerMovementSystem(
                     }
                 }
 
-                if (currentPosition in grid.beltTiles && grid.nextBeltTile(currentPosition) != null && remainingPath.isNotEmpty()) {
+                if (beltTraversal.boardsAt(grid, currentPosition) && remainingPath.isNotEmpty()) {
                     enteredBelt = true
                     break
                 }
@@ -190,7 +194,7 @@ internal class WorkerMovementSystem(
         val newPath = if (worker.movementPath.firstOrNull() == exitTile) worker.movementPath.drop(1) else emptyList()
         val exitOrientation = Orientation.between(worker.position, exitTile) ?: worker.orientation
         val nextPhase = movementStrategyResolver.strategyFor(worker, workerProfilesById[worker.catalogId])
-            .beltRidePolicy.phaseAfterRide(grid, exitTile)
+            .beltTraversal.phaseAfterRide(grid, exitTile)
         access.updateWorker(worker.id) {
             it.position = exitTile
             it.orientation = exitOrientation

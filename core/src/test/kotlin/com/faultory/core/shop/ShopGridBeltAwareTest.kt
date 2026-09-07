@@ -31,7 +31,7 @@ class ShopGridBeltAwareTest {
         )
     )
 
-    private val finder = ShortestPathFinder(BeltTraversal.OneTileRide)
+    private val finder = ShortestPathFinder(BeltTraversal.ONE_TILE_RIDE)
 
     @Test
     fun `returns empty list when start equals goal`() {
