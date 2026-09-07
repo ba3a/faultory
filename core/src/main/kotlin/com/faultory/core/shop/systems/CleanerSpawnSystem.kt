@@ -42,7 +42,7 @@ internal class CleanerSpawnSystem(
             orientation = Orientation.EAST,
             workerRole = WorkerRole.CLEANER
         )
-        access.mutablePlacedObjects += cleaner
+        access.addPlacedObject(cleaner)
         events.publish { CleanerSpawnedEvent(objectId = cleanerId, levelId = it ?: gate.levelId()) }
     }
 

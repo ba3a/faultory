@@ -53,9 +53,29 @@ internal interface PlacedObjectReads {
     fun operatorWorkerForMachine(machineId: String): PlacedShopObject.Worker?
 }
 
-/** Write side of the placed-object table. */
+/**
+ * Write side of the placed-object table.
+ *
+ * Placed objects are mutated in place, and [ShopFloorState] derives tile occupancy, the per-kind
+ * lists and the operator-by-machine map from their fields, so it has to see the values those fields
+ * held before the change. The two `update*` methods bracket the mutation and reconcile around it;
+ * assigning a field on a record obtained from [PlacedObjectReads] instead corrupts those indexes
+ * silently, and `ShopFloorMutationIndexTest` is what catches it.
+ */
 internal interface PlacedObjectWrites : PlacedObjectReads {
-    val mutablePlacedObjects: IdIndexedMutableList<PlacedShopObject>
+    /**
+     * Mutates the worker with [workerId] in place, reconciling the indexes [ShopFloorState] derives
+     * from its tile, its assignment and its role around the change. Null when no such worker is on
+     * the floor.
+     */
+    fun updateWorker(workerId: String, mutate: (PlacedShopObject.Worker) -> Unit): PlacedShopObject.Worker?
+
+    /** [updateWorker] for a machine; its footprint and slot geometry are what get reconciled. */
+    fun updateMachine(machineId: String, mutate: (PlacedShopObject.Machine) -> Unit): PlacedShopObject.Machine?
+
+    fun addPlacedObject(placedObject: PlacedShopObject)
+
+    fun removePlacedObject(objectId: String): PlacedShopObject?
 
     /** Drops whatever a worker is carrying and stops it where it stands. */
     fun clearWorkerHold(workerId: String)

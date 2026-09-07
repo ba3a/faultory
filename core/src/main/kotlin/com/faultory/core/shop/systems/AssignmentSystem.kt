@@ -35,7 +35,6 @@ internal class AssignmentSystem(
 ) {
     private val grid get() = access.grid
     private val machineSpecsById get() = access.machineSpecsById
-    private val mutablePlacedObjects get() = access.mutablePlacedObjects
     private val activeProducts get() = access.activeProducts
     private val qaInspectionStates get() = access.qaInspectionStates
 
@@ -112,15 +111,13 @@ internal class AssignmentSystem(
             goalsByAccessTile = operatorSlots.associateBy { it.accessTile },
             fallbackOrientation = { it.side.opposite() }
         ) { assigned, slot, path, orientation ->
-            assigned.copy(
-                orientation = orientation,
-                workerRole = machineSpec.requiredOperatorRole(),
-                assignedMachineId = machine.id,
-                assignedSlotIndex = slot.slotIndex,
-                qaPostTile = null,
-                movementPath = path,
-                movementProgress = 0f
-            )
+            assigned.orientation = orientation
+            assigned.workerRole = machineSpec.requiredOperatorRole()
+            assigned.assignedMachineId = machine.id
+            assigned.assignedSlotIndex = slot.slotIndex
+            assigned.qaPostTile = null
+            assigned.movementPath = path
+            assigned.movementProgress = 0f
         }
     }
 
@@ -146,15 +143,13 @@ internal class AssignmentSystem(
             goalsByAccessTile = candidatesByPost,
             fallbackOrientation = { it.orientation }
         ) { assigned, post, path, orientation ->
-            assigned.copy(
-                orientation = orientation,
-                workerRole = WorkerRole.QA,
-                assignedMachineId = null,
-                assignedSlotIndex = null,
-                qaPostTile = post.postTile,
-                movementPath = path,
-                movementProgress = 0f
-            )
+            assigned.orientation = orientation
+            assigned.workerRole = WorkerRole.QA
+            assigned.assignedMachineId = null
+            assigned.assignedSlotIndex = null
+            assigned.qaPostTile = post.postTile
+            assigned.movementPath = path
+            assigned.movementProgress = 0f
         }
     }
 
@@ -163,14 +158,16 @@ internal class AssignmentSystem(
      * which candidate the path actually reached, face the walk (or the target when already there),
      * apply the role-specific worker write, and hand back [WorkerAssignmentResult.Success].
      *
-     * [assign] receives `(worker, target, path, facing orientation)` and returns the updated worker.
+     * [assign] receives `(worker, target, path, facing orientation)` and writes the role-specific
+     * fields onto the worker; it runs inside [PlacedObjectWrites.updateWorker], so the assignment
+     * and role indexes are reconciled around it.
      */
     private fun <T> routeWorkerTo(
         worker: PlacedShopObject.Worker,
         workerProfile: WorkerProfile?,
         goalsByAccessTile: Map<TileCoordinate, T>,
         fallbackOrientation: (T) -> Orientation,
-        assign: (PlacedShopObject.Worker, T, List<TileCoordinate>, Orientation) -> PlacedShopObject.Worker
+        assign: (PlacedShopObject.Worker, T, List<TileCoordinate>, Orientation) -> Unit
     ): WorkerAssignmentResult {
         val path = movementStrategyResolver.strategyFor(worker, workerProfile).pathFinder.findPath(
             grid = grid,
@@ -187,8 +184,8 @@ internal class AssignmentSystem(
             else -> fallbackOrientation(target)
         } ?: worker.orientation
 
-        val updatedWorker = assign(worker, target, path, orientation)
-        mutablePlacedObjects.replaceById(updatedWorker.id) { updatedWorker }
+        val updatedWorker = access.updateWorker(worker.id) { assign(it, target, path, orientation) }
+            ?: return fail(WorkerAssignmentFailureReason.WORKER_NOT_FOUND)
         return WorkerAssignmentResult.Success(updatedWorker)
     }
 
@@ -219,7 +216,7 @@ internal class AssignmentSystem(
         slotIndex: Int,
         ignoreWorkerId: String? = null
     ): Boolean {
-        return mutablePlacedObjects.filterIsInstance<PlacedShopObject.Worker>().any { placedObject ->
+        return access.placedObjects.filterIsInstance<PlacedShopObject.Worker>().any { placedObject ->
             placedObject.id != ignoreWorkerId &&
                 placedObject.assignedMachineId == machineId &&
                 placedObject.assignedSlotIndex == slotIndex

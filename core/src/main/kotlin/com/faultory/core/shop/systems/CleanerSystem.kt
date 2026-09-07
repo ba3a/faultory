@@ -21,7 +21,6 @@ internal class CleanerSystem(
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) : SimulationSystem {
-    private val mutablePlacedObjects get() = access.mutablePlacedObjects
     private val grid get() = access.grid
 
     private val previousPositionByCleanerId: HashMap<String, TileCoordinate> = HashMap()
@@ -31,7 +30,7 @@ internal class CleanerSystem(
     override fun step(context: SystemContext) = update(context.deltaSeconds, context.workerProfilesById)
 
     fun update(deltaSeconds: Float, workerProfilesById: Map<String, WorkerProfile>) {
-        val cleaners = mutablePlacedObjects.filterIsInstance<PlacedShopObject.Worker>()
+        val cleaners = access.placedObjects.filterIsInstance<PlacedShopObject.Worker>()
             .filter { it.workerRole == WorkerRole.CLEANER }
         if (cleaners.isEmpty()) {
             previousPositionByCleanerId.clear()
@@ -39,23 +38,21 @@ internal class CleanerSystem(
         }
 
         for (cleaner in cleaners) {
-            val freshIndex = mutablePlacedObjects.indexOfId(cleaner.id)
-            if (freshIndex < 0) continue
-            val current = mutablePlacedObjects[freshIndex] as? PlacedShopObject.Worker ?: continue
+            val current = access.findObjectById(cleaner.id) as? PlacedShopObject.Worker ?: continue
 
             emitWetTrailIfMoved(current)
 
             if (access.animationStateFor(current.id).isBusy) continue
 
             if (current.carriedProductId == null) {
-                if (tryPickUpAdjacentProduct(freshIndex, current)) continue
+                if (tryPickUpAdjacentProduct(current)) continue
                 if (current.movementPath.isEmpty()) {
-                    planRoaming(freshIndex, current, workerProfilesById)
+                    planRoaming(current, workerProfilesById)
                 }
             } else {
-                if (tryHandProductToAdjacentWorker(freshIndex, current)) continue
+                if (tryHandProductToAdjacentWorker(current)) continue
                 if (current.movementPath.isEmpty()) {
-                    if (!planDeliveryToNearestWorker(freshIndex, current, workerProfilesById)) {
+                    if (!planDeliveryToNearestWorker(current, workerProfilesById)) {
                         startDestroyingHeldProduct(current)
                     }
                 }
@@ -83,7 +80,7 @@ internal class CleanerSystem(
         return (access.floorTuning.wetTileBaseSeconds + jitter).coerceAtLeast(0.1f)
     }
 
-    private fun tryPickUpAdjacentProduct(cleanerIndex: Int, cleaner: PlacedShopObject.Worker): Boolean {
+    private fun tryPickUpAdjacentProduct(cleaner: PlacedShopObject.Worker): Boolean {
         val candidate = access.productsAdjacentTo(cleaner.position).firstOrNull { product ->
             product.holderObjectId == null && product.state == ShopProductState.ON_FLOOR
         } ?: return false
@@ -98,12 +95,12 @@ internal class CleanerSystem(
             it.reworkTargetMachineId = null
         } ?: return false
         val orientation = Orientation.between(cleaner.position, productTile) ?: cleaner.orientation
-        mutablePlacedObjects[cleanerIndex] = cleaner.copy(
-            carriedProductId = candidate.id,
-            movementPath = emptyList(),
-            movementProgress = 0f,
-            orientation = orientation
-        )
+        access.updateWorker(cleaner.id) {
+            it.carriedProductId = candidate.id
+            it.movementPath = emptyList()
+            it.movementProgress = 0f
+            it.orientation = orientation
+        }
         events.publish {
             ProductPickedUpEvent(
                 objectId = cleaner.id,
@@ -117,7 +114,7 @@ internal class CleanerSystem(
         return true
     }
 
-    private fun tryHandProductToAdjacentWorker(cleanerIndex: Int, cleaner: PlacedShopObject.Worker): Boolean {
+    private fun tryHandProductToAdjacentWorker(cleaner: PlacedShopObject.Worker): Boolean {
         val productId = cleaner.carriedProductId ?: return false
         val recipient = access.placedObjectsAdjacentTo(cleaner.position)
             .filterIsInstance<PlacedShopObject.Worker>()
@@ -142,7 +139,6 @@ internal class CleanerSystem(
     }
 
     private fun planRoaming(
-        cleanerIndex: Int,
         cleaner: PlacedShopObject.Worker,
         workerProfilesById: Map<String, WorkerProfile>
     ) {
@@ -151,21 +147,20 @@ internal class CleanerSystem(
         val blocked = access.blockedTilesForPath(ignoreWorkerId = cleaner.id)
         val path = roamer.nextRoam(grid, cleaner.position, blocked, random)
         if (path.isEmpty()) return
-        mutablePlacedObjects[cleanerIndex] = cleaner.copy(
-            movementPath = path,
-            movementProgress = 0f,
-            orientation = Orientation.between(cleaner.position, path.first()) ?: cleaner.orientation
-        )
+        access.updateWorker(cleaner.id) {
+            it.movementPath = path
+            it.movementProgress = 0f
+            it.orientation = Orientation.between(cleaner.position, path.first()) ?: cleaner.orientation
+        }
     }
 
     private fun planDeliveryToNearestWorker(
-        cleanerIndex: Int,
         cleaner: PlacedShopObject.Worker,
         workerProfilesById: Map<String, WorkerProfile>
     ): Boolean {
         val carriedProductId = cleaner.carriedProductId
         val standTilesByWorker = mutableMapOf<TileCoordinate, String>()
-        for (worker in mutablePlacedObjects.filterIsInstance<PlacedShopObject.Worker>()) {
+        for (worker in access.placedObjects.filterIsInstance<PlacedShopObject.Worker>()) {
             if (worker.id == cleaner.id) continue
             if (worker.workerRole == WorkerRole.CLEANER) continue
             for (stand in grid.orthogonalNeighbors(worker.position)) {
@@ -185,14 +180,14 @@ internal class CleanerSystem(
             ignoreCarriedProductId = carriedProductId
         )
         val path = pathFinder.findPath(grid, cleaner.position, standTilesByWorker.keys, blocked) ?: return false
-        mutablePlacedObjects[cleanerIndex] = cleaner.copy(
-            movementPath = path,
-            movementProgress = 0f,
-            orientation = when {
+        access.updateWorker(cleaner.id) {
+            it.movementPath = path
+            it.movementProgress = 0f
+            it.orientation = when {
                 path.isNotEmpty() -> Orientation.between(cleaner.position, path.first()) ?: cleaner.orientation
                 else -> cleaner.orientation
             }
-        )
+        }
         return true
     }
 

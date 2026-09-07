@@ -42,7 +42,6 @@ internal class QaSystem(
     private val events: ShopFloorEvents = ShopFloorEvents(),
     private val chance: ChanceOracle = RandomChanceOracle(random)
 ) : SimulationSystem {
-    private val mutablePlacedObjects get() = access.mutablePlacedObjects
     private val placedMachines get() = access.placedMachines
     private val placedWorkers get() = access.placedWorkers
     private val mutableQaInspectionStates get() = access.mutableQaInspectionStates
@@ -224,8 +223,10 @@ internal class QaSystem(
             product.holderObjectId = holderObjectId
         } ?: return
         if (holderWorker != null) {
-            mutablePlacedObjects.replaceById(holderWorker.id) {
-                holderWorker.copy(carriedProductId = productId, movementPath = emptyList(), movementProgress = 0f)
+            access.updateWorker(holderWorker.id) {
+                it.carriedProductId = productId
+                it.movementPath = emptyList()
+                it.movementProgress = 0f
             }
         }
     }
@@ -260,9 +261,8 @@ internal class QaSystem(
     private fun destroyHeldProduct(productId: String, inspectorId: String): Boolean {
         if (access.productById(productId) == null) return false
 
-        val inspectorIndex = mutablePlacedObjects.indexOfId(inspectorId)
-            .takeIf { it >= 0 && mutablePlacedObjects[it] is PlacedShopObject.Worker } ?: -1
-        if (inspectorIndex < 0) {
+        val inspector = access.findObjectById(inspectorId) as? PlacedShopObject.Worker
+        if (inspector == null) {
             // Machine inspector — destroy instantly.
             val destroyed = access.removeProduct(productId) ?: return false
             events.publish {
@@ -277,7 +277,6 @@ internal class QaSystem(
             return true
         }
 
-        val inspector = mutablePlacedObjects[inspectorIndex] as PlacedShopObject.Worker
         if (access.animationStateFor(inspector.id).unitPhase == UnitPhase.DESTROYING_PRODUCT) {
             // Phase already running for this product — nothing to start.
             return false
@@ -333,20 +332,19 @@ internal class QaSystem(
 
         val targetWorker = nearestAvailableProducerWorker(originTile)
         if (targetWorker != null) {
-            val workerIndex = mutablePlacedObjects.indexOfId(targetWorker.id)
-            if (workerIndex >= 0) {
-                val handed = access.updateProduct(productId) {
-                    it.state = ShopProductState.CARRIED
-                    it.tile = null
-                    it.carrierWorkerId = targetWorker.id
-                    it.holderObjectId = targetWorker.id
-                    it.reworkTargetMachineId = targetWorker.assignedMachineId
-                } ?: return false
-                mutablePlacedObjects[workerIndex] = targetWorker.copy(
-                    carriedProductId = productId,
-                    movementPath = emptyList(),
-                    movementProgress = 0f
-                )
+            val handed = access.updateProduct(productId) {
+                it.state = ShopProductState.CARRIED
+                it.tile = null
+                it.carrierWorkerId = targetWorker.id
+                it.holderObjectId = targetWorker.id
+                it.reworkTargetMachineId = targetWorker.assignedMachineId
+            }
+            val received = access.updateWorker(targetWorker.id) {
+                it.carriedProductId = productId
+                it.movementPath = emptyList()
+                it.movementProgress = 0f
+            }
+            if (handed != null && received != null) {
                 access.clearWorkerHold(inspector.id)
                 events.publish {
                     ProductHandedOverEvent(
@@ -365,11 +363,10 @@ internal class QaSystem(
 
         val automaticProducer = nearestAutomaticProducerWithCapacity(originTile)
         if (automaticProducer != null) {
-            val machineIndex = mutablePlacedObjects.indexOfId(automaticProducer.id)
-            if (machineIndex >= 0) {
-                mutablePlacedObjects[machineIndex] = automaticProducer.copy(
-                    faultyInventoryCount = automaticProducer.faultyInventoryCount + 1
-                )
+            val stocked = access.updateMachine(automaticProducer.id) {
+                it.faultyInventoryCount += 1
+            }
+            if (stocked != null) {
                 val stored = access.removeProduct(productId) ?: return false
                 access.clearWorkerHold(inspector.id)
                 events.publish {

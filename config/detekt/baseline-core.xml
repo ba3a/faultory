@@ -5,7 +5,7 @@
     <ID>ComplexCondition:EncounterEngine.kt$EncounterEngine$target != null &amp;&amp; !target.id.let { target.oneShot &amp;&amp; it in progress.triggeredEncounterIds } &amp;&amp; target.condition.evaluate(ctx)</ID>
     <ID>ComplexCondition:HudRenderer.kt$HudRenderer$selectedItemTextDirty || isShiftEnded != lastIsShiftEnded || assignmentWorkerId != lastAssignmentWorkerId || selectedKey != lastSelectedKey</ID>
     <ID>CyclomaticComplexMethod:CleanerSystem.kt$CleanerSystem$fun update(deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
-    <ID>CyclomaticComplexMethod:CleanerSystem.kt$CleanerSystem$private fun planDeliveryToNearestWorker( cleanerIndex: Int, cleaner: PlacedShopObject.Worker, workerProfilesById: Map&lt;String, WorkerProfile&gt; ): Boolean</ID>
+    <ID>CyclomaticComplexMethod:CleanerSystem.kt$CleanerSystem$private fun planDeliveryToNearestWorker( cleaner: PlacedShopObject.Worker, workerProfilesById: Map&lt;String, WorkerProfile&gt; ): Boolean</ID>
     <ID>CyclomaticComplexMethod:ProductionSystem.kt$ProductionSystem$fun acceptBeltInputs()</ID>
     <ID>CyclomaticComplexMethod:QaSystem.kt$QaSystem$private fun qaConfigFor( inspector: PlacedShopObject, workerProfilesById: Map&lt;String, WorkerProfile&gt;, requireReady: Boolean ): QaInspectorConfig?</ID>
     <ID>CyclomaticComplexMethod:QaSystem.kt$QaSystem$private fun resolveCompletedQaInspection( inspection: QaInspectionState, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
@@ -14,7 +14,7 @@
     <ID>CyclomaticComplexMethod:WorkerMovementSystem.kt$WorkerMovementSystem$fun update( deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>
     <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun chooseDeliveryPlan( worker: PlacedShopObject.Worker, deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; ): DeliveryPlan?</ID>
     <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun resolveWorkerObjectives(deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt;)</ID>
-    <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun tryPlanRecipeIngredientFetch( workerIndex: Int, worker: PlacedShopObject.Worker, needed: Set&lt;String&gt;, deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; ): Boolean</ID>
+    <ID>CyclomaticComplexMethod:WorkerObjectiveSystem.kt$WorkerObjectiveSystem$private fun tryPlanRecipeIngredientFetch( worker: PlacedShopObject.Worker, needed: Set&lt;String&gt;, deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; ): Boolean</ID>
     <ID>LongMethod:CompletionModalRenderer.kt$CompletionModalRenderer$override fun drawText(ctx: ShopFloorRenderContext)</ID>
     <ID>LongMethod:LocalSaveRepositoryTest.kt$LocalSaveRepositoryTest$@Test fun `save keeps each level in its own slot even when shop ids match`()</ID>
     <ID>LongMethod:ProductionSystem.kt$ProductionSystem$private fun tickRecipeMachine( machine: PlacedShopObject.Machine, machineSpec: MachineSpec, recipe: MachineRecipe, deltaSeconds: Float, workerProfilesById: Map&lt;String, WorkerProfile&gt; )</ID>

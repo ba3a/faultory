@@ -13,23 +13,21 @@ internal class UnitPhaseSystem(
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) : SimulationSystem {
-    private val mutablePlacedObjects get() = access.mutablePlacedObjects
 
     override val phase = SimulationPhase.ANIMATION
 
     override fun step(context: SystemContext) = update(context.deltaSeconds)
 
     fun update(deltaSeconds: Float) {
-        for (index in mutablePlacedObjects.indices) {
-            val placed = mutablePlacedObjects[index] as? PlacedShopObject.Worker ?: continue
+        for (index in access.placedObjects.indices) {
+            val placed = access.placedObjects[index] as? PlacedShopObject.Worker ?: continue
             val animation = access.animationStateFor(placed.id)
             val phase = animation.unitPhase ?: continue
-            advance(index, placed, animation, phase, deltaSeconds)
+            advance(placed, animation, phase, deltaSeconds)
         }
     }
 
     private fun advance(
-        index: Int,
         placed: PlacedShopObject.Worker,
         animation: WorkerAnimationState,
         phase: UnitPhase,
@@ -61,11 +59,11 @@ internal class UnitPhaseSystem(
                 }
                 events.publish { UnitStoodUpEvent(objectId = placed.id, tile = placed.position, levelId = it) }
             }
-            UnitPhase.DESTROYING_PRODUCT -> completeDestroyProduct(index, placed)
+            UnitPhase.DESTROYING_PRODUCT -> completeDestroyProduct(placed)
         }
     }
 
-    private fun completeDestroyProduct(index: Int, placed: PlacedShopObject.Worker) {
+    private fun completeDestroyProduct(placed: PlacedShopObject.Worker) {
         val productId = placed.carriedProductId
         if (productId != null) {
             val destroyed = access.removeProduct(productId)
@@ -81,7 +79,7 @@ internal class UnitPhaseSystem(
                 }
             }
         }
-        mutablePlacedObjects[index] = placed.copy(carriedProductId = null)
+        access.updateWorker(placed.id) { it.carriedProductId = null }
         access.updateAnimation(placed.id) {
             it.copy(unitPhase = null, unitPhaseTimer = 0f, unitPhaseDurationSeconds = 0f)
         }
@@ -103,10 +101,10 @@ internal class UnitPhaseSystem(
             animations: WorkerAnimationWrites,
             fallSeconds: Float
         ) {
-            val worker = objects.mutablePlacedObjects.byId(workerId) as? PlacedShopObject.Worker ?: return
-            objects.mutablePlacedObjects.replaceById(workerId) {
-                worker.copy(movementPath = emptyList(), movementProgress = 0f)
-            }
+            objects.updateWorker(workerId) {
+                it.movementPath = emptyList()
+                it.movementProgress = 0f
+            } ?: return
             animations.updateAnimation(workerId) {
                 it.copy(
                     unitPhase = UnitPhase.FALLING,
@@ -122,10 +120,10 @@ internal class UnitPhaseSystem(
             animations: WorkerAnimationWrites,
             destroySeconds: Float
         ) {
-            val worker = objects.mutablePlacedObjects.byId(workerId) as? PlacedShopObject.Worker ?: return
-            objects.mutablePlacedObjects.replaceById(workerId) {
-                worker.copy(movementPath = emptyList(), movementProgress = 0f)
-            }
+            objects.updateWorker(workerId) {
+                it.movementPath = emptyList()
+                it.movementProgress = 0f
+            } ?: return
             animations.updateAnimation(workerId) {
                 it.copy(
                     unitPhase = UnitPhase.DESTROYING_PRODUCT,

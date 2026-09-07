@@ -36,7 +36,6 @@ internal class ProductionSystem(
     private val chance: ChanceOracle = RandomChanceOracle(random)
 ) : SimulationSystem {
     private val grid get() = access.grid
-    private val mutablePlacedObjects get() = access.mutablePlacedObjects
     private val placedMachines get() = access.placedMachines
     private val mutableMachineProductionStates get() = access.mutableMachineProductionStates
     private val mutableMachineRecipeStates get() = access.mutableMachineRecipeStates
@@ -284,9 +283,6 @@ internal class ProductionSystem(
         if (!access.isWorkerAtAssignedSlot(worker) || worker.carriedProductId != null) {
             return false
         }
-        val workerIndex = mutablePlacedObjects.indexOfId(worker.id)
-        if (workerIndex < 0) return false
-
         val handedOver = ShopProduct(
             id = head.productInstanceId,
             productId = head.productId,
@@ -297,11 +293,11 @@ internal class ProductionSystem(
             holderObjectId = worker.id
         )
         access.addProduct(handedOver)
-        mutablePlacedObjects[workerIndex] = worker.copy(
-            carriedProductId = head.productInstanceId,
-            movementPath = emptyList(),
-            movementProgress = 0f
-        )
+        access.updateWorker(worker.id) {
+            it.carriedProductId = head.productInstanceId
+            it.movementPath = emptyList()
+            it.movementProgress = 0f
+        }
         events.publish {
             ProductHandedOverEvent(
                 objectId = machine.id,

@@ -139,7 +139,7 @@ class ShopFloorStateAdjacencyTest {
         val newTile = TileCoordinate(7, 4)
         val state = state(placements = listOf(worker("mover", oldTile)))
 
-        state.mutablePlacedObjects.replaceById("mover") { (it as PlacedShopObject.Worker).copy(position = newTile) }
+        state.updateWorker("mover") { it.position = newTile }
 
         assertFalse(state.isOccupied(oldTile))
         assertNull(state.objectAtTile(oldTile))
@@ -180,14 +180,12 @@ class ShopFloorStateAdjacencyTest {
 
         // EAST rotates (1, 0) to (0, -1): footprint becomes anchor and anchor + (0, -1), sharing the
         // anchor tile with the old footprint — exercises the "old and new overlap" splice.
-        state.mutablePlacedObjects.replaceById("gate") {
-            (it as PlacedShopObject.Machine).copy(orientation = Orientation.EAST)
-        }
+        state.updateMachine("gate") { it.orientation = Orientation.EAST }
         val eastFootprint = setOf(anchor, TileCoordinate(10, 9))
         assertEquals(eastFootprint, state.blockedTilesForPath())
         assertFalse(state.isOccupied(TileCoordinate(11, 10)))
 
-        state.mutablePlacedObjects.removeById("gate")
+        state.removePlacedObject("gate")
         assertTrue(state.blockedTilesForPath().isEmpty())
         eastFootprint.forEach { tile -> assertFalse(state.isOccupied(tile)) }
     }

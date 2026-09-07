@@ -34,7 +34,6 @@ internal class PlacementSystem(
 ) {
     private val grid get() = access.grid
     private val machineSpecsById get() = access.machineSpecsById
-    private val mutablePlacedObjects get() = access.mutablePlacedObjects
 
     fun canPlaceObject(
         placedObject: PlacedShopObject,
@@ -149,7 +148,7 @@ internal class PlacementSystem(
         if (access.findObjectById(placedObject.id) != null) return false
         if (!canPlaceObject(placedObject)) return false
 
-        mutablePlacedObjects += placedObject
+        access.addPlacedObject(placedObject)
         events.publish {
             ObjectPlacedEvent(
                 objectId = placedObject.id,
@@ -171,14 +170,14 @@ internal class PlacementSystem(
         if (!machineHasNoActiveWork(machineId)) return false
 
         // A detached probe, never installed: canPlaceObject asks whether the rotated footprint fits.
-        val rotated = machine.copy(orientation = orientation)
-        if (!canPlaceObject(rotated, ignoreObjectId = machine.id)) return false
+        val probe = machine.copy(orientation = orientation)
+        if (!canPlaceObject(probe, ignoreObjectId = machine.id)) return false
 
-        mutablePlacedObjects.replaceById(machine.id) { rotated }
+        access.updateMachine(machine.id) { it.orientation = orientation }
         events.publish {
             ObjectRotatedEvent(
-                objectId = rotated.id,
-                catalogId = rotated.catalogId,
+                objectId = machine.id,
+                catalogId = machine.catalogId,
                 orientation = orientation,
                 levelId = it
             )
@@ -192,7 +191,7 @@ internal class PlacementSystem(
      * would strand state that was computed against the old facing.
      */
     private fun machineHasNoActiveWork(machineId: String): Boolean {
-        return mutablePlacedObjects.filterIsInstance<PlacedShopObject.Worker>()
+        return access.placedObjects.filterIsInstance<PlacedShopObject.Worker>()
             .none { it.assignedMachineId == machineId } &&
             access.machineProductionStates.none { it.machineId == machineId } &&
             access.machineRecipeStates.none { it.machineId == machineId && !it.isEmpty } &&
@@ -211,17 +210,18 @@ internal class PlacementSystem(
         }
         if (cost > 0 && !access.tryDeductCash(cost, CashFlowReason.UPGRADE)) return false
 
-        mutablePlacedObjects.replaceById(objectId) {
-            when (it) {
-                is PlacedShopObject.Worker -> it.copy(catalogId = targetCatalogId)
-                is PlacedShopObject.Machine -> it.copy(catalogId = targetCatalogId)
-            }
+        // Read before the write: `current` is the live record, so after the upgrade its catalogId is
+        // the one being upgraded *to*.
+        val fromCatalogId = current.catalogId
+        when (current) {
+            is PlacedShopObject.Worker -> access.updateWorker(objectId) { it.catalogId = targetCatalogId }
+            is PlacedShopObject.Machine -> access.updateMachine(objectId) { it.catalogId = targetCatalogId }
         }
         events.publish {
             ObjectUpgradedEvent(
                 objectId = current.id,
                 kind = current.kind,
-                fromCatalogId = current.catalogId,
+                fromCatalogId = fromCatalogId,
                 toCatalogId = targetCatalogId,
                 cost = cost,
                 levelId = it

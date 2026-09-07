@@ -25,7 +25,6 @@ internal class WorkerObjectiveSystem(
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) : SimulationSystem {
-    private val mutablePlacedObjects get() = access.mutablePlacedObjects
     private val machineSpecsById get() = access.machineSpecsById
     private val grid get() = access.grid
 
@@ -41,8 +40,8 @@ internal class WorkerObjectiveSystem(
     }
 
     private fun resolveWorkerObjectives(deltaSeconds: Float, workerProfilesById: Map<String, WorkerProfile>) {
-        for (index in mutablePlacedObjects.indices) {
-            val worker = mutablePlacedObjects[index] as? PlacedShopObject.Worker ?: continue
+        for (index in access.placedObjects.indices) {
+            val worker = access.placedObjects[index] as? PlacedShopObject.Worker ?: continue
             if (access.animationStateFor(worker.id).isBusy) {
                 continue
             }
@@ -50,35 +49,35 @@ internal class WorkerObjectiveSystem(
             if (worker.carriedProductId != null) {
                 val carriedProduct = access.productById(worker.carriedProductId) ?: continue
                 if (carriedProduct.reworkTargetMachineId != null) {
-                    if (tryDeliverProductToProducer(index, worker, carriedProduct)) {
+                    if (tryDeliverProductToProducer(worker, carriedProduct)) {
                         continue
                     }
                     if (worker.movementPath.isEmpty()) {
-                        planWorkerReturnToMachine(index, worker, deltaSeconds, workerProfilesById)
+                        planWorkerReturnToMachine(worker, deltaSeconds, workerProfilesById)
                     }
                     continue
                 }
 
-                if (tryDropCarriedProduct(index, worker, carriedProduct, deltaSeconds, workerProfilesById)) {
+                if (tryDropCarriedProduct(worker, carriedProduct, deltaSeconds, workerProfilesById)) {
                     continue
                 }
                 if (worker.movementPath.isEmpty()) {
-                    planWorkerDelivery(index, worker, deltaSeconds, workerProfilesById)
+                    planWorkerDelivery(worker, deltaSeconds, workerProfilesById)
                 }
                 continue
             }
 
-            if (tryHandleRecipeIngredientFetch(index, worker, deltaSeconds, workerProfilesById)) {
+            if (tryHandleRecipeIngredientFetch(worker, deltaSeconds, workerProfilesById)) {
                 continue
             }
 
             if (worker.assignedMachineId != null && worker.movementPath.isEmpty() && !access.isWorkerAtAssignedSlot(worker)) {
-                planWorkerReturnToMachine(index, worker, deltaSeconds, workerProfilesById)
+                planWorkerReturnToMachine(worker, deltaSeconds, workerProfilesById)
                 continue
             }
 
             if (worker.qaPostTile != null && worker.movementPath.isEmpty() && !access.isWorkerAtQaPost(worker)) {
-                planWorkerReturnToQaPost(index, worker, deltaSeconds, workerProfilesById)
+                planWorkerReturnToQaPost(worker, deltaSeconds, workerProfilesById)
             }
         }
     }
@@ -148,7 +147,6 @@ internal class WorkerObjectiveSystem(
     }
 
     private fun tryHandleRecipeIngredientFetch(
-        workerIndex: Int,
         worker: PlacedShopObject.Worker,
         deltaSeconds: Float,
         workerProfilesById: Map<String, WorkerProfile>
@@ -169,11 +167,11 @@ internal class WorkerObjectiveSystem(
             return false
         }
 
-        if (tryGrabAdjacentRecipeIngredient(workerIndex, worker, machineId, needed)) {
+        if (tryGrabAdjacentRecipeIngredient(worker, machineId, needed)) {
             return true
         }
 
-        return tryPlanRecipeIngredientFetch(workerIndex, worker, needed, deltaSeconds, workerProfilesById)
+        return tryPlanRecipeIngredientFetch(worker, needed, deltaSeconds, workerProfilesById)
     }
 
     private fun neededRecipeIngredients(
@@ -187,7 +185,6 @@ internal class WorkerObjectiveSystem(
     }
 
     private fun tryGrabAdjacentRecipeIngredient(
-        workerIndex: Int,
         worker: PlacedShopObject.Worker,
         machineId: String,
         needed: Set<String>
@@ -208,12 +205,12 @@ internal class WorkerObjectiveSystem(
             it.reworkTargetMachineId = machineId
         } ?: return false
         val orientation = Orientation.between(worker.position, productTile) ?: worker.orientation
-        mutablePlacedObjects[workerIndex] = worker.copy(
-            carriedProductId = candidate.id,
-            movementPath = emptyList(),
-            movementProgress = 0f,
-            orientation = orientation
-        )
+        access.updateWorker(worker.id) {
+            it.carriedProductId = candidate.id
+            it.movementPath = emptyList()
+            it.movementProgress = 0f
+            it.orientation = orientation
+        }
         events.publish {
             ProductPickedUpEvent(
                 objectId = worker.id,
@@ -228,7 +225,6 @@ internal class WorkerObjectiveSystem(
     }
 
     private fun tryPlanRecipeIngredientFetch(
-        workerIndex: Int,
         worker: PlacedShopObject.Worker,
         needed: Set<String>,
         deltaSeconds: Float,
@@ -274,16 +270,15 @@ internal class WorkerObjectiveSystem(
             path.isNotEmpty() -> Orientation.between(worker.position, path.first()) ?: worker.orientation
             else -> worker.orientation
         }
-        mutablePlacedObjects[workerIndex] = worker.copy(
-            movementPath = path,
-            movementProgress = 0f,
-            orientation = orientation
-        )
+        access.updateWorker(worker.id) {
+            it.movementPath = path
+            it.movementProgress = 0f
+            it.orientation = orientation
+        }
         return true
     }
 
     private fun tryDeliverProductToProducer(
-        workerIndex: Int,
         worker: PlacedShopObject.Worker,
         carriedProduct: ShopProduct
     ): Boolean {
@@ -313,16 +308,15 @@ internal class WorkerObjectiveSystem(
         }
 
         access.removeProduct(carriedProduct.id)
-        mutablePlacedObjects[workerIndex] = worker.copy(
-            carriedProductId = null,
-            movementPath = emptyList(),
-            movementProgress = 0f
-        )
+        access.updateWorker(worker.id) {
+            it.carriedProductId = null
+            it.movementPath = emptyList()
+            it.movementProgress = 0f
+        }
         return true
     }
 
     private fun tryDropCarriedProduct(
-        workerIndex: Int,
         worker: PlacedShopObject.Worker,
         carriedProduct: ShopProduct,
         deltaSeconds: Float,
@@ -342,11 +336,11 @@ internal class WorkerObjectiveSystem(
             it.holderObjectId = null
             it.reworkTargetMachineId = null
         } ?: return false
-        mutablePlacedObjects[workerIndex] = worker.copy(
-            carriedProductId = null,
-            movementPath = emptyList(),
-            movementProgress = 0f
-        )
+        access.updateWorker(worker.id) {
+            it.carriedProductId = null
+            it.movementPath = emptyList()
+            it.movementProgress = 0f
+        }
         events.publish {
             ProductPlacedOnBeltEvent(
                 productInstanceId = carriedProduct.id,
@@ -357,30 +351,29 @@ internal class WorkerObjectiveSystem(
             )
         }
 
-        val updatedWorker = mutablePlacedObjects[workerIndex] as? PlacedShopObject.Worker ?: return true
+        val updatedWorker = access.findObjectById(worker.id) as? PlacedShopObject.Worker ?: return true
         if (updatedWorker.assignedMachineId != null && !access.isWorkerAtAssignedSlot(updatedWorker)) {
-            planWorkerReturnToMachine(workerIndex, updatedWorker, deltaSeconds, workerProfilesById)
+            planWorkerReturnToMachine(updatedWorker, deltaSeconds, workerProfilesById)
         } else if (updatedWorker.qaPostTile != null && !access.isWorkerAtQaPost(updatedWorker)) {
-            planWorkerReturnToQaPost(workerIndex, updatedWorker, deltaSeconds, workerProfilesById)
+            planWorkerReturnToQaPost(updatedWorker, deltaSeconds, workerProfilesById)
         }
         return true
     }
 
     private fun planWorkerDelivery(
-        workerIndex: Int,
         worker: PlacedShopObject.Worker,
         deltaSeconds: Float,
         workerProfilesById: Map<String, WorkerProfile>
     ) {
         val deliveryPlan = chooseDeliveryPlan(worker, deltaSeconds, workerProfilesById) ?: return
-        mutablePlacedObjects[workerIndex] = worker.copy(
-            movementPath = deliveryPlan.path,
-            movementProgress = 0f,
-            orientation = when {
+        access.updateWorker(worker.id) {
+            it.movementPath = deliveryPlan.path
+            it.movementProgress = 0f
+            it.orientation = when {
                 deliveryPlan.path.isNotEmpty() -> Orientation.between(worker.position, deliveryPlan.path.first()) ?: worker.orientation
                 else -> worker.orientation
             }
-        )
+        }
     }
 
     private fun chooseDeliveryPlan(
@@ -422,18 +415,17 @@ internal class WorkerObjectiveSystem(
     }
 
     private fun planWorkerReturnToMachine(
-        workerIndex: Int,
         worker: PlacedShopObject.Worker,
         deltaSeconds: Float,
         workerProfilesById: Map<String, WorkerProfile>
     ) {
         val assignedSlot = access.assignedSlotFor(worker) ?: return
         if (assignedSlot.accessTile == worker.position) {
-            mutablePlacedObjects[workerIndex] = worker.copy(
-                movementPath = emptyList(),
-                movementProgress = 0f,
-                orientation = assignedSlot.side.opposite()
-            )
+            access.updateWorker(worker.id) {
+                it.movementPath = emptyList()
+                it.movementProgress = 0f
+                it.orientation = assignedSlot.side.opposite()
+            }
             return
         }
 
@@ -449,15 +441,15 @@ internal class WorkerObjectiveSystem(
             )
         } ?: return
 
-        mutablePlacedObjects[workerIndex] = worker.copy(
-            movementPath = path,
-            movementProgress = 0f,
-            orientation = Orientation.between(worker.position, path.firstOrNull() ?: worker.position) ?: worker.orientation
-        )
+        access.updateWorker(worker.id) {
+            it.movementPath = path
+            it.movementProgress = 0f
+            it.orientation = Orientation.between(worker.position, path.firstOrNull() ?: worker.position)
+                ?: worker.orientation
+        }
     }
 
     private fun planWorkerReturnToQaPost(
-        workerIndex: Int,
         worker: PlacedShopObject.Worker,
         deltaSeconds: Float,
         workerProfilesById: Map<String, WorkerProfile>
@@ -466,11 +458,11 @@ internal class WorkerObjectiveSystem(
         if (qaPostTile == worker.position) {
             val beltTile = qaPostLocator.beltTileInspectedBy(worker)
             val orientation = beltTile?.let { Orientation.between(qaPostTile, it) } ?: worker.orientation
-            mutablePlacedObjects[workerIndex] = worker.copy(
-                movementPath = emptyList(),
-                movementProgress = 0f,
-                orientation = orientation
-            )
+            access.updateWorker(worker.id) {
+                it.movementPath = emptyList()
+                it.movementProgress = 0f
+                it.orientation = orientation
+            }
             return
         }
 
@@ -486,11 +478,12 @@ internal class WorkerObjectiveSystem(
             )
         } ?: return
 
-        mutablePlacedObjects[workerIndex] = worker.copy(
-            movementPath = path,
-            movementProgress = 0f,
-            orientation = Orientation.between(worker.position, path.firstOrNull() ?: worker.position) ?: worker.orientation
-        )
+        access.updateWorker(worker.id) {
+            it.movementPath = path
+            it.movementProgress = 0f
+            it.orientation = Orientation.between(worker.position, path.firstOrNull() ?: worker.position)
+                ?: worker.orientation
+        }
     }
 }
 

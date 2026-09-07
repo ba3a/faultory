@@ -22,7 +22,6 @@ internal class SecuritySystem(
     private val random: Random,
     private val events: ShopFloorEvents = ShopFloorEvents()
 ) : SimulationSystem {
-    private val mutablePlacedObjects get() = access.mutablePlacedObjects
     private val placedWorkers get() = access.placedWorkers
     private val placedSecurityWorkers get() = access.placedSecurityWorkers
     private val mutableMachineProductionStates get() = access.mutableMachineProductionStates
@@ -44,14 +43,12 @@ internal class SecuritySystem(
             .toMutableSet()
 
         for (security in securityWorkers) {
-            val freshIndex = mutablePlacedObjects.indexOfId(security.id)
-            if (freshIndex < 0) continue
-            val current = mutablePlacedObjects[freshIndex] as PlacedShopObject.Worker
+            val current = access.findObjectById(security.id) as? PlacedShopObject.Worker ?: continue
             val profile = workerProfilesById[current.catalogId] ?: continue
             val roleProfile = profile.profileFor(WorkerRole.SECURITY) ?: continue
 
             if (current.pursuitTargetWorkerId != null) {
-                handleSecurityPursuit(freshIndex, current, saboteursById, pursuedSaboteurIds, profile)
+                handleSecurityPursuit(current, saboteursById, pursuedSaboteurIds, profile)
                 continue
             }
 
@@ -60,7 +57,7 @@ internal class SecuritySystem(
                 continue
             }
 
-            handleRoamingSecurity(freshIndex, current, profile, roleProfile, saboteursById, pursuedSaboteurIds)
+            handleRoamingSecurity(current, profile, roleProfile, saboteursById, pursuedSaboteurIds)
         }
     }
 
@@ -87,7 +84,6 @@ internal class SecuritySystem(
     }
 
     private fun handleSecurityPursuit(
-        securityIndex: Int,
         security: PlacedShopObject.Worker,
         saboteursById: Map<String, PlacedShopObject.Worker>,
         pursuedSaboteurIds: MutableSet<String>,
@@ -97,11 +93,11 @@ internal class SecuritySystem(
         val target = saboteursById[targetId]
         if (target == null) {
             pursuedSaboteurIds.remove(targetId)
-            mutablePlacedObjects[securityIndex] = security.copy(
-                pursuitTargetWorkerId = null,
-                movementPath = emptyList(),
-                movementProgress = 0f
-            )
+            access.updateWorker(security.id) {
+                it.pursuitTargetWorkerId = null
+                it.movementPath = emptyList()
+                it.movementProgress = 0f
+            }
             events.publish {
                 PursuitAbandonedEvent(objectId = security.id, saboteurObjectId = targetId, levelId = it)
             }
@@ -113,12 +109,12 @@ internal class SecuritySystem(
             cancelSabotage(sabotagedMachineId)
             pursuedSaboteurIds.remove(targetId)
             val orientation = Orientation.between(security.position, target.position) ?: security.orientation
-            mutablePlacedObjects[securityIndex] = security.copy(
-                pursuitTargetWorkerId = null,
-                movementPath = emptyList(),
-                movementProgress = 0f,
-                orientation = orientation
-            )
+            access.updateWorker(security.id) {
+                it.pursuitTargetWorkerId = null
+                it.movementPath = emptyList()
+                it.movementProgress = 0f
+                it.orientation = orientation
+            }
             events.publish {
                 SabotageStoppedEvent(
                     objectId = security.id,
@@ -133,11 +129,11 @@ internal class SecuritySystem(
         if (security.movementPath.isEmpty() || !isPathStillValid(security)) {
             val path = planSecurityPursuit(security, target, workerProfile) ?: return
             if (path.isEmpty()) return
-            mutablePlacedObjects[securityIndex] = security.copy(
-                movementPath = path,
-                movementProgress = 0f,
-                orientation = Orientation.between(security.position, path.first()) ?: security.orientation
-            )
+            access.updateWorker(security.id) {
+                it.movementPath = path
+                it.movementProgress = 0f
+                it.orientation = Orientation.between(security.position, path.first()) ?: security.orientation
+            }
         }
     }
 
@@ -173,7 +169,6 @@ internal class SecuritySystem(
     }
 
     private fun handleRoamingSecurity(
-        securityIndex: Int,
         security: PlacedShopObject.Worker,
         profile: WorkerProfile,
         roleProfile: WorkerRoleProfile,
@@ -200,11 +195,11 @@ internal class SecuritySystem(
         if (security.movementPath.isEmpty()) {
             val path = planSecurityRoamingPath(security, profile)
             if (path.isNotEmpty()) {
-                mutablePlacedObjects[securityIndex] = security.copy(
-                    movementPath = path,
-                    movementProgress = 0f,
-                    orientation = Orientation.between(security.position, path.first()) ?: security.orientation
-                )
+                access.updateWorker(security.id) {
+                    it.movementPath = path
+                    it.movementProgress = 0f
+                    it.orientation = Orientation.between(security.position, path.first()) ?: security.orientation
+                }
             }
         }
     }
@@ -229,18 +224,16 @@ internal class SecuritySystem(
         target: PlacedShopObject.Worker,
         workerProfile: WorkerProfile?
     ) {
-        val pursuerIndex = mutablePlacedObjects.indexOfId(pursuer.id)
-        if (pursuerIndex < 0) return
-        val current = mutablePlacedObjects[pursuerIndex] as PlacedShopObject.Worker
+        val current = access.findObjectById(pursuer.id) as? PlacedShopObject.Worker ?: return
         val path = planSecurityPursuit(current, target, workerProfile)
-        mutablePlacedObjects[pursuerIndex] = current.copy(
-            pursuitTargetWorkerId = target.id,
-            movementPath = path ?: emptyList(),
-            movementProgress = 0f,
-            orientation = path?.firstOrNull()
-                ?.let { Orientation.between(current.position, it) }
-                ?: current.orientation
-        )
+        access.updateWorker(current.id) {
+            it.pursuitTargetWorkerId = target.id
+            it.movementPath = path ?: emptyList()
+            it.orientation = path?.firstOrNull()
+                ?.let { first -> Orientation.between(it.position, first) }
+                ?: it.orientation
+            it.movementProgress = 0f
+        }
         val sabotagedMachineId = target.assignedMachineId ?: return
         events.publish {
             SaboteurSpottedEvent(

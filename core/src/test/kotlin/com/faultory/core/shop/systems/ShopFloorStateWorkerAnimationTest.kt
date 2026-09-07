@@ -68,8 +68,8 @@ class ShopFloorStateWorkerAnimationTest {
         val state = state(placements = listOf(worker("worker-1")))
         state.updateAnimation("worker-1") { it.copy(unitPhase = UnitPhase.FALLING) }
 
-        state.mutablePlacedObjects.removeById("worker-1")
-        state.mutablePlacedObjects.add(worker("worker-1"))
+        state.removePlacedObject("worker-1")
+        state.addPlacedObject(worker("worker-1"))
 
         assertEquals(WorkerAnimationState(), state.animationStateFor("worker-1"))
     }

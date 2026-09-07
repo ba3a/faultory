@@ -121,8 +121,6 @@ class ShopFloor(
     fun interactionDefinitionFor(definitionId: String): InteractionDefinition? =
         interactionCatalogProvider()?.find(definitionId)
 
-    private val mutablePlacedObjects: MutableList<PlacedShopObject>
-        get() = state.mutablePlacedObjects
     private val mutableMachineProductionStates: MutableList<MachineProductionState>
         get() = state.mutableMachineProductionStates
     private val mutableQaInspectionStates: MutableList<QaInspectionState>
@@ -138,7 +136,7 @@ class ShopFloor(
      * must take its own `.toList()` copy.
      */
     val placedObjects: List<PlacedShopObject>
-        get() = mutablePlacedObjects
+        get() = state.placedObjects
 
     /** A live, read-only view; see [placedObjects] for the snapshot caveat. */
     val activeProducts: List<ShopProduct>

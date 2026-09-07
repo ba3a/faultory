@@ -204,8 +204,9 @@ class WorkerObjectiveSystemTest {
         assertTrue(afterFirstFailure.cooldownRemainingSeconds > 0f)
         assertEquals("machine-a", afterFirstFailure.cooldownTargetId)
 
-        state.mutablePlacedObjects.replaceById("w1") {
-            (it as PlacedShopObject.Worker).copy(assignedMachineId = "machine-b", assignedSlotIndex = 0)
+        state.updateWorker("w1") {
+            it.assignedMachineId = "machine-b"
+            it.assignedSlotIndex = 0
         }
         objectiveSystem.update(GameConfig.simulationStepSeconds, emptyMap())
 

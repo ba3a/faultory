@@ -77,8 +77,8 @@ class ShopFloorStateWorkerReplanTest {
             )
         }
 
-        state.mutablePlacedObjects.removeById("worker-1")
-        state.mutablePlacedObjects.add(worker("worker-1"))
+        state.removePlacedObject("worker-1")
+        state.addPlacedObject(worker("worker-1"))
 
         assertEquals(WorkerReplanState(), state.replanStateFor("worker-1"))
     }

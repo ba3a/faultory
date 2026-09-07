@@ -25,7 +25,6 @@ internal class WorkerMovementSystem(
     private val events: ShopFloorEvents = ShopFloorEvents(),
     private val chance: ChanceOracle = RandomChanceOracle(random)
 ) : SimulationSystem {
-    private val mutablePlacedObjects get() = access.mutablePlacedObjects
     private val grid get() = access.grid
 
     override val phase = SimulationPhase.MOVEMENT
@@ -36,15 +35,17 @@ internal class WorkerMovementSystem(
         deltaSeconds: Float,
         workerProfilesById: Map<String, WorkerProfile>
     ) {
-        for (index in mutablePlacedObjects.indices) {
-            val placedObject = mutablePlacedObjects[index] as? PlacedShopObject.Worker ?: continue
+        // Deliberately over placedObjects, not placedWorkers: the two happen to agree today, but
+        // iteration order is a tie-break input that capture mode's byte-identical output relies on.
+        for (index in access.placedObjects.indices) {
+            val placedObject = access.placedObjects[index] as? PlacedShopObject.Worker ?: continue
             val animation = access.animationStateFor(placedObject.id)
             if (animation.isBusy) {
                 continue
             }
 
             if (animation.beltRidePhase != null) {
-                handleBeltPhase(index, placedObject, animation, deltaSeconds, workerProfilesById)
+                handleBeltPhase(placedObject, animation, deltaSeconds, workerProfilesById)
                 continue
             }
 
@@ -89,10 +90,10 @@ internal class WorkerMovementSystem(
             }
 
             if (slipped) {
-                mutablePlacedObjects[index] = placedObject.copy(
-                    position = currentPosition,
-                    orientation = currentOrientation
-                )
+                access.updateWorker(placedObject.id) {
+                    it.position = currentPosition
+                    it.orientation = currentOrientation
+                }
                 UnitPhaseSystem.startFalling(placedObject.id, access, access, access.floorTuning.unitFallSeconds)
                 events.publish {
                     UnitFellEvent(objectId = placedObject.id, tile = currentPosition, levelId = it)
@@ -108,12 +109,12 @@ internal class WorkerMovementSystem(
             }
 
             if (enteredBelt) {
-                mutablePlacedObjects[index] = placedObject.copy(
-                    position = currentPosition,
-                    orientation = currentOrientation,
-                    movementPath = remainingPath,
-                    movementProgress = 0f
-                )
+                access.updateWorker(placedObject.id) {
+                    it.position = currentPosition
+                    it.orientation = currentOrientation
+                    it.movementPath = remainingPath
+                    it.movementProgress = 0f
+                }
                 access.updateAnimation(placedObject.id) {
                     it.copy(beltRidePhase = BeltRidePhase.ENTERING, beltRideTimer = 0f)
                 }
@@ -124,48 +125,46 @@ internal class WorkerMovementSystem(
                 currentOrientation = orientationAtAssignedSlot(placedObject, at = currentPosition)
                     ?: orientationAtQaPost(placedObject)
                     ?: currentOrientation
-                mutablePlacedObjects[index] = placedObject.copy(
-                    position = currentPosition,
-                    orientation = currentOrientation,
-                    movementPath = remainingPath,
-                    movementProgress = 0f
-                )
+                access.updateWorker(placedObject.id) {
+                    it.position = currentPosition
+                    it.orientation = currentOrientation
+                    it.movementPath = remainingPath
+                    it.movementProgress = 0f
+                }
             } else {
                 currentOrientation = Orientation.between(currentPosition, remainingPath.first()) ?: currentOrientation
-                mutablePlacedObjects[index] = placedObject.copy(
-                    position = currentPosition,
-                    orientation = currentOrientation,
-                    movementPath = remainingPath,
-                    movementProgress = progress
-                )
+                access.updateWorker(placedObject.id) {
+                    it.position = currentPosition
+                    it.orientation = currentOrientation
+                    it.movementPath = remainingPath
+                    it.movementProgress = progress
+                }
             }
         }
     }
 
     private fun handleBeltPhase(
-        index: Int,
         worker: PlacedShopObject.Worker,
         animation: WorkerAnimationState,
         deltaSeconds: Float,
         workerProfilesById: Map<String, WorkerProfile>
     ) {
         when (animation.beltRidePhase) {
-            BeltRidePhase.ENTERING -> handleBeltEntering(index, worker, animation, deltaSeconds)
-            BeltRidePhase.RIDING -> handleBeltRiding(index, worker, deltaSeconds, workerProfilesById)
-            BeltRidePhase.EXITING -> handleBeltExiting(index, worker, animation, deltaSeconds)
+            BeltRidePhase.ENTERING -> handleBeltEntering(worker, animation, deltaSeconds)
+            BeltRidePhase.RIDING -> handleBeltRiding(worker, deltaSeconds, workerProfilesById)
+            BeltRidePhase.EXITING -> handleBeltExiting(worker, animation, deltaSeconds)
             null -> Unit
         }
     }
 
     private fun handleBeltEntering(
-        index: Int,
         worker: PlacedShopObject.Worker,
         animation: WorkerAnimationState,
         deltaSeconds: Float
     ) {
         val newTimer = animation.beltRideTimer + deltaSeconds
         if (newTimer >= access.floorTuning.beltEnterDurationSeconds) {
-            mutablePlacedObjects[index] = worker.copy(movementProgress = 0f)
+            access.updateWorker(worker.id) { it.movementProgress = 0f }
             access.updateAnimation(worker.id) {
                 it.copy(beltRidePhase = BeltRidePhase.RIDING, beltRideTimer = 0f)
             }
@@ -175,7 +174,6 @@ internal class WorkerMovementSystem(
     }
 
     private fun handleBeltRiding(
-        index: Int,
         worker: PlacedShopObject.Worker,
         deltaSeconds: Float,
         workerProfilesById: Map<String, WorkerProfile>
@@ -186,24 +184,23 @@ internal class WorkerMovementSystem(
         }
         val newProgress = worker.movementProgress + deltaSeconds / access.floorTuning.beltRideDurationSeconds
         if (newProgress < 1f) {
-            mutablePlacedObjects[index] = worker.copy(movementProgress = newProgress)
+            access.updateWorker(worker.id) { it.movementProgress = newProgress }
             return
         }
         val newPath = if (worker.movementPath.firstOrNull() == exitTile) worker.movementPath.drop(1) else emptyList()
         val exitOrientation = Orientation.between(worker.position, exitTile) ?: worker.orientation
         val nextPhase = movementStrategyResolver.strategyFor(worker, workerProfilesById[worker.catalogId])
             .beltRidePolicy.phaseAfterRide(grid, exitTile)
-        mutablePlacedObjects[index] = worker.copy(
-            position = exitTile,
-            orientation = exitOrientation,
-            movementPath = newPath,
-            movementProgress = 0f
-        )
+        access.updateWorker(worker.id) {
+            it.position = exitTile
+            it.orientation = exitOrientation
+            it.movementPath = newPath
+            it.movementProgress = 0f
+        }
         access.updateAnimation(worker.id) { it.copy(beltRidePhase = nextPhase, beltRideTimer = 0f) }
     }
 
     private fun handleBeltExiting(
-        index: Int,
         worker: PlacedShopObject.Worker,
         animation: WorkerAnimationState,
         deltaSeconds: Float
@@ -220,7 +217,10 @@ internal class WorkerMovementSystem(
         } else {
             worker.orientation
         }
-        mutablePlacedObjects[index] = worker.copy(orientation = finalOrientation, movementProgress = 0f)
+        access.updateWorker(worker.id) {
+            it.orientation = finalOrientation
+            it.movementProgress = 0f
+        }
         access.updateAnimation(worker.id) { it.copy(beltRidePhase = null, beltRideTimer = 0f) }
         events.publish { WorkerLeftBeltEvent(objectId = worker.id, tile = worker.position, levelId = it) }
     }

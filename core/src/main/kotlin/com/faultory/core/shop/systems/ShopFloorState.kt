@@ -54,7 +54,6 @@ internal class ShopFloorState(
     // instead of an `indexOfFirst { it.id == … }` scan on the per-frame path.
     private val placedObjectsIndex: IdIndexedMutableList<PlacedShopObject> =
         IdIndexedMutableList(snapshot.placements.map { it.detached() }) { it.id }
-    override val mutablePlacedObjects: IdIndexedMutableList<PlacedShopObject> = placedObjectsIndex
     override val placedObjects: List<PlacedShopObject> get() = placedObjectsIndex
 
     private val activeProductsIndex: IdIndexedMutableList<ShopProduct> =
@@ -106,19 +105,13 @@ internal class ShopFloorState(
     override val placedSecurityWorkers: List<PlacedShopObject.Worker> get() = _placedSecurityWorkers
 
     init {
+        // Only structural events reach this listener: nothing can install a record over an existing
+        // id any more, so `old` always means a genuine removal and `new` a genuine arrival. A field
+        // change goes through [updateWorker] / [updateMachine], which reconcile the same indexes
+        // against the values the fields held before the change.
         placedObjectsIndex.addMutationListener { old, new ->
-            updatePlacedObjectTileIndex(old, new)
-            if (old != null) occupiedTilesByObjectId.remove(old.id)
-            if (old is PlacedShopObject.Machine) {
-                slotPositionsByObjectId.remove(old.id)
-                if (new == null) machineRecipeStatesIndex.removeAll { it.machineId == old.id }
-            }
-            if (old is PlacedShopObject.Worker && new == null) {
-                workerAnimationStatesByWorkerId.remove(old.id)
-                workerReplanStatesByWorkerId.remove(old.id)
-            }
-            updateOperatorWorkerIndex(old, new)
-            updateKindIndex(old, new)
+            if (old != null) unindexPlacedObject(old)
+            if (new != null) indexPlacedObject(new)
         }
         // Only structural events reach this listener now — a field change goes through
         // [updateProduct], which calls the same two primitives with the pre-change values.
@@ -129,79 +122,139 @@ internal class ShopFloorState(
         rebuildSecondaryIndicesFromScratch()
     }
 
-    private fun updateKindIndex(old: PlacedShopObject?, new: PlacedShopObject?) {
-        when {
-            old is PlacedShopObject.Machine && new is PlacedShopObject.Machine ->
-                replaceById(_placedMachines, new)
-            old is PlacedShopObject.Worker && new is PlacedShopObject.Worker -> {
-                replaceById(_placedWorkers, new)
-                // An upsert, not an insert: a worker reassigned away from SECURITY has to leave the
-                // index, or SecuritySystem keeps dispatching it and pursuing saboteurs with it.
-                if (new.workerRole == WorkerRole.SECURITY) {
-                    replaceById(_placedSecurityWorkers, new)
-                } else {
-                    removeById(_placedSecurityWorkers, new.id)
-                }
-            }
-            else -> {
-                when (old) {
-                    is PlacedShopObject.Machine -> removeById(_placedMachines, old.id)
-                    is PlacedShopObject.Worker -> {
-                        removeById(_placedWorkers, old.id)
-                        removeById(_placedSecurityWorkers, old.id)
-                    }
-                    null -> Unit
-                }
-                when (new) {
-                    is PlacedShopObject.Machine -> _placedMachines += new
-                    is PlacedShopObject.Worker -> {
-                        _placedWorkers += new
-                        if (new.workerRole == WorkerRole.SECURITY) _placedSecurityWorkers += new
-                    }
-                    null -> Unit
-                }
-            }
-        }
-    }
-
     private fun <T : PlacedShopObject> removeById(list: MutableList<T>, id: String) {
         val idx = list.indexOfFirst { it.id == id }
         if (idx >= 0) list.removeAt(idx)
     }
 
-    /** In-place replace by id, preserving list order; appends only when the id is new to the list. */
-    private fun <T : PlacedShopObject> replaceById(list: MutableList<T>, element: T) {
-        val idx = list.indexOfFirst { it.id == element.id }
-        if (idx >= 0) list[idx] = element else list += element
-    }
-
-    private fun updateOperatorWorkerIndex(old: PlacedShopObject?, new: PlacedShopObject?) {
-        if (old is PlacedShopObject.Worker) {
-            val machineId = old.assignedMachineId
-            if (machineId != null && operatorWorkerByMachineId[machineId]?.id == old.id) {
-                operatorWorkerByMachineId.remove(machineId)
-            }
+    /**
+     * Adds [placed] to every index derived from it. Paired with [unindexPlacedObject]; the two are
+     * also what [rebuildSecondaryIndicesFromScratch] is built out of, so there is one description of
+     * what each index means.
+     */
+    private fun indexPlacedObject(placed: PlacedShopObject) {
+        for (tile in computeOccupiedTiles(placed)) {
+            placedObjectIdByTile[tile] = placed.id
         }
-        if (new is PlacedShopObject.Worker) {
-            val machineId = new.assignedMachineId
-            if (machineId != null && new.assignedSlotIndex != null) {
-                operatorWorkerByMachineId[machineId] = new
+        when (placed) {
+            is PlacedShopObject.Machine -> _placedMachines += placed
+            is PlacedShopObject.Worker -> {
+                _placedWorkers += placed
+                if (placed.workerRole == WorkerRole.SECURITY) _placedSecurityWorkers += placed
+                attachOperatorWorker(placed)
             }
         }
     }
 
-    private fun updatePlacedObjectTileIndex(old: PlacedShopObject?, new: PlacedShopObject?) {
-        if (old != null) {
-            for (tile in computeOccupiedTiles(old)) {
-                if (placedObjectIdByTile[tile] == old.id) placedObjectIdByTile.remove(tile)
-            }
+    /** Called only on a genuine removal, so it also drops the side tables keyed by the same id. */
+    private fun unindexPlacedObject(placed: PlacedShopObject) {
+        for (tile in computeOccupiedTiles(placed)) {
+            if (placedObjectIdByTile[tile] == placed.id) placedObjectIdByTile.remove(tile)
         }
-        if (new != null) {
-            for (tile in computeOccupiedTiles(new)) {
-                placedObjectIdByTile[tile] = new.id
+        occupiedTilesByObjectId.remove(placed.id)
+        when (placed) {
+            is PlacedShopObject.Machine -> {
+                slotPositionsByObjectId.remove(placed.id)
+                removeById(_placedMachines, placed.id)
+                machineRecipeStatesIndex.removeAll { it.machineId == placed.id }
+            }
+            is PlacedShopObject.Worker -> {
+                removeById(_placedWorkers, placed.id)
+                removeById(_placedSecurityWorkers, placed.id)
+                detachOperatorWorker(placed.id, placed.assignedMachineId)
+                workerAnimationStatesByWorkerId.remove(placed.id)
+                workerReplanStatesByWorkerId.remove(placed.id)
             }
         }
     }
+
+    private fun attachOperatorWorker(worker: PlacedShopObject.Worker) {
+        val machineId = worker.assignedMachineId ?: return
+        if (worker.assignedSlotIndex != null) {
+            operatorWorkerByMachineId[machineId] = worker
+        }
+    }
+
+    private fun detachOperatorWorker(workerId: String, machineId: String?) {
+        if (machineId != null && operatorWorkerByMachineId[machineId]?.id == workerId) {
+            operatorWorkerByMachineId.remove(machineId)
+        }
+    }
+
+    /** Present in the security index if and only if the worker currently holds the SECURITY role. */
+    private fun reindexSecurityWorker(worker: PlacedShopObject.Worker) {
+        if (worker.workerRole == WorkerRole.SECURITY) {
+            if (_placedSecurityWorkers.none { it.id == worker.id }) _placedSecurityWorkers += worker
+        } else {
+            removeById(_placedSecurityWorkers, worker.id)
+        }
+    }
+
+    override fun updateWorker(
+        workerId: String,
+        mutate: (PlacedShopObject.Worker) -> Unit
+    ): PlacedShopObject.Worker? {
+        val worker = placedObjectsIndex.byId(workerId) as? PlacedShopObject.Worker ?: return null
+        val previousPosition = worker.position
+        val previousRole = worker.workerRole
+        val previousMachineId = worker.assignedMachineId
+        val previousSlotIndex = worker.assignedSlotIndex
+
+        mutate(worker)
+
+        // A worker's footprint is exactly its own tile (see computeOccupiedTiles), so nothing but a
+        // move can touch the tile index or stale the footprint memo. Guarding on that is the point:
+        // advancing walk progress is the hottest write in the game and now costs four comparisons.
+        if (worker.position != previousPosition) {
+            if (placedObjectIdByTile[previousPosition] == workerId) {
+                placedObjectIdByTile.remove(previousPosition)
+            }
+            placedObjectIdByTile[worker.position] = workerId
+            occupiedTilesByObjectId.remove(workerId)
+        }
+        if (worker.assignedMachineId != previousMachineId || worker.assignedSlotIndex != previousSlotIndex) {
+            detachOperatorWorker(workerId, previousMachineId)
+            attachOperatorWorker(worker)
+        }
+        if (worker.workerRole != previousRole) {
+            reindexSecurityWorker(worker)
+        }
+        return worker
+    }
+
+    override fun updateMachine(
+        machineId: String,
+        mutate: (PlacedShopObject.Machine) -> Unit
+    ): PlacedShopObject.Machine? {
+        val machine = placedObjectsIndex.byId(machineId) as? PlacedShopObject.Machine ?: return null
+        // Read through the memo before mutating: it is exactly the set the tile index was built from.
+        val previousFootprint = occupiedTilesFor(machine)
+        val previousPosition = machine.position
+        val previousOrientation = machine.orientation
+        val previousCatalogId = machine.catalogId
+
+        mutate(machine)
+
+        if (machine.position != previousPosition ||
+            machine.orientation != previousOrientation ||
+            machine.catalogId != previousCatalogId
+        ) {
+            for (tile in previousFootprint) {
+                if (placedObjectIdByTile[tile] == machineId) placedObjectIdByTile.remove(tile)
+            }
+            occupiedTilesByObjectId.remove(machineId)
+            slotPositionsByObjectId.remove(machineId)
+            for (tile in occupiedTilesFor(machine)) placedObjectIdByTile[tile] = machineId
+        }
+        return machine
+    }
+
+    override fun addPlacedObject(placedObject: PlacedShopObject) {
+        placedObjectsIndex += placedObject
+    }
+
+    override fun removePlacedObject(objectId: String): PlacedShopObject? =
+        placedObjectsIndex.removeById(objectId)
 
     /**
      * Adds [product] to the tile and belt-tile indexes according to where it is and what it is
@@ -248,27 +301,42 @@ internal class ShopFloorState(
 
     override fun removeProduct(productId: String): ShopProduct? = activeProductsIndex.removeById(productId)
 
-    private fun rebuildSecondaryIndicesFromScratch() {
+    /**
+     * Every derived index, projected to ids and tiles. Exists for `ShopFloorMutationIndexTest`,
+     * which compares it against a from-scratch [rebuildSecondaryIndicesFromScratch] — the way
+     * `ShopFloor.schedule` exists for `SimulationScheduleTest`. Ids, not records: the two maps below
+     * store records as values, so comparing those directly would compare the same instance on both
+     * sides and pass however corrupt the keys were. The per-kind lists stay ordered, because
+     * SecuritySystem and QaSystem iterate them and order is behaviour.
+     */
+    internal fun secondaryIndexSnapshot(): SecondaryIndexSnapshot = SecondaryIndexSnapshot(
+        placedObjectIdByTile = placedObjectIdByTile.toMap(),
+        productIdByTile = productIdByTile.toMap(),
+        productIdByBeltTile = productByBeltTile.mapValues { (_, product) -> product.id },
+        operatorWorkerIdByMachineId = operatorWorkerByMachineId.mapValues { (_, worker) -> worker.id },
+        machineIds = _placedMachines.map { it.id },
+        workerIds = _placedWorkers.map { it.id },
+        securityWorkerIds = _placedSecurityWorkers.map { it.id }
+    )
+
+    internal data class SecondaryIndexSnapshot(
+        val placedObjectIdByTile: Map<TileCoordinate, String>,
+        val productIdByTile: Map<TileCoordinate, String>,
+        val productIdByBeltTile: Map<TileCoordinate, String>,
+        val operatorWorkerIdByMachineId: Map<String, String>,
+        val machineIds: List<String>,
+        val workerIds: List<String>,
+        val securityWorkerIds: List<String>
+    )
+
+    internal fun rebuildSecondaryIndicesFromScratch() {
         operatorWorkerByMachineId.clear()
         _placedMachines.clear()
         _placedWorkers.clear()
         _placedSecurityWorkers.clear()
         placedObjectIdByTile.clear()
         for (placed in placedObjectsIndex) {
-            when (placed) {
-                is PlacedShopObject.Machine -> _placedMachines += placed
-                is PlacedShopObject.Worker -> {
-                    _placedWorkers += placed
-                    if (placed.workerRole == WorkerRole.SECURITY) _placedSecurityWorkers += placed
-                    val machineId = placed.assignedMachineId
-                    if (machineId != null && placed.assignedSlotIndex != null) {
-                        operatorWorkerByMachineId[machineId] = placed
-                    }
-                }
-            }
-            for (tile in computeOccupiedTiles(placed)) {
-                placedObjectIdByTile[tile] = placed.id
-            }
+            indexPlacedObject(placed)
         }
         productByBeltTile.clear()
         productIdByTile.clear()
@@ -482,17 +550,11 @@ internal class ShopFloorState(
     }
 
     override fun clearWorkerHold(workerId: String) {
-        val worker = mutablePlacedObjects.byId(workerId) as? PlacedShopObject.Worker ?: return
-        if (worker.carriedProductId == null) {
-            return
-        }
-
-        mutablePlacedObjects.replaceById(workerId) {
-            worker.copy(
-                carriedProductId = null,
-                movementPath = emptyList(),
-                movementProgress = 0f
-            )
+        updateWorker(workerId) {
+            if (it.carriedProductId == null) return@updateWorker
+            it.carriedProductId = null
+            it.movementPath = emptyList()
+            it.movementProgress = 0f
         }
     }
 

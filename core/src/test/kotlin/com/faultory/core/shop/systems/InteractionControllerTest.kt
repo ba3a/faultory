@@ -212,7 +212,7 @@ class InteractionControllerTest {
 
         fun objectById(id: String): PlacedShopObject.Worker =
             assertNotNull(
-                state.mutablePlacedObjects.filterIsInstance<PlacedShopObject.Worker>().firstOrNull { it.id == id },
+                state.findObjectById(id) as? PlacedShopObject.Worker,
                 "no worker $id"
             )
 
@@ -222,13 +222,11 @@ class InteractionControllerTest {
             state.productById(id)
 
         fun setCarried(id: String, productId: String?) {
-            val index = state.mutablePlacedObjects.indexOfFirst { it.id == id }
-            state.mutablePlacedObjects[index] =
-                (state.mutablePlacedObjects[index] as PlacedShopObject.Worker).copy(carriedProductId = productId)
+            state.updateWorker(id) { it.carriedProductId = productId }
         }
 
         fun remove(id: String) {
-            state.mutablePlacedObjects.removeAll { it.id == id }
+            state.removePlacedObject(id)
         }
     }
 
