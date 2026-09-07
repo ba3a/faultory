@@ -53,12 +53,12 @@ internal class ShopFloorState(
     // Exposed as the concrete type so systems can reach id→index in O(1) (indexOfId / replaceById)
     // instead of an `indexOfFirst { it.id == … }` scan on the per-frame path.
     private val placedObjectsIndex: IdIndexedMutableList<PlacedShopObject> =
-        IdIndexedMutableList(snapshot.placements) { it.id }
+        IdIndexedMutableList(snapshot.placements.map { it.detached() }) { it.id }
     override val mutablePlacedObjects: IdIndexedMutableList<PlacedShopObject> = placedObjectsIndex
     override val placedObjects: List<PlacedShopObject> get() = placedObjectsIndex
 
     private val activeProductsIndex: IdIndexedMutableList<ShopProduct> =
-        IdIndexedMutableList(snapshot.products) { it.id }
+        IdIndexedMutableList(snapshot.products.map { it.detached() }) { it.id }
     override val mutableActiveProducts: IdIndexedMutableList<ShopProduct> = activeProductsIndex
     override val activeProducts: List<ShopProduct> get() = activeProductsIndex
 
@@ -190,13 +190,15 @@ internal class ShopFloorState(
     }
 
     private fun updateProductByBeltTileIndex(old: ShopProduct?, new: ShopProduct?) {
-        if (old != null && old.state == ShopProductState.ON_BELT && old.tile != null) {
-            if (productByBeltTile[old.tile]?.id == old.id) {
-                productByBeltTile.remove(old.tile)
+        val oldTile = old?.tile
+        if (oldTile != null && old.state == ShopProductState.ON_BELT) {
+            if (productByBeltTile[oldTile]?.id == old.id) {
+                productByBeltTile.remove(oldTile)
             }
         }
-        if (new != null && new.state == ShopProductState.ON_BELT && new.tile != null) {
-            productByBeltTile[new.tile] = new
+        val newTile = new?.tile
+        if (newTile != null && new.state == ShopProductState.ON_BELT) {
+            productByBeltTile[newTile] = new
         }
     }
 
@@ -214,11 +216,13 @@ internal class ShopFloorState(
     }
 
     private fun updateProductTileIndex(old: ShopProduct?, new: ShopProduct?) {
-        if (old != null && old.state != ShopProductState.CARRIED && old.tile != null) {
-            if (productIdByTile[old.tile] == old.id) productIdByTile.remove(old.tile)
+        val oldTile = old?.tile
+        if (oldTile != null && old.state != ShopProductState.CARRIED) {
+            if (productIdByTile[oldTile] == old.id) productIdByTile.remove(oldTile)
         }
-        if (new != null && new.state != ShopProductState.CARRIED && new.tile != null) {
-            productIdByTile[new.tile] = new.id
+        val newTile = new?.tile
+        if (newTile != null && new.state != ShopProductState.CARRIED) {
+            productIdByTile[newTile] = new.id
         }
     }
 
@@ -247,11 +251,12 @@ internal class ShopFloorState(
         productByBeltTile.clear()
         productIdByTile.clear()
         for (product in activeProductsIndex) {
-            if (product.state == ShopProductState.ON_BELT && product.tile != null) {
-                productByBeltTile[product.tile] = product
+            val tile = product.tile ?: continue
+            if (product.state == ShopProductState.ON_BELT) {
+                productByBeltTile[tile] = product
             }
-            if (product.state != ShopProductState.CARRIED && product.tile != null) {
-                productIdByTile[product.tile] = product.id
+            if (product.state != ShopProductState.CARRIED) {
+                productIdByTile[tile] = product.id
             }
         }
     }
@@ -276,13 +281,14 @@ internal class ShopFloorState(
      * This state's own slice of a [ShopFloorSnapshot] — everything except [ShopFloorSnapshot.wetTiles],
      * which [ShopFloor] composes in separately since the puddle map lives on [WetFloor], not here.
      * The five tables are read through their `IdIndexedMutableList`s as copies: those lists are live
-     * views (see [placedObjects]), and a save row must outlive the tick that took it. Recipe rows
-     * hold mutable collections, so those are `detached()` rather than merely re-listed — and the
-     * seeding above detaches too, so two floors built from one snapshot never share a buffer.
+     * views (see [placedObjects]), and a save row must outlive the tick that took it. Placed
+     * objects, products and recipe rows are all mutated in place, so those three are `detached()`
+     * rather than merely re-listed — and the seeding above detaches too, so two floors built from
+     * one snapshot never share a record.
      */
     fun snapshot(): ShopFloorSnapshot = ShopFloorSnapshot(
-        placements = placedObjectsIndex.toList(),
-        products = activeProductsIndex.toList(),
+        placements = placedObjectsIndex.map { it.detached() },
+        products = activeProductsIndex.map { it.detached() },
         machineProductionStates = machineProductionStatesIndex.toList(),
         qaInspectionStates = qaInspectionStatesIndex.toList(),
         machineRecipeStates = machineRecipeStatesIndex.map { it.detached() },

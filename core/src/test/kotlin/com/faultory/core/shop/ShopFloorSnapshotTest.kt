@@ -1,13 +1,16 @@
 package com.faultory.core.shop
 
 import com.faultory.core.config.FaultoryJson
+import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
+import com.faultory.core.content.WorkerRoleProfile
 import com.faultory.core.shop.systems.WorkerPlanGoalKind
 import com.faultory.core.shop.systems.WorkerReplanState
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -127,5 +130,99 @@ class ShopFloorSnapshotTest {
 
         val decoded = json.decodeFromString<ShopFloorSnapshot>(json.encodeToString(snapshot))
         assertEquals(snapshot.wetTiles, decoded.wetTiles)
+    }
+
+    // A straight belt along y = 5 from x = 5 to x = 8, so the grid has walkable floor around it.
+    private fun walkableBlueprint() = ShopBlueprint(
+        id = "snapshot-walk-shop",
+        displayName = "Snapshot Walk Shop",
+        qualityThresholdPercent = 90f,
+        shiftLengthSeconds = 60f,
+        conveyorBelts = listOf(
+            ConveyorBelt(
+                id = "belt-1",
+                checkpoints = listOf(BeltNode(5f * 40f, 5f * 40f), BeltNode(8f * 40f, 5f * 40f))
+            )
+        ),
+        machineSlots = emptyList(),
+        workerSpawnPoints = emptyList()
+    )
+
+    private val walkerProfile = WorkerProfile(
+        id = "line-inspector",
+        level = 1,
+        hireCost = 60,
+        walkSpeed = 200f,
+        skin = "worker_line_inspector",
+        roleProfiles = listOf(
+            WorkerRoleProfile(role = WorkerRole.PRODUCER_OPERATOR, taskDurationSeconds = 1f)
+        )
+    )
+
+    private fun walkingSnapshot() = ShopFloorSnapshot(
+        placements = listOf(
+            PlacedShopObject.Worker(
+                id = "worker-1",
+                catalogId = walkerProfile.id,
+                position = TileCoordinate(6, 4),
+                workerRole = WorkerRole.PRODUCER_OPERATOR,
+                movementPath = listOf(
+                    TileCoordinate(7, 4),
+                    TileCoordinate(8, 4),
+                    TileCoordinate(9, 4),
+                    TileCoordinate(10, 4)
+                )
+            )
+        ),
+        products = listOf(
+            ShopProduct(
+                id = "product-1",
+                productId = "ceramic-mug",
+                sourceMachineId = "supply",
+                state = ShopProductState.ON_FLOOR,
+                tile = TileCoordinate(12, 4)
+            )
+        )
+    )
+
+    @Test
+    fun `a snapshot is a value the simulation cannot change under it`() {
+        val shopFloor = ShopFloor(
+            blueprint = walkableBlueprint(),
+            machineSpecsById = emptyMap(),
+            snapshot = walkingSnapshot()
+        )
+        val profiles = mapOf(walkerProfile.id to walkerProfile)
+
+        val taken = shopFloor.snapshot()
+        val encodedAtCapture = json.encodeToString(taken)
+
+        repeat(120) { shopFloor.update(1f / 60f, profiles) }
+
+        assertEquals(encodedAtCapture, json.encodeToString(taken), "the snapshot changed after capture")
+        assertNotEquals(
+            encodedAtCapture,
+            json.encodeToString(shopFloor.snapshot()),
+            "the fixture never advanced, so the assertion above proves nothing"
+        )
+    }
+
+    @Test
+    fun `two floors seeded from one snapshot do not share records`() {
+        val seed = walkingSnapshot()
+        val profiles = mapOf(walkerProfile.id to walkerProfile)
+        val moved = ShopFloor(blueprint = walkableBlueprint(), machineSpecsById = emptyMap(), snapshot = seed)
+        val untouched = ShopFloor(blueprint = walkableBlueprint(), machineSpecsById = emptyMap(), snapshot = seed)
+
+        repeat(120) { moved.update(1f / 60f, profiles) }
+
+        val stayed = assertNotNull(untouched.findObjectById("worker-1") as? PlacedShopObject.Worker)
+        assertEquals(TileCoordinate(6, 4), stayed.position)
+        assertEquals(TileCoordinate(6, 4), (seed.placements.single() as PlacedShopObject.Worker).position)
+        assertNotEquals(
+            TileCoordinate(6, 4),
+            (assertNotNull(moved.findObjectById("worker-1") as? PlacedShopObject.Worker)).position,
+            "the fixture never advanced, so the assertions above prove nothing"
+        )
     }
 }

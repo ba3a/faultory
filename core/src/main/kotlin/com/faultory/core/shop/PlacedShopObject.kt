@@ -13,6 +13,14 @@ import kotlinx.serialization.Serializable
  * is. Simulation and render code branches on the subtype (`is PlacedShopObject.Worker`); the
  * [kind] extension is for the event and display boundary, where a plain [PlacedShopObjectKind]
  * token is wanted.
+ *
+ * The live simulation **mutates these records in place** — a walking worker used to be copied whole
+ * several times a frame to advance one `Float`. Only [id] is immutable, because it keys every index
+ * that points at the record. The four shared fields stay `val` here and are overridden as `var` on
+ * the subtypes, so code holding a `PlacedShopObject` has a read-only view and only code that has
+ * narrowed to a [Worker] or a [Machine] can write.
+ *
+ * Anything that outlives the tick that read a record stores its id, or takes a [detached] copy.
  */
 @Serializable
 sealed interface PlacedShopObject {
@@ -28,35 +36,45 @@ sealed interface PlacedShopObject {
      */
     val kind: PlacedShopObjectKind
 
+    /**
+     * A copy that the simulation will never write to, for anything that has to outlive the tick it
+     * was read in — a save row, or a list frozen and handed to another subsystem.
+     */
+    fun detached(): PlacedShopObject
+
     @Serializable
     @SerialName("worker")
     data class Worker(
         override val id: String,
-        override val catalogId: String,
-        override val position: TileCoordinate,
-        override val orientation: Orientation = Orientation.SOUTH,
-        val workerRole: WorkerRole? = null,
-        val assignedMachineId: String? = null,
-        val assignedSlotIndex: Int? = null,
-        val qaPostTile: TileCoordinate? = null,
-        val carriedProductId: String? = null,
-        val movementPath: List<TileCoordinate> = emptyList(),
-        val movementProgress: Float = 0f,
-        val pursuitTargetWorkerId: String? = null
+        override var catalogId: String,
+        override var position: TileCoordinate,
+        override var orientation: Orientation = Orientation.SOUTH,
+        var workerRole: WorkerRole? = null,
+        var assignedMachineId: String? = null,
+        var assignedSlotIndex: Int? = null,
+        var qaPostTile: TileCoordinate? = null,
+        var carriedProductId: String? = null,
+        var movementPath: List<TileCoordinate> = emptyList(),
+        var movementProgress: Float = 0f,
+        var pursuitTargetWorkerId: String? = null
     ) : PlacedShopObject {
         override val kind: PlacedShopObjectKind get() = PlacedShopObjectKind.WORKER
+
+        override fun detached(): Worker = copy()
     }
 
     @Serializable
     @SerialName("machine")
     data class Machine(
         override val id: String,
-        override val catalogId: String,
-        override val position: TileCoordinate,
-        override val orientation: Orientation = Orientation.SOUTH,
-        val faultyInventoryCount: Int = 0
+        override var catalogId: String,
+        override var position: TileCoordinate,
+        override var orientation: Orientation = Orientation.SOUTH,
+        var faultyInventoryCount: Int = 0
     ) : PlacedShopObject {
         override val kind: PlacedShopObjectKind get() = PlacedShopObjectKind.MACHINE
+
+        override fun detached(): Machine = copy()
     }
 }
 

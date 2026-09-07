@@ -2,22 +2,33 @@ package com.faultory.core.shop
 
 import kotlinx.serialization.Serializable
 
+/**
+ * A unit of product on the floor, on a belt, or in someone's hands.
+ *
+ * Mutated in place by the simulation the same way [PlacedShopObject] is, and for the same reason —
+ * advancing one along a belt used to copy the whole record. Only [id] is immutable, because it keys
+ * every index that points at the record; anything outliving the tick that read one takes
+ * [detached].
+ */
 @Serializable
 data class ShopProduct(
     val id: String,
-    val productId: String,
-    val sourceMachineId: String,
-    val faultReason: ProductFaultReason? = null,
-    val state: ShopProductState,
-    val tile: TileCoordinate? = null,
-    val beltProgress: Float = 0f,
-    val carrierWorkerId: String? = null,
-    val holderObjectId: String? = null,
-    val reworkTargetMachineId: String? = null,
-    val inspectedByObjectIds: Set<String> = emptySet()
+    var productId: String,
+    var sourceMachineId: String,
+    var faultReason: ProductFaultReason? = null,
+    var state: ShopProductState,
+    var tile: TileCoordinate? = null,
+    var beltProgress: Float = 0f,
+    var carrierWorkerId: String? = null,
+    var holderObjectId: String? = null,
+    var reworkTargetMachineId: String? = null,
+    var inspectedByObjectIds: Set<String> = emptySet()
 ) {
     val isFaulty: Boolean
         get() = faultReason != null
+
+    /** A copy the simulation will never write to. See [PlacedShopObject.detached]. */
+    fun detached(): ShopProduct = copy()
 }
 
 @Serializable
