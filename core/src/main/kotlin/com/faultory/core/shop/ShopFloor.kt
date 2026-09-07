@@ -38,7 +38,13 @@ class ShopFloor(
     val grid = ShopGrid(blueprint)
     val beltTopology = BeltTopology(blueprint, grid)
 
-    private val state: ShopFloorState = ShopFloorState(
+    /**
+     * The whole mutable world. `internal` so `ShopFloorSimulationIndexIntegrityTest` can compare the
+     * indexes it derives against a from-scratch rebuild after running the schedule, the way
+     * [schedule] is `internal` for `SimulationScheduleTest`. Nothing else reaches for it: systems
+     * take a narrow `*Access` interface and this class delegates.
+     */
+    internal val state: ShopFloorState = ShopFloorState(
         grid = grid,
         machineSpecsById = machineSpecsById,
         productDefinitionsById = productDefinitionsById,

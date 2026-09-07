@@ -9,12 +9,18 @@ import com.faultory.core.shop.ShopProduct
  *
  * Layers used to each re-iterate [com.faultory.core.shop.ShopFloor] and re-call
  * [ShopFloorGeometry.renderPositionFor] — `PlacedObjectRenderer` alone walks the entity lists in both
- * its fill and its line pass. Capturing the lists and their resolved positions in one immutable value
- * collapses that to a single pass and means a new read-only layer needs nothing injected but this.
+ * its fill and its line pass. Capturing the lists and their resolved positions in one value collapses
+ * that to a single pass and means a new read-only layer needs nothing injected but this.
  *
- * Built by [ShopFloorFrameFactory.capture] at the top of [com.faultory.core.screens.ShopFloorScreen]'s
- * render, before any layer runs. Carries no LibGDX type, so the render-planning path is exercisable
- * without a GL context.
+ * **What a frame freezes is list membership and the resolved positions — not field values.** The
+ * simulation mutates its records in place, and these lists hold those records, so a frame is valid
+ * only for the frame it was captured in. [ShopFloorFrameFactory.capture] runs at the top of
+ * [com.faultory.core.screens.ShopFloorScreen]'s render, after the simulation has stepped and before
+ * any layer runs, and nothing may hold a frame past that render. Copying the records instead would
+ * put back most of the per-frame garbage the in-place simulation exists to remove, for data nothing
+ * reads after the next tick.
+ *
+ * Carries no LibGDX type, so the render-planning path is exercisable without a GL context.
  *
  * Sprite-specific geometry — socket placement, handover interpolation, machine footprint centres — is
  * deliberately *not* here: it is resolved per fragment inside [EntitySpriteLayer], not per entity.

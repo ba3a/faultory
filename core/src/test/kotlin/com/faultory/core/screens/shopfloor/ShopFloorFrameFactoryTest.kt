@@ -78,12 +78,14 @@ class ShopFloorFrameFactoryTest {
     }
 
     @Test
-    fun `the captured frame does not change when the shop floor mutates afterwards`() {
+    fun `the captured frame's membership does not change when an object is placed afterwards`() {
         val shopFloor = shopFloor(placements = listOf(worker("worker-1", TileCoordinate(5, 9))))
         val frame = ShopFloorFrameFactory(shopFloor, ShopFloorGeometry(shopFloor)).capture()
 
         shopFloor.placeObject(worker("worker-2", TileCoordinate(8, 9)))
 
+        // Membership only. The records inside the frame are the live simulation records, so this
+        // deliberately does not claim their field values are frozen — see ShopFloorFrame's KDoc.
         assertEquals(listOf("worker-1"), frame.placedObjects.map { it.id })
         assertEquals(2, shopFloor.placedObjects.size)
     }
