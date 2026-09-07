@@ -215,7 +215,7 @@ class ShopFloorRecipeFetchTest {
                 machineRecipeStates = listOf(
                     MachineRecipeState(
                         machineId = "blender-1",
-                        inputBuffer = mapOf("ceramic-mug" to 1)
+                        inputBuffer = mutableMapOf("ceramic-mug" to 1)
                     )
                 )
             ),

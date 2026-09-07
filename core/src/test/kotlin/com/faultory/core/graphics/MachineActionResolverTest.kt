@@ -56,7 +56,7 @@ class MachineActionResolverTest {
                 machineRecipeStates = listOf(
                     MachineRecipeState(
                         machineId = "machine-1",
-                        outputQueue = List(FloorTuning().machineOutputQueueCap) { index ->
+                        outputQueue = MutableList(FloorTuning().machineOutputQueueCap) { index ->
                             QueuedMachineOutput(productInstanceId = "product-$index", productId = "ceramic-mug")
                         }
                     )
@@ -76,7 +76,7 @@ class MachineActionResolverTest {
                 machineRecipeStates = listOf(
                     MachineRecipeState(
                         machineId = "machine-1",
-                        outputQueue = listOf(
+                        outputQueue = mutableListOf(
                             QueuedMachineOutput(productInstanceId = "product-0", productId = "ceramic-mug")
                         )
                     )
@@ -104,7 +104,7 @@ class MachineActionResolverTest {
                 machineRecipeStates = listOf(
                     MachineRecipeState(
                         machineId = "machine-1",
-                        outputQueue = List(FloorTuning().machineOutputQueueCap) { index ->
+                        outputQueue = MutableList(FloorTuning().machineOutputQueueCap) { index ->
                             QueuedMachineOutput(productInstanceId = "product-$index", productId = "ceramic-mug")
                         }
                     )

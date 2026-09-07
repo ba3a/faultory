@@ -8,6 +8,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -76,6 +77,33 @@ class ShopFloorSnapshotTest {
         val restored = ShopFloor(blueprint = minimalBlueprint(), machineSpecsById = emptyMap(), snapshot = decoded)
 
         assertEquals(taken, restored.snapshot())
+    }
+
+    @Test
+    fun `a snapshot's recipe rows share no buffer with the floor that produced it`() {
+        val seed = ShopFloorSnapshot(
+            machineRecipeStates = listOf(
+                MachineRecipeState(
+                    machineId = "machine-1",
+                    inputBuffer = mutableMapOf("ceramic-clay" to 1),
+                    outputQueue = mutableListOf(
+                        QueuedMachineOutput(productInstanceId = "product-0", productId = "ceramic-mug")
+                    )
+                )
+            )
+        )
+        val shopFloor = ShopFloor(blueprint = minimalBlueprint(), machineSpecsById = emptyMap(), snapshot = seed)
+        val taken = shopFloor.snapshot()
+
+        val live = shopFloor.machineRecipeStateFor("machine-1")
+        assertNotNull(live)
+        live.inputBuffer["ceramic-clay"] = 99
+        live.outputQueue.clear()
+
+        assertEquals(mapOf("ceramic-clay" to 1), taken.machineRecipeStates.single().inputBuffer)
+        assertEquals(1, taken.machineRecipeStates.single().outputQueue.size)
+        // and the snapshot the floor was seeded from is equally untouched
+        assertEquals(mapOf("ceramic-clay" to 1), seed.machineRecipeStates.single().inputBuffer)
     }
 
     @Test

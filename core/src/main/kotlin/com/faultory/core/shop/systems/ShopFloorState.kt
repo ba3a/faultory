@@ -74,7 +74,7 @@ internal class ShopFloorState(
     override val qaInspectionStates: List<QaInspectionState> get() = qaInspectionStatesIndex
 
     private val machineRecipeStatesIndex: IdIndexedMutableList<MachineRecipeState> =
-        IdIndexedMutableList(snapshot.machineRecipeStates) { it.machineId }
+        IdIndexedMutableList(snapshot.machineRecipeStates.map { it.detached() }) { it.machineId }
     override val mutableMachineRecipeStates: IdIndexedMutableList<MachineRecipeState> = machineRecipeStatesIndex
     override val machineRecipeStates: List<MachineRecipeState> get() = machineRecipeStatesIndex
 
@@ -275,15 +275,17 @@ internal class ShopFloorState(
     /**
      * This state's own slice of a [ShopFloorSnapshot] — everything except [ShopFloorSnapshot.wetTiles],
      * which [ShopFloor] composes in separately since the puddle map lives on [WetFloor], not here.
-     * The five tables are read through their `IdIndexedMutableList`s as `.toList()` copies: those
-     * lists are live views (see [placedObjects]), and a save row must outlive the tick that took it.
+     * The five tables are read through their `IdIndexedMutableList`s as copies: those lists are live
+     * views (see [placedObjects]), and a save row must outlive the tick that took it. Recipe rows
+     * hold mutable collections, so those are `detached()` rather than merely re-listed — and the
+     * seeding above detaches too, so two floors built from one snapshot never share a buffer.
      */
     fun snapshot(): ShopFloorSnapshot = ShopFloorSnapshot(
         placements = placedObjectsIndex.toList(),
         products = activeProductsIndex.toList(),
         machineProductionStates = machineProductionStatesIndex.toList(),
         qaInspectionStates = qaInspectionStatesIndex.toList(),
-        machineRecipeStates = machineRecipeStatesIndex.toList(),
+        machineRecipeStates = machineRecipeStatesIndex.map { it.detached() },
         cash = cash,
         cleanerSpawnedThisShift = cleanerSpawnedThisShift,
         workerAnimationStates = workerAnimationStatesByWorkerId.toMap(),

@@ -50,15 +50,32 @@ data class QueuedMachineOutput(
     val faultReason: ProductFaultReason? = null
 )
 
+/**
+ * A machine's recipe buffers, mutated in place by [MachineRecipeBuffers][com.faultory.core.shop.systems.MachineRecipeBuffers].
+ * Counting one ingredient in used to clone the whole input map and queueing one output used to
+ * clone the whole queue, several times a second per producing machine; the collections are mutable
+ * so those writes cost nothing.
+ *
+ * Mutable state means a row handed out has to be [detached] before anything keeps it past the tick
+ * that read it — which is what the save boundary does.
+ */
 @Serializable
 data class MachineRecipeState(
     val machineId: String,
-    val inputBuffer: Map<String, Int> = emptyMap(),
-    val outputQueue: List<QueuedMachineOutput> = emptyList(),
-    val accumulatedInputFault: ProductFaultReason? = null
+    val inputBuffer: MutableMap<String, Int> = mutableMapOf(),
+    val outputQueue: MutableList<QueuedMachineOutput> = mutableListOf(),
+    var accumulatedInputFault: ProductFaultReason? = null
 ) {
     val isEmpty: Boolean
         get() = inputBuffer.isEmpty() && outputQueue.isEmpty() && accumulatedInputFault == null
+
+    /** A copy that shares no mutable collection with this row. */
+    fun detached(): MachineRecipeState = MachineRecipeState(
+        machineId = machineId,
+        inputBuffer = LinkedHashMap(inputBuffer),
+        outputQueue = ArrayList(outputQueue),
+        accumulatedInputFault = accumulatedInputFault
+    )
 }
 
 @Serializable

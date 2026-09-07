@@ -37,13 +37,8 @@ internal class MachineRecipeBuffers(private val access: RecipeStateWrites) {
     /** Counts one more [productId] into the buffer and folds [faultReason] into the running fault. */
     fun addInput(machineId: String, productId: String, faultReason: ProductFaultReason?) {
         val current = ensureFor(machineId)
-        val count = (current.inputBuffer[productId] ?: 0) + 1
-        replace(
-            current.copy(
-                inputBuffer = current.inputBuffer + (productId to count),
-                accumulatedInputFault = worstFault(current.accumulatedInputFault, faultReason)
-            )
-        )
+        current.inputBuffer[productId] = (current.inputBuffer[productId] ?: 0) + 1
+        current.accumulatedInputFault = worstFault(current.accumulatedInputFault, faultReason)
     }
 
     /**
@@ -52,38 +47,32 @@ internal class MachineRecipeBuffers(private val access: RecipeStateWrites) {
      */
     fun consumeInputs(machineId: String, recipe: MachineRecipe): ProductFaultReason? {
         val current = ensureFor(machineId)
-        val remaining = current.inputBuffer.toMutableMap()
+        val accumulated = current.accumulatedInputFault
         for (input in recipe.inputs) {
-            val left = (remaining[input.productId] ?: 0) - input.quantity
-            if (left <= 0) remaining.remove(input.productId) else remaining[input.productId] = left
+            val left = (current.inputBuffer[input.productId] ?: 0) - input.quantity
+            if (left <= 0) {
+                current.inputBuffer.remove(input.productId)
+            } else {
+                current.inputBuffer[input.productId] = left
+            }
         }
-        replace(current.copy(inputBuffer = remaining, accumulatedInputFault = null))
-        return current.accumulatedInputFault
+        current.accumulatedInputFault = null
+        return accumulated
     }
 
     fun queueOutput(machineId: String, output: QueuedMachineOutput) {
-        val current = ensureFor(machineId)
-        replace(current.copy(outputQueue = current.outputQueue + output))
+        ensureFor(machineId).outputQueue += output
     }
 
     /** Drops the head of the output queue, once the caller has placed it somewhere. */
     fun dropQueuedOutputHead(machineId: String) {
         val current = stateFor(machineId) ?: return
         if (current.outputQueue.isEmpty()) return
-        replace(current.copy(outputQueue = current.outputQueue.drop(1)))
+        current.outputQueue.removeAt(0)
     }
 
     fun pruneEmpty() {
         access.mutableMachineRecipeStates.removeAll { it.isEmpty }
-    }
-
-    private fun replace(recipeState: MachineRecipeState) {
-        val index = access.mutableMachineRecipeStates.indexOfId(recipeState.machineId)
-        if (index >= 0) {
-            access.mutableMachineRecipeStates[index] = recipeState
-        } else {
-            access.mutableMachineRecipeStates += recipeState
-        }
     }
 
     companion object {

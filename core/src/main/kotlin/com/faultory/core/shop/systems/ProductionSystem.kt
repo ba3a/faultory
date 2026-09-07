@@ -221,9 +221,14 @@ internal class ProductionSystem(
         }
     }
 
+    /**
+     * Walked by index over the live table rather than a copy of it: nothing on this path adds or
+     * removes a recipe row — emptied rows are dropped later, in [RecipeStateCleanupSystem] — and the
+     * copy ran every tick whether or not any machine had output waiting.
+     */
     fun drainRecipeOutputs(workerProfilesById: Map<String, WorkerProfile>) {
-        val states = mutableMachineRecipeStates.toList()
-        for (recipeState in states) {
+        for (index in mutableMachineRecipeStates.indices) {
+            val recipeState = mutableMachineRecipeStates[index]
             if (recipeState.outputQueue.isEmpty()) continue
             val machine = access.findObjectById(recipeState.machineId) as? PlacedShopObject.Machine ?: continue
             val machineSpec = machineSpecsById[machine.catalogId] ?: continue

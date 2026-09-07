@@ -170,7 +170,7 @@ class ShopFloorRecipeTest {
                 machineRecipeStates = listOf(
                     MachineRecipeState(
                         machineId = "blender-1",
-                        inputBuffer = mapOf(
+                        inputBuffer = mutableMapOf(
                             "ceramic-mug" to FloorTuning().machineInputBufferCap
                         )
                     )
