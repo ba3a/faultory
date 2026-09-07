@@ -42,8 +42,17 @@ internal class SecuritySystem(
             .filter { it in saboteursById }
             .toMutableSet()
 
-        for (security in securityWorkers) {
-            val current = access.findObjectById(security.id) as? PlacedShopObject.Worker ?: continue
+        // Iterating a snapshot of the ids, not the live index, mirroring the QA inspection loop:
+        // placedSecurityWorkers is the live list, and a worker whose role changes to or from
+        // SECURITY is added to or removed from it, which would skip an entry or run off the end.
+        // Nothing in the schedule writes workerRole today, but the loop should not depend on that.
+        // Records are also re-read per iteration: an earlier iteration can hand one a payload or
+        // send it somewhere, and the snapshot's elements would be as current either way, so the
+        // re-read exists to skip a worker that has left the floor entirely.
+        val securityWorkerIds = securityWorkers.map { it.id }
+
+        for (securityId in securityWorkerIds) {
+            val current = access.findObjectById(securityId) as? PlacedShopObject.Worker ?: continue
             val profile = workerProfilesById[current.catalogId] ?: continue
             val roleProfile = profile.profileFor(WorkerRole.SECURITY) ?: continue
 
