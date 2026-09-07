@@ -35,7 +35,7 @@ class StraightLineRoamerTest {
     fun `straight-line branch produces a path of at least minSteps tiles in one direction`() {
         // beltTripChance = 0 forces the straight-line branch on every roll.
         val roamer = StraightLineRoamer(
-            pathFinder = ShortestPathFinder(BeltTraversal.LongRide),
+            pathFinder = ShortestPathFinder(BeltTraversal.LONG_RIDE),
             minSteps = 3,
             maxSteps = 6,
             beltTripChance = 0f
@@ -57,7 +57,7 @@ class StraightLineRoamerTest {
     fun `belt-trip branch routes through the pathfinder to a belt tile`() {
         // beltTripChance = 1 forces every roll into the belt-trip branch.
         val roamer = StraightLineRoamer(
-            pathFinder = ShortestPathFinder(BeltTraversal.LongRide),
+            pathFinder = ShortestPathFinder(BeltTraversal.LONG_RIDE),
             minSteps = 3,
             maxSteps = 6,
             beltTripChance = 1f

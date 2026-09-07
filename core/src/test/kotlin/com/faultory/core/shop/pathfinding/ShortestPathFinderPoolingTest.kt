@@ -39,7 +39,7 @@ class ShortestPathFinderPoolingTest {
 
     @Test
     fun `plainBfs pooled buffers don't leak state between calls`() {
-        val finder = ShortestPathFinder(BeltTraversal.Avoid)
+        val finder = ShortestPathFinder(BeltTraversal.AVOID)
         val start = TileCoordinate(10, 10)
 
         val firstPath = assertNotNull(finder.findPath(grid, start, setOf(TileCoordinate(12, 10)), emptySet()))
@@ -60,7 +60,7 @@ class ShortestPathFinderPoolingTest {
 
     @Test
     fun `beltAwareBfs pooled buffers don't leak state between calls`() {
-        val finder = ShortestPathFinder(BeltTraversal.OneTileRide)
+        val finder = ShortestPathFinder(BeltTraversal.ONE_TILE_RIDE)
         val start = TileCoordinate(10, 10)
 
         val firstPath = assertNotNull(finder.findPath(grid, start, setOf(TileCoordinate(12, 10)), emptySet()))

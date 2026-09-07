@@ -5,11 +5,13 @@ import com.faultory.core.content.WorkerRoleProfile
 /**
  * Predefined coherent [MovementStrategy] instances.
  *
- * Each strategy pairs a [PathFinder] with a matching [BeltRidePolicy] so the simulation
- * walks paths the search produced. [securityPathFinder] / [cleanerPathFinder] are kept as
- * long-lived singletons - each holds pooled scratch buffers reused across calls (see
- * [PathFinder]'s KDoc) - so a per-worker [WorkerRoleProfile]'s roam tuning only rebuilds the cheap
- * [StraightLineRoamer] / [MovementStrategy] wrapper around them, never the path finder itself.
+ * Each strategy is built around exactly one [BeltTraversal], carried by its [ShortestPathFinder]:
+ * the roamer walks with the same finder and the simulation reads the same value through
+ * [MovementStrategy.beltTraversal], so the search, the roam and the boarding decision cannot
+ * disagree about belts. [securityPathFinder] / [cleanerPathFinder] are kept as long-lived
+ * singletons - each holds pooled scratch buffers reused across calls (see [PathFinder]'s KDoc) -
+ * so a per-worker [WorkerRoleProfile]'s roam tuning only rebuilds the cheap [StraightLineRoamer] /
+ * [MovementStrategy] wrapper around them, never the path finder itself.
  */
 object MovementStrategies {
 
@@ -17,13 +19,12 @@ object MovementStrategies {
      * Worker: shortest belt-aware path that allows mid-belt exits, simulation rides one tile.
      */
     val Worker: MovementStrategy = MovementStrategy(
-        pathFinder = ShortestPathFinder(BeltTraversal.OneTileRide),
-        roamer = null,
-        beltRidePolicy = BeltRidePolicy.OneTileRideExit
+        pathFinder = ShortestPathFinder(BeltTraversal.ONE_TILE_RIDE),
+        roamer = null
     )
 
-    private val securityPathFinder = ShortestPathFinder(BeltTraversal.LongRide)
-    private val cleanerPathFinder = ShortestPathFinder(BeltTraversal.Avoid)
+    private val securityPathFinder = ShortestPathFinder(BeltTraversal.LONG_RIDE)
+    private val cleanerPathFinder = ShortestPathFinder(BeltTraversal.AVOID)
 
     /**
      * Security: shortest path treating belts as plain walkable, straight-line roaming with
@@ -37,8 +38,7 @@ object MovementStrategies {
             minSteps = roleProfile?.roamMinSteps ?: 3,
             maxSteps = roleProfile?.roamMaxSteps ?: 10,
             beltTripChance = roleProfile?.beltTripChance ?: 0.12f
-        ),
-        beltRidePolicy = BeltRidePolicy.ChainLongRide
+        )
     )
 
     /**
@@ -53,7 +53,6 @@ object MovementStrategies {
             minSteps = roleProfile?.roamMinSteps ?: 1,
             maxSteps = roleProfile?.roamMaxSteps ?: 4,
             beltTripChance = 0f
-        ),
-        beltRidePolicy = BeltRidePolicy.OneTileRideExit
+        )
     )
 }

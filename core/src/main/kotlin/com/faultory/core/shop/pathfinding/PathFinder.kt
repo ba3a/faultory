@@ -9,8 +9,14 @@ import java.util.ArrayDeque
  *
  * Returns `null` when no path exists, an empty list when the start already satisfies a goal,
  * or the sequence of tiles to traverse (excluding the start).
+ *
+ * [beltTraversal] is the single source of truth for how paths from this finder cross belts —
+ * [MovementStrategy.beltTraversal] reads it, and [StraightLineRoamer] reads it off the finder it
+ * already holds rather than taking a second, possibly-disagreeing copy.
  */
-fun interface PathFinder {
+interface PathFinder {
+    val beltTraversal: BeltTraversal
+
     fun findPath(
         grid: ShopGrid,
         start: TileCoordinate,
@@ -23,13 +29,13 @@ fun interface PathFinder {
  * Breadth-first shortest-path finder parameterised by how it crosses belts.
  *
  * The BFS is bog-standard except for belt handling: each [BeltTraversal] variant supplies
- * its own neighbor expansion. [BeltTraversal.OneTileRide] uses a state-aware `(tile, rideCommitted)`
- * BFS so a worker entering a belt rides exactly one tile and may exit anywhere; [BeltTraversal.LongRide]
+ * its own neighbor expansion. [BeltTraversal.ONE_TILE_RIDE] uses a state-aware `(tile, rideCommitted)`
+ * BFS so a worker entering a belt rides exactly one tile and may exit anywhere; [BeltTraversal.LONG_RIDE]
  * treats belt tiles as plain walkable tiles (the chaining is handled by the simulation, not the search);
- * [BeltTraversal.Avoid] excludes belt tiles from the search entirely.
+ * [BeltTraversal.AVOID] excludes belt tiles from the search entirely.
  */
 class ShortestPathFinder(
-    private val beltTraversal: BeltTraversal
+    override val beltTraversal: BeltTraversal
 ) : PathFinder {
     // Reused across calls: MovementStrategies holds exactly 3 long-lived instances of this class for
     // the game's lifetime, the sim is single-threaded, and findPath is never called reentrantly, so
@@ -51,9 +57,9 @@ class ShortestPathFinder(
             return emptyList()
         }
         return when (beltTraversal) {
-            BeltTraversal.OneTileRide -> beltAwareBfs(grid, start, goals, blockedTiles)
-            BeltTraversal.LongRide -> plainBfs(grid, start, goals, blockedTiles, allowBelts = true)
-            BeltTraversal.Avoid -> plainBfs(grid, start, goals, blockedTiles, allowBelts = false)
+            BeltTraversal.ONE_TILE_RIDE -> beltAwareBfs(grid, start, goals, blockedTiles)
+            BeltTraversal.LONG_RIDE -> plainBfs(grid, start, goals, blockedTiles, allowBelts = true)
+            BeltTraversal.AVOID -> plainBfs(grid, start, goals, blockedTiles, allowBelts = false)
         }
     }
 

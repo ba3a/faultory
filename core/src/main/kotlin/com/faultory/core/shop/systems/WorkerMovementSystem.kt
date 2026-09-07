@@ -190,7 +190,7 @@ internal class WorkerMovementSystem(
         val newPath = if (worker.movementPath.firstOrNull() == exitTile) worker.movementPath.drop(1) else emptyList()
         val exitOrientation = Orientation.between(worker.position, exitTile) ?: worker.orientation
         val nextPhase = movementStrategyResolver.strategyFor(worker, workerProfilesById[worker.catalogId])
-            .beltRidePolicy.phaseAfterRide(grid, exitTile)
+            .beltTraversal.phaseAfterRide(grid, exitTile)
         access.updateWorker(worker.id) {
             it.position = exitTile
             it.orientation = exitOrientation

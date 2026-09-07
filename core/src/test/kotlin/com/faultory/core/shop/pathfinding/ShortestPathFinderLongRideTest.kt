@@ -33,7 +33,7 @@ class ShortestPathFinderLongRideTest {
         )
     )
 
-    private val finder = ShortestPathFinder(BeltTraversal.LongRide)
+    private val finder = ShortestPathFinder(BeltTraversal.LONG_RIDE)
 
     @Test
     fun `belt tiles are walkable as plain floor (no commitment in search)`() {
