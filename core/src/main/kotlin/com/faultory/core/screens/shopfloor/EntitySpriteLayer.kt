@@ -38,7 +38,14 @@ class EntitySpriteLayer(
     private val drawnIds: MutableSet<String> = mutableSetOf(),
     private val drawnProductIds: MutableSet<String> = mutableSetOf()
 ) : ShopFloorLayer {
-    private val planned = mutableListOf<PlannedSprite>()
+    private val planned = PlannedSpriteBuffer()
+
+    // Scratch geometry for a carried product: where its holder holds it, and where its handover
+    // partner would. Both are read and consumed inside one product's planning pass.
+    private val heldPlacement = SpritePlacement()
+    private val towardPlacement = SpritePlacement()
+    private val attachedPlacement = SpritePlacement()
+    private val inProductionPlacement = SpritePlacement()
 
     // The animation clock is keyed by String, and a producing machine's key is not simply its object
     // id, so it used to be concatenated afresh for every producing machine every frame. Keyed by
@@ -73,11 +80,11 @@ class EntitySpriteLayer(
         planPlacedObjects(ctx, skinRegistry, delta)
         planProducts(ctx, skinRegistry, delta)
         planInMachineProduction(ctx, skinRegistry, delta)
-        planned.sortWith(PlannedSprite.backToFront)
+        planned.sortBackToFront()
     }
 
     override fun drawSprite(ctx: ShopFloorRenderContext) {
-        planned.forEach { it.draw(ctx.spriteBatch) }
+        planned.drawAll(ctx.spriteBatch)
     }
 
     /**
@@ -133,7 +140,8 @@ class EntitySpriteLayer(
             val roleKey = group?.roleKeyFor(placedObject.id)
             val sort = group?.anchor ?: anchor
 
-            val base = PlannedSprite.standingOnTile(
+            val base = planned.obtain()
+            base.setStandingOnTile(
                 region = frame.region,
                 tileWorldX = anchor.worldX,
                 tileWorldY = anchor.worldY,
@@ -142,7 +150,6 @@ class EntitySpriteLayer(
                 sortAnchorX = sort.worldX,
                 sortAnchorY = sort.worldY
             )
-            planned += base
             planParts(frame, base.placement, group, roleKey)
             drawnIds += placedObject.id
         }
@@ -165,13 +172,10 @@ class EntitySpriteLayer(
         for (part in frame.parts()) {
             val region = frame.partRegion(part) ?: continue
             val key = if (group != null && roleKey != null) group.partKey(roleKey, part.name) else null
-            planned += PlannedSprite(
+            planned.obtain().setLayeredOver(
                 region = region,
-                placement = base.copy(
-                    width = region.regionWidth.toFloat(),
-                    height = region.regionHeight.toFloat(),
-                    depth = depthFor(group, key, part.depth)
-                )
+                source = base,
+                depth = depthFor(group, key, part.depth)
             )
         }
     }
@@ -198,14 +202,21 @@ class EntitySpriteLayer(
             val overlayRegion = overlayRegionFor(ctx, definition, product, orientation, delta)
             val tint = if (overlayRegion == null) ShopFloorPalette.productFaultTint(product.faultReason) else null
 
-            val base = attachedSpriteFor(product, frame, tint)
-                ?: tileSpriteFor(ctx, product, frame, tint)
-                ?: continue
+            val base = planned.obtain()
+            val placed = fillAttachedSprite(base, product, frame, tint) ||
+                fillTileSprite(base, ctx, product, frame, tint)
+            if (!placed) {
+                planned.discardLast()
+                continue
+            }
 
-            planned += base
             planParts(frame, base.placement)
             if (overlayRegion != null) {
-                planned += base.overlaidWith(overlayRegion, OVERLAY_DEPTH_STEP)
+                planned.obtain().setLayeredOver(
+                    region = overlayRegion,
+                    source = base.placement,
+                    depth = base.placement.depth + OVERLAY_DEPTH_STEP
+                )
             }
             drawnProductIds += product.id
         }
@@ -216,32 +227,29 @@ class EntitySpriteLayer(
      * lines up by the spot being held rather than by its corner. Returns null when the holder or the
      * socket is unauthored, and the caller places the product on a tile instead.
      */
-    private fun attachedSpriteFor(
+    private fun fillAttachedSprite(
+        target: PlannedSprite,
         product: ShopProduct,
         frame: SkinFrameLookup.ResolvedFrame,
         tint: Color?
-    ): PlannedSprite? {
+    ): Boolean {
         if (product.state != ShopProductState.CARRIED) {
-            return null
+            return false
         }
-        val holder = geometry.holderFor(product) ?: return null
-        val held = socketPlacementFor(holder, frame) ?: return null
-        val placement = handoverPlacement(holder, product, frame, held)
+        val holder = geometry.holderFor(product) ?: return false
+        if (!fillSocketPlacement(heldPlacement, holder, frame)) return false
+        fillHandoverPlacement(attachedPlacement, holder, product, frame, heldPlacement)
 
         // Inside a layered interaction the payload takes its authored slot, which is what puts a
         // product inside a machine with one of the worker's arms in front of it and one behind.
         val group = groupsByObjectId[holder.id]?.takeIf { it.payloadProductId == product.id }
-            ?: return PlannedSprite(frame.region, placement, tint)
-
-        return PlannedSprite(
-            region = frame.region,
-            placement = placement.copy(
-                groupX = group.anchor.worldX,
-                groupY = group.anchor.worldY,
-                depth = group.depthFor(InteractionRenderGroup.PAYLOAD, placement.depth)
-            ),
-            tint = tint
-        )
+        if (group != null) {
+            attachedPlacement.depth = group.depthFor(InteractionRenderGroup.PAYLOAD, attachedPlacement.depth)
+            attachedPlacement.groupX = group.anchor.worldX
+            attachedPlacement.groupY = group.anchor.worldY
+        }
+        target.setAt(frame.region, attachedPlacement, tint)
+        return true
     }
 
     /**
@@ -252,37 +260,40 @@ class EntitySpriteLayer(
      * holder is the giver and the partner the taker, afterwards they swap, and the same curve read
      * from either side describes one unbroken path.
      */
-    private fun handoverPlacement(
+    private fun fillHandoverPlacement(
+        target: SpritePlacement,
         holder: PlacedShopObject,
         product: ShopProduct,
         frame: SkinFrameLookup.ResolvedFrame,
         held: SpritePlacement
-    ): SpritePlacement {
+    ) {
+        target.setFrom(held)
         val interaction = (holder as? PlacedShopObject.Worker)
             ?.let { shopFloor.workerAnimationState(it.id).interaction }
-            ?.takeIf { it.payloadProductId == product.id } ?: return held
+            ?.takeIf { it.payloadProductId == product.id } ?: return
         val fraction = handoverFraction(
             elapsedSeconds = interaction.elapsedSeconds,
             transferSeconds = interaction.transferSeconds,
             durationSeconds = interaction.durationSeconds
         )
         if (fraction <= 0f) {
-            return held
+            return
         }
-        val partner = shopFloor.findObjectById(interaction.partnerObjectId) ?: return held
-        val toward = socketPlacementFor(partner, frame) ?: return held
+        val partner = shopFloor.findObjectById(interaction.partnerObjectId) ?: return
+        if (!fillSocketPlacement(towardPlacement, partner, frame)) return
 
-        return held.lerpTo(toward, fraction)
+        target.setLerped(held, towardPlacement, fraction)
     }
 
-    /** Where [holder] would hold [frame], or null when the holder authored no hands socket. */
-    private fun socketPlacementFor(
+    /** Where [holder] would hold [frame]; false when the holder authored no hands socket. */
+    private fun fillSocketPlacement(
+        target: SpritePlacement,
         holder: PlacedShopObject,
         frame: SkinFrameLookup.ResolvedFrame
-    ): SpritePlacement? {
-        val socket = framesByObjectId[holder.id]?.socket(SocketNames.HANDS) ?: return null
+    ): Boolean {
+        val socket = framesByObjectId[holder.id]?.socket(SocketNames.HANDS) ?: return false
         val anchor = geometry.holderAnchorFor(holder)
-        return SpritePlacement.atSocket(
+        target.setAtSocket(
             regionWidth = frame.region.regionWidth.toFloat(),
             regionHeight = frame.region.regionHeight.toFloat(),
             holderTileWorldX = anchor.worldX,
@@ -291,22 +302,25 @@ class EntitySpriteLayer(
             socket = socket,
             grip = frame.socket(SocketNames.GRIP)
         )
+        return true
     }
 
-    private fun tileSpriteFor(
+    private fun fillTileSprite(
+        target: PlannedSprite,
         ctx: ShopFloorRenderContext,
         product: ShopProduct,
         frame: SkinFrameLookup.ResolvedFrame,
         tint: Color?
-    ): PlannedSprite? {
-        val anchor = ctx.frame.renderPositionOf(product) ?: return null
-        return PlannedSprite.standingOnTile(
+    ): Boolean {
+        val anchor = ctx.frame.renderPositionOf(product) ?: return false
+        target.setStandingOnTile(
             region = frame.region,
             tileWorldX = anchor.worldX,
             tileWorldY = anchor.worldY,
             tileSize = GameConfig.tileSize,
             tint = tint
         )
+        return true
     }
 
     /**
@@ -331,17 +345,20 @@ class EntitySpriteLayer(
 
             val anchor = geometry.machineCenterFor(machine)
             val socket = framesByObjectId[machine.id]?.socket(SocketNames.HANDS)
-            planned += if (socket != null) {
-                PlannedSprite.atSocket(
-                    region = frame.region,
+            val sprite = planned.obtain()
+            if (socket != null) {
+                inProductionPlacement.setAtSocket(
+                    regionWidth = frame.region.regionWidth.toFloat(),
+                    regionHeight = frame.region.regionHeight.toFloat(),
                     holderTileWorldX = anchor.worldX,
                     holderTileWorldY = anchor.worldY,
                     tileSize = GameConfig.tileSize,
                     socket = socket,
                     grip = frame.socket(SocketNames.GRIP)
                 )
+                sprite.setAt(frame.region, inProductionPlacement)
             } else {
-                PlannedSprite.standingOnTile(
+                sprite.setStandingOnTile(
                     region = frame.region,
                     tileWorldX = anchor.worldX,
                     tileWorldY = anchor.worldY,

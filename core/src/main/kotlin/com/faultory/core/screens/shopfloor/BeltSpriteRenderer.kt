@@ -14,7 +14,7 @@ class BeltSpriteRenderer(
     private val shopFloor: ShopFloor,
     private val drawnTiles: MutableSet<TileCoordinate> = mutableSetOf()
 ) : ShopFloorLayer {
-    private val planned = mutableListOf<PlannedSprite>()
+    private val planned = PlannedSpriteBuffer()
 
     // The belt topology is fixed for the whole shift, so its per-tile clock keys are built once
     // rather than concatenated for every belt tile every frame.
@@ -46,7 +46,7 @@ class BeltSpriteRenderer(
                 delta = delta
             ) ?: continue
 
-            planned += PlannedSprite.coveringTile(
+            planned.obtain().setCoveringTile(
                 region = region,
                 tileWorldX = shopFloor.grid.worldXFor(tile),
                 tileWorldY = shopFloor.grid.worldYFor(tile),
@@ -57,7 +57,7 @@ class BeltSpriteRenderer(
     }
 
     override fun drawSprite(ctx: ShopFloorRenderContext) {
-        planned.forEach { it.draw(ctx.spriteBatch) }
+        planned.drawAll(ctx.spriteBatch)
     }
 
     private companion object {
