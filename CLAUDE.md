@@ -223,8 +223,21 @@ When a refactor clears out a mistake that could be made again, leave something b
 - `PlacedShopObject` is a `@Serializable sealed interface` (`Worker` / `Machine`, polymorphic
   `"type"` discriminator). A field lives on the subtype that owns it — do not add a nullable
   field to both. Branch on the subtype (`is PlacedShopObject.Worker`), not `.kind` (that member
-  is for the event / display boundary only). `@Transient` animation state (`beltRidePhase`,
-  `unitPhase`, `interaction`) still rides `Worker`.
+  is for the event / display boundary only).
+- **Shop-floor entity records are mutated in place, never copy-and-replaced.** `PlacedShopObject.Worker`
+  / `.Machine`, `ShopProduct` and `MachineRecipeState` are live records the simulation writes to.
+  Every field write on the first three goes through `PlacedObjectWrites.updateWorker` /
+  `updateMachine` or `ProductWrites.updateProduct`, which reconcile the indexes `ShopFloorState`
+  derives from tile, footprint, assignment, role and product state around the change; recipe buffers
+  go through `MachineRecipeBuffers`. Assigning a field directly on a record obtained from a `*Reads`
+  compiles, looks right, and silently corrupts an index — `ShopFloorMutationIndexTest` and
+  `ShopFloorSimulationIndexIntegrityTest` are what catch it. `id` stays `val` on all of them.
+  Anything that outlives the tick it read a record in stores an **id**, or takes `detached()`;
+  `ShopFloorState.snapshot()` detaches in both directions of the save boundary. Never use these
+  records as `Set` members or `Map` keys — their `hashCode` moves. The same rule holds one layer out
+  in the renderer: `AnimationState`, `PlannedSprite` and `SpritePlacement` are reused across frames
+  and are valid only for the frame that planned them, and a `ShopFloorFrame` freezes list membership
+  and resolved positions, not field values.
 - Do not introduce new dependencies without strong justification; add via `gradle/libs.versions.toml` and the relevant `build.gradle.kts`.
 - Do not introduce Spring, Ktor, Hibernate, or any backend framework speculatively.
 - Tests live in the module they exercise: `core/src/test/kotlin/com/faultory/core/...` for runtime
