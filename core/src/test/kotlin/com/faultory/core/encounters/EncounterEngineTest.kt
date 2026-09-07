@@ -4,6 +4,9 @@ import com.faultory.core.save.EncounterProgress
 import com.faultory.core.save.EncounterProgressRepository
 import com.faultory.core.save.GameSave
 import com.faultory.core.save.SaveRepository
+import com.faultory.core.shop.PlacedShopObject
+import com.faultory.core.shop.PlacedShopObjectKind
+import com.faultory.core.shop.TileCoordinate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -53,6 +56,39 @@ class EncounterEngineTest {
         assertEquals(1L, counters["shipped.__all__.product.ceramic-mug"])
         assertEquals(1L, counters["shipped.test-level.quality.good.product.ceramic-mug"])
         assertEquals(1L, counters["shipped.__all__.quality.good.product.ceramic-mug"])
+    }
+
+    @Test
+    fun `ObjectPlaced sees a machine placed mid-shift, not the floor as it was at shift start`() {
+        val bus = EventBus()
+        val catalog = EncounterCatalog(
+            encounters = listOf(
+                EncounterDefinition(
+                    id = "bench-placed",
+                    condition = Condition.ObjectPlaced(PlacedShopObjectKind.MACHINE, "bench-assembler"),
+                    effect = EncounterEffect.MarkTriggered,
+                    oneShot = true
+                )
+            )
+        )
+        val eng = engine(catalog, bus)
+        eng.currentLevelId = "test-level"
+
+        // The engine holds the floor itself, not a copy of it, the way ShopFloorScreen wires it.
+        val floor = mutableListOf<PlacedShopObject>()
+        eng.currentPlacedObjects = floor
+
+        bus.publish(ShiftStartedEvent(levelId = "test-level"))
+        assertFalse("bench-placed" in eng.progress.triggeredEncounterIds)
+
+        floor += PlacedShopObject.Machine(
+            id = "machine-1",
+            catalogId = "bench-assembler",
+            position = TileCoordinate(4, 4)
+        )
+        bus.publish(ShiftStartedEvent(levelId = "test-level"))
+
+        assertTrue("bench-placed" in eng.progress.triggeredEncounterIds)
     }
 
     @Test

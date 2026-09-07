@@ -19,6 +19,11 @@ class EncounterEngine(
         private set
 
     var currentLevelId: String? = null
+    /**
+     * The floor `Condition.ObjectPlaced` is evaluated against. A live view of the shop floor, not a
+     * copy: an encounter gated on a machine being placed should fire when the player places it, not
+     * at the start of the next shift. Cleared when the level closes.
+     */
     var currentPlacedObjects: List<PlacedShopObject>? = null
 
     private var fireDepth = 0

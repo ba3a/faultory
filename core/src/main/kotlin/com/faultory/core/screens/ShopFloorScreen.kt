@@ -177,16 +177,18 @@ class ShopFloorScreen(
 
     override fun show() {
         viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
-        // Snapshots, not the live view: both outlive this call — the context is held by
-        // upgradeFlow, and the placed-object list by the encounter engine — for the whole shift.
-        val placedObjectsSnapshot = shopFloor.placedObjects.toList()
+        // The live view, deliberately: both of these outlive this call — the context is held by
+        // upgradeFlow and the placed-object list by the encounter engine, for the whole shift — and
+        // "is this machine placed" should mean now, not at the moment the shift started. Neither
+        // outlives the screen; FaultoryGame clears the engine's list when the level closes.
+        val placedObjects = shopFloor.placedObjects
         val ctx = game.buildEvaluationContext(
             levelId = level.id,
-            placedObjects = placedObjectsSnapshot
+            placedObjects = placedObjects
         )
         bankPanel.rebuild(level, ctx)
         bankPanel.layout()
-        game.updateEncounterPlacedObjects(placedObjectsSnapshot)
+        game.updateEncounterPlacedObjects(placedObjects)
         upgradeFlow.evaluationContext = ctx
         if (shiftLifecycle.finalizeIfNeeded()) {
             input.clearInteractionStateForShiftEnd()
