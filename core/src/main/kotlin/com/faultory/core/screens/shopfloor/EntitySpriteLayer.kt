@@ -39,6 +39,12 @@ class EntitySpriteLayer(
     private val drawnProductIds: MutableSet<String> = mutableSetOf()
 ) : ShopFloorLayer {
     private val planned = mutableListOf<PlannedSprite>()
+
+    // The animation clock is keyed by String, and a producing machine's key is not simply its object
+    // id, so it used to be concatenated afresh for every producing machine every frame. Keyed by
+    // machine id, which is bounded by the floor and long-lived — unlike product ids, which churn
+    // constantly, so the fault overlay's key is deliberately not cached here.
+    private val producingAnimationIds = mutableMapOf<String, String>()
     private val framesByObjectId = mutableMapOf<String, SkinFrameLookup.ResolvedFrame>()
     private val groupsByObjectId = mutableMapOf<String, InteractionRenderGroup>()
 
@@ -315,7 +321,9 @@ class EntitySpriteLayer(
             val definition = skinDefinitionFor(productionState.productId, skinRegistry) ?: continue
             val frame = ctx.frameLookup.resolveFrame(
                 definition = definition,
-                animationId = "$PRODUCING_ANIMATION_PREFIX${productionState.machineId}",
+                animationId = producingAnimationIds.getOrPut(productionState.machineId) {
+                    "$PRODUCING_ANIMATION_PREFIX${productionState.machineId}"
+                },
                 action = SpriteAction.PRODUCING.id,
                 orientation = machine.orientation,
                 delta = delta

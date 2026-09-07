@@ -3,6 +3,7 @@ package com.faultory.core.graphics
 import com.faultory.core.shop.Orientation
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertSame
 import kotlin.test.assertNull
 
 class AnimationPlayerTest {
@@ -10,13 +11,31 @@ class AnimationPlayerTest {
     fun `advance tracks elapsed per id while action stays the same`() {
         val player = AnimationPlayer()
 
-        val first = player.advance("worker-1", SpriteAction.IDLE.id, Orientation.NORTH, 0.25f)
-        val second = player.advance("worker-1", SpriteAction.IDLE.id, Orientation.WEST, 0.25f)
-        val other = player.advance("worker-2", SpriteAction.IDLE.id, Orientation.SOUTH, 1f)
+        assertEquals(
+            AnimationState(SpriteAction.IDLE.id, Orientation.NORTH, 0f),
+            player.advance("worker-1", SpriteAction.IDLE.id, Orientation.NORTH, 0.25f)
+        )
+        assertEquals(
+            AnimationState(SpriteAction.IDLE.id, Orientation.WEST, 0.25f),
+            player.advance("worker-1", SpriteAction.IDLE.id, Orientation.WEST, 0.25f)
+        )
+        assertEquals(
+            AnimationState(SpriteAction.IDLE.id, Orientation.SOUTH, 0f),
+            player.advance("worker-2", SpriteAction.IDLE.id, Orientation.SOUTH, 1f)
+        )
+    }
 
-        assertEquals(AnimationState(SpriteAction.IDLE.id, Orientation.NORTH, 0f), first)
-        assertEquals(AnimationState(SpriteAction.IDLE.id, Orientation.WEST, 0.25f), second)
-        assertEquals(AnimationState(SpriteAction.IDLE.id, Orientation.SOUTH, 0f), other)
+    @Test
+    fun `an id's clock is one object, advanced in place`() {
+        val player = AnimationPlayer()
+
+        val first = player.advance("worker-1", SpriteAction.IDLE.id, Orientation.NORTH, 0.25f)
+        val second = player.advance("worker-1", SpriteAction.IDLE.id, Orientation.NORTH, 0.25f)
+
+        // Deliberate: the player owns one state per id and updates it, so nothing may hold a state
+        // past the frame it read it in. Callers read it and draw within the same frame.
+        assertSame(first, second)
+        assertEquals(0.25f, first.elapsed)
     }
 
     @Test

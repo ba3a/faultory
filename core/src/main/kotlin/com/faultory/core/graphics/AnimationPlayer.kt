@@ -4,10 +4,15 @@ import com.faultory.core.config.GameConfig
 import com.faultory.core.shop.Orientation
 import kotlin.math.floor
 
+/**
+ * One entity's animation clock, owned by [AnimationPlayer.statesById] and advanced in place.
+ * Mutable because [AnimationPlayer.advance] runs once per drawn entity per frame and used to
+ * allocate a fresh state on every one of them; nothing holds a state past the frame it read it in.
+ */
 data class AnimationState(
-    val action: String,
-    val orientation: Orientation,
-    val elapsed: Float
+    var action: String,
+    var orientation: Orientation,
+    var elapsed: Float
 )
 
 class AnimationPlayer {
@@ -20,17 +25,16 @@ class AnimationPlayer {
      */
     fun advance(id: String, action: String, orientation: Orientation, delta: Float): AnimationState {
         val previous = statesById[id]
-        val nextState = if (previous == null || previous.action != action) {
+        val nextState = if (previous == null) {
             AnimationState(action = action, orientation = orientation, elapsed = 0f)
+                .also { statesById[id] = it }
         } else {
-            AnimationState(
-                action = action,
-                orientation = orientation,
-                elapsed = previous.elapsed + delta.coerceAtLeast(0f)
-            )
+            previous.elapsed = if (previous.action != action) 0f else previous.elapsed + delta.coerceAtLeast(0f)
+            previous.action = action
+            previous.orientation = orientation
+            previous
         }
 
-        statesById[id] = nextState
         touchedIds += id
         return nextState
     }

@@ -16,6 +16,10 @@ class BeltSpriteRenderer(
 ) : ShopFloorLayer {
     private val planned = mutableListOf<PlannedSprite>()
 
+    // The belt topology is fixed for the whole shift, so its per-tile clock keys are built once
+    // rather than concatenated for every belt tile every frame.
+    private val animationIdsByTile = mutableMapOf<TileCoordinate, String>()
+
     fun drawnTilesView(): Set<TileCoordinate> = drawnTiles
 
     override fun prepare(ctx: ShopFloorRenderContext) {
@@ -34,7 +38,9 @@ class BeltSpriteRenderer(
             val definition = skinRegistry.get(info.skinId) ?: continue
             val region = ctx.frameLookup.region(
                 definition = definition,
-                animationId = "$BELT_ANIMATION_PREFIX${tile.x},${tile.y}",
+                animationId = animationIdsByTile.getOrPut(tile) {
+                    "$BELT_ANIMATION_PREFIX${tile.x},${tile.y}"
+                },
                 action = SpriteAction.forBeltShape(info.shape).id,
                 orientation = info.flow,
                 delta = delta
