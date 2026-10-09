@@ -80,6 +80,7 @@ class FindReferencesDialog(
             is AssetSelection.Machine -> "References to machine '${selection.id}'"
             is AssetSelection.Level -> "References to level '${selection.id}'"
             is AssetSelection.Blueprint -> "References to blueprint '${selection.shopAssetPath}'"
+            is AssetSelection.Scenery -> "References to ${selection.kind.label} '${selection.id}'"
         }
     }
 }

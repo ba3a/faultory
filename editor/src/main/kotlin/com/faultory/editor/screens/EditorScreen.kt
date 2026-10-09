@@ -11,15 +11,18 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.faultory.editor.backup.BackupService
+import com.faultory.editor.model.CreateResult
 import com.faultory.editor.model.DeleteResult
 import com.faultory.editor.model.Duplicator
 import com.faultory.editor.model.EditorSession
 import com.faultory.editor.model.ReferenceIndex
 import com.faultory.editor.model.RenameResult
+import com.faultory.editor.model.SceneryKind
 import com.faultory.editor.ui.dialogs.BakeAtlasDialog
 import com.faultory.editor.ui.dialogs.ConfirmDialog
 import com.faultory.editor.ui.dialogs.DuplicateDialog
 import com.faultory.editor.ui.dialogs.FindReferencesDialog
+import com.faultory.editor.ui.dialogs.NewIdDialog
 import com.faultory.editor.ui.dialogs.RenameDialog
 import com.faultory.editor.ui.inspector.Inspector
 import com.faultory.editor.ui.tree.AssetSelection
@@ -99,6 +102,10 @@ class EditorScreen(
         menuBar.addMenu(fileMenu)
 
         val editMenu = Menu("Edit")
+        SceneryKind.entries.forEach { kind ->
+            editMenu.addItem(menuItem("New ${kind.label}…") { openCreateDialog(kind) })
+        }
+        editMenu.addSeparator()
         editMenu.addItem(menuItem("Duplicate…") { openDuplicateDialog() })
         editMenu.addItem(menuItem("Find references…") {
             val selection = SelectionBus.current
@@ -212,6 +219,7 @@ class EditorScreen(
             is AssetSelection.Level -> selection.id
             is AssetSelection.Blueprint -> session.repository.blueprints[selection.shopAssetPath]?.id
                 ?: return
+            is AssetSelection.Scenery -> selection.id
         }
         RenameDialog(
             title = "Rename ${labelFor(selection)}",
@@ -254,6 +262,7 @@ class EditorScreen(
         is AssetSelection.Machine -> "machine"
         is AssetSelection.Level -> "level"
         is AssetSelection.Blueprint -> "blueprint"
+        is AssetSelection.Scenery -> selection.kind.label
     }
 
     private fun rebuildLeftPanel() {
@@ -264,6 +273,24 @@ class EditorScreen(
     private fun openFindReferences(selection: AssetSelection) {
         val session = session ?: return
         FindReferencesDialog.open(stage, selection, ReferenceIndex(session.repository))
+    }
+
+    private fun openCreateDialog(kind: SceneryKind) {
+        val session = session ?: run {
+            ConfirmDialog.info(stage, "New ${kind.label}", "No assets loaded.")
+            return
+        }
+        NewIdDialog(
+            title = "New ${kind.label.replaceFirstChar(Char::uppercase)}",
+            prompt = "New ${kind.label} id:",
+            onConfirm = { newId ->
+                when (val result = session.create(kind, newId)) {
+                    is CreateResult.Success -> SelectionBus.select(result.newSelection)
+                    is CreateResult.Collision -> ConfirmDialog.info(stage, "Create failed", result.message)
+                    is CreateResult.InvalidId -> ConfirmDialog.info(stage, "Create failed", result.message)
+                }
+            },
+        ).showOn(stage)
     }
 
     private fun openDuplicateDialog() {

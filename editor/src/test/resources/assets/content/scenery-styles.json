@@ -1,0 +1,13 @@
+{
+  "styles": [
+    {
+      "id": "plain",
+      "tagWeights": [
+        {
+          "tag": "brick",
+          "multiplier": 2.0
+        }
+      ]
+    }
+  ]
+}

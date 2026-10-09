@@ -19,6 +19,7 @@ object BlueprintValidator : Validator<AssetSelection.Blueprint> {
         issues += beltIssues(blueprint)
         issues += floorIssues(blueprint)
         issues += cameraIssues(blueprint)
+        issues += SceneryIssues.of(blueprint.scenery, context.repository)
         return issues
     }
 

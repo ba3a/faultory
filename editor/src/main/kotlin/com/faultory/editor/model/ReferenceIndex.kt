@@ -18,6 +18,7 @@ class ReferenceIndex(private val repository: AssetRepository) {
             is AssetSelection.Machine -> referencesToMachine(target.id)
             is AssetSelection.Level -> referencesToLevel(target.id)
             is AssetSelection.Blueprint -> referencesToBlueprint(target.shopAssetPath)
+            is AssetSelection.Scenery -> SceneryReferences(repository).referencesTo(target.kind, target.id)
         }
     }
 

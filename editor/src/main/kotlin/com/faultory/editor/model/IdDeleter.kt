@@ -28,7 +28,17 @@ class IdDeleter(
             is AssetSelection.Machine -> deleteMachine(selection.id)
             is AssetSelection.Level -> deleteLevel(selection.id)
             is AssetSelection.Blueprint -> deleteBlueprint(selection.shopAssetPath)
+            is AssetSelection.Scenery -> deleteScenery(selection.kind, selection.id)
         }
+    }
+
+    private fun deleteScenery(kind: SceneryKind, id: String): DeleteResult {
+        if (!kind.collection.remove(repository, id)) {
+            return DeleteResult.NotFound("${kind.label.replaceFirstChar(Char::uppercase)} '$id' not found")
+        }
+        SceneryReferences(repository).delete(kind, id)
+        onMutated()
+        return DeleteResult.Success
     }
 
     private fun deleteProduct(id: String): DeleteResult {

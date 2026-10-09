@@ -25,6 +25,10 @@ class BackupService(
             shopCatalog = repository.shopCatalog,
             levelCatalog = repository.levelCatalog,
             blueprints = repository.blueprints.toMap(),
+            terrainCatalog = repository.terrainCatalog,
+            tileCatalog = repository.tileCatalog,
+            wallCatalog = repository.wallCatalog,
+            sceneryStyleCatalog = repository.sceneryStyleCatalog,
         )
     }
 
@@ -50,6 +54,10 @@ class BackupService(
 
         repository.shopCatalog = bundle.shopCatalog
         repository.levelCatalog = bundle.levelCatalog
+        repository.terrainCatalog = bundle.terrainCatalog
+        repository.tileCatalog = bundle.tileCatalog
+        repository.wallCatalog = bundle.wallCatalog
+        repository.sceneryStyleCatalog = bundle.sceneryStyleCatalog
         repository.blueprints.clear()
         bundle.blueprints.forEach { (path, blueprint) -> repository.blueprints[path] = blueprint }
         repository.writeAll()

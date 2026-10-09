@@ -4,7 +4,9 @@ import com.faultory.core.assets.AssetPaths
 import com.faultory.core.content.ShopCatalog
 import com.faultory.core.graphics.InteractionCatalog
 import com.faultory.core.graphics.SkinActionCatalog
+import com.faultory.core.scenery.SceneryContent
 import com.faultory.core.shop.ShopBlueprint
+import com.faultory.editor.model.SceneryKind
 import com.faultory.editor.ui.tree.AssetSelection
 
 /** One animations grid: which skin it edits, and which action rows it shows. */
@@ -28,6 +30,7 @@ object AnimationTargets {
         catalog: ShopCatalog,
         blueprints: Map<String, ShopBlueprint>,
         interactions: InteractionCatalog = InteractionCatalog(),
+        scenery: SceneryContent = SceneryContent(),
     ): List<AnimationTarget> = when (selection) {
         // Interaction halves are authored per interaction rather than as fixed constants, so the
         // rows a worker offers depend on what the interaction catalog currently defines.
@@ -49,6 +52,13 @@ object AnimationTargets {
         is AssetSelection.Blueprint -> beltTargets(blueprints[selection.shopAssetPath])
 
         is AssetSelection.Level -> emptyList()
+
+        // Ground tiles and wall pieces are one static frame each; terrains and styles have no art.
+        is AssetSelection.Scenery -> when (selection.kind) {
+            SceneryKind.TILE -> scenery.tiles.tiles.firstOrNull { it.id == selection.id }?.skin
+            SceneryKind.WALL -> scenery.walls.walls.firstOrNull { it.id == selection.id }?.skin
+            SceneryKind.TERRAIN, SceneryKind.STYLE -> null
+        }.toTargets(SkinActionCatalog.tile)
     }
 
     /**

@@ -6,13 +6,21 @@ import com.faultory.core.content.MachineType
 import com.faultory.core.content.Manuality
 import com.faultory.core.content.ProductDefinition
 import com.faultory.core.content.ShopCatalog
+import com.faultory.core.content.TileCatalog
+import com.faultory.core.content.TileCorners
+import com.faultory.core.content.TileDefinition
+import com.faultory.core.content.WallCatalog
+import com.faultory.core.content.WallDefinition
+import com.faultory.core.content.WallSegment
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.graphics.InteractionCatalog
 import com.faultory.core.graphics.InteractionDefinition
 import com.faultory.core.graphics.SkinActionCatalog
+import com.faultory.core.scenery.SceneryContent
 import com.faultory.core.shop.BeltNode
 import com.faultory.core.shop.ConveyorBelt
 import com.faultory.core.shop.ShopBlueprint
+import com.faultory.editor.model.SceneryKind
 import com.faultory.editor.ui.tree.AssetSelection
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -122,6 +130,21 @@ class AnimationTargetsTest {
         assertTrue(targetsFor(AssetSelection.Product("missing")).isEmpty())
         assertTrue(targetsFor(AssetSelection.Blueprint("shops/missing.json")).isEmpty())
         assertTrue(targetsFor(AssetSelection.Level("tutorial-shop")).isEmpty())
+    }
+
+    @Test
+    fun `ground tiles and wall pieces offer their one static frame, terrains and styles nothing`() {
+        val scenery = SceneryContent(
+            tiles = TileCatalog(listOf(TileDefinition("grass", "tile_grass", TileCorners("g", "g", "g", "g")))),
+            walls = WallCatalog(listOf(WallDefinition("brick", "wall_brick", WallSegment.FAR))),
+        )
+        fun targets(kind: SceneryKind, id: String) =
+            AnimationTargets.forSelection(AssetSelection.Scenery(kind, id), catalog, blueprints, scenery = scenery)
+
+        assertEquals(listOf(AnimationTarget("tile_grass", SkinActionCatalog.tile)), targets(SceneryKind.TILE, "grass"))
+        assertEquals(listOf(AnimationTarget("wall_brick", SkinActionCatalog.tile)), targets(SceneryKind.WALL, "brick"))
+        assertTrue(targets(SceneryKind.TERRAIN, "g").isEmpty())
+        assertTrue(targets(SceneryKind.STYLE, "plain").isEmpty())
     }
 
     private fun targetsFor(selection: AssetSelection) =

@@ -9,6 +9,7 @@ object ValidatorRegistry {
         AssetSelection.Machine::class.java to MachineValidator,
         AssetSelection.Level::class.java to LevelValidator,
         AssetSelection.Blueprint::class.java to BlueprintValidator,
+        AssetSelection.Scenery::class.java to SceneryValidator,
     )
 
     fun validate(selection: AssetSelection, context: ValidationContext): List<ValidationIssue> {

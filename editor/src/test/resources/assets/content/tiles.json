@@ -1,0 +1,28 @@
+{
+  "tiles": [
+    {
+      "id": "floor_full",
+      "skin": "tile_floor_full",
+      "corners": {
+        "northWest": "floor",
+        "northEast": "floor",
+        "southEast": "floor",
+        "southWest": "floor"
+      },
+      "weight": 1.0,
+      "tags": []
+    },
+    {
+      "id": "yard_full",
+      "skin": "tile_yard_full",
+      "corners": {
+        "northWest": "yard",
+        "northEast": "yard",
+        "southEast": "yard",
+        "southWest": "yard"
+      },
+      "weight": 1.0,
+      "tags": ["grassy"]
+    }
+  ]
+}

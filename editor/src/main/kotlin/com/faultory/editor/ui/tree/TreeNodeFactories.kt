@@ -3,6 +3,8 @@ package com.faultory.editor.ui.tree
 import com.faultory.core.content.BinaryUpgradeTree
 import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.ShopCatalog
+import com.faultory.editor.model.SceneryKind
+import com.faultory.editor.repository.AssetRepository
 
 object TreeNodeFactories {
     fun buildItemsNode(catalog: ShopCatalog): AssetTreeNode {
@@ -31,6 +33,19 @@ object TreeNodeFactories {
                 scenesNode.add(levelNode)
             }
         return scenesNode
+    }
+
+    /** One group per scenery catalog, each listing its entries by id. */
+    fun buildSceneryNode(repository: AssetRepository): AssetTreeNode {
+        val sceneryNode = AssetTreeNode(label = "Scenery", selection = null)
+        SceneryKind.entries.forEach { kind ->
+            val kindNode = AssetTreeNode(label = kind.pluralLabel, selection = null)
+            kind.collection.ids(repository).sorted().forEach { id ->
+                kindNode.add(AssetTreeNode(label = id, selection = AssetSelection.Scenery(kind, id)))
+            }
+            sceneryNode.add(kindNode)
+        }
+        return sceneryNode
     }
 
     private fun buildProductsNode(catalog: ShopCatalog): AssetTreeNode {

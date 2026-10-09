@@ -92,6 +92,17 @@ class EditorSession(
         markDirty()
     }
 
+    fun <T : Any> updateScenery(collection: SceneryCollection<T>, originalId: String, updated: T) {
+        if (collection.replace(repository, originalId, updated)) markDirty()
+    }
+
+    /** Adds a blank scenery entry named [id] and tells the tree, which has to show it. */
+    fun create(kind: SceneryKind, id: String): CreateResult {
+        val result = AssetCreator(repository) { markDirty() }.create(kind, id)
+        if (result is CreateResult.Success) fireStructureChanged()
+        return result
+    }
+
     fun rename(selection: com.faultory.editor.ui.tree.AssetSelection, newId: String): RenameResult {
         val result = IdRenamer(repository, translationStore) { markDirty() }.rename(selection, newId)
         if (result is RenameResult.Success) fireStructureChanged()

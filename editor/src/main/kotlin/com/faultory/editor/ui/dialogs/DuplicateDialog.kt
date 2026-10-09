@@ -61,6 +61,11 @@ object DuplicateDialog {
                     suggest(baseName),
                 )
             }
+            is AssetSelection.Scenery -> Triple(
+                "Duplicate ${selection.kind.label.replaceFirstChar(Char::uppercase)}",
+                "New ${selection.kind.label} id:",
+                suggest(selection.id),
+            )
         }
     }
 

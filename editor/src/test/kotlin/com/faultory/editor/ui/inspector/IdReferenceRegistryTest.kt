@@ -4,7 +4,13 @@ import com.faultory.core.content.BinaryUpgradeTree
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.content.MachineSpec
 import com.faultory.core.content.ProductDefinition
+import com.faultory.core.content.TileCorners
+import com.faultory.core.content.TileDefinition
 import com.faultory.core.content.WorkerProfile
+import com.faultory.core.shop.ScenerySpec
+import com.faultory.core.shop.ShopBlueprint
+import com.faultory.core.shop.TerrainRegion
+import com.faultory.core.shop.TilePin
 import kotlinx.serialization.serializer
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -69,5 +75,22 @@ class IdReferenceRegistryTest {
         assertNull(IdReferenceRegistry.lookup(listOf(machineSpecName), "skin"))
         assertNull(IdReferenceRegistry.lookup(listOf(productDefinitionName), "id"))
         assertNull(IdReferenceRegistry.lookup(listOf(upgradeTreeName), "leftUpgradeId"))
+    }
+
+    @Test
+    fun `scenery fields resolve through owner chains of any depth`() {
+        val blueprint = serializer<ShopBlueprint>().descriptor.serialName
+        val scenery = serializer<ScenerySpec>().descriptor.serialName
+        val region = serializer<TerrainRegion>().descriptor.serialName
+        val pin = serializer<TilePin>().descriptor.serialName
+        val tile = serializer<TileDefinition>().descriptor.serialName
+        val corners = serializer<TileCorners>().descriptor.serialName
+
+        assertEquals(CatalogType.TERRAIN, IdReferenceRegistry.lookup(listOf(blueprint, scenery), "floorTerrain"))
+        assertEquals(CatalogType.STYLE, IdReferenceRegistry.lookup(listOf(blueprint, scenery), "styleId"))
+        assertEquals(CatalogType.TERRAIN, IdReferenceRegistry.lookup(listOf(blueprint, scenery, region), "terrain"))
+        assertEquals(CatalogType.TILE, IdReferenceRegistry.lookup(listOf(blueprint, scenery, pin), "tileId"))
+        assertEquals(CatalogType.TERRAIN, IdReferenceRegistry.lookup(listOf(tile, corners), "southWest"))
+        assertNull(IdReferenceRegistry.lookup(listOf(scenery, region), "terrain"), "the chain must match from the root")
     }
 }

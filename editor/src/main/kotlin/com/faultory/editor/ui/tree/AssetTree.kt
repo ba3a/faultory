@@ -20,10 +20,13 @@ class AssetTree(
     init {
         val itemsNode = TreeNodeFactories.buildItemsNode(repository.shopCatalog)
         val scenesNode = TreeNodeFactories.buildScenesNode(repository.levelCatalog)
+        val sceneryNode = TreeNodeFactories.buildSceneryNode(repository)
         add(itemsNode)
         add(scenesNode)
+        add(sceneryNode)
         itemsNode.expandAll()
         scenesNode.expandAll()
+        sceneryNode.expandAll()
 
         primaryIndex = buildPrimaryIndex()
 

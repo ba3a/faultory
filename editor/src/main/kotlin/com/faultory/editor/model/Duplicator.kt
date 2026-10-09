@@ -25,7 +25,24 @@ class Duplicator(
             is AssetSelection.Machine -> duplicateMachine(selection.id, newId)
             is AssetSelection.Level -> duplicateLevel(selection.id, newId)
             is AssetSelection.Blueprint -> duplicateBlueprint(selection.shopAssetPath, newId)
+            is AssetSelection.Scenery -> duplicateScenery(selection.kind.collection, selection.id, newId)
         }
+    }
+
+    private fun <T : Any> duplicateScenery(
+        collection: SceneryCollection<T>,
+        originalId: String,
+        newId: String,
+    ): DuplicateResult {
+        val label = collection.kind.label.replaceFirstChar(Char::uppercase)
+        val original = collection.find(repository, originalId)
+            ?: return DuplicateResult.NotFound("$label '$originalId' not found")
+        if (collection.contains(repository, newId)) {
+            return DuplicateResult.Collision("$label id '$newId' already exists")
+        }
+        collection.add(repository, collection.withId(original, newId))
+        session?.markDirty()
+        return DuplicateResult.Success(AssetSelection.Scenery(collection.kind, newId))
     }
 
     private fun duplicateProduct(originalId: String, newId: String): DuplicateResult {

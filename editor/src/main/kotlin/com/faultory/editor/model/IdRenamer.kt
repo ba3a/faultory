@@ -33,7 +33,23 @@ class IdRenamer(
             is AssetSelection.Machine -> renameMachine(selection.id, newId)
             is AssetSelection.Level -> renameLevel(selection.id, newId)
             is AssetSelection.Blueprint -> renameBlueprint(selection.shopAssetPath, newId)
+            is AssetSelection.Scenery -> renameScenery(selection.kind.collection, selection.id, newId)
         }
+    }
+
+    private fun <T : Any> renameScenery(collection: SceneryCollection<T>, oldId: String, newId: String): RenameResult {
+        val selection = AssetSelection.Scenery(collection.kind, newId)
+        if (oldId == newId) return RenameResult.Success(selection)
+        val label = collection.kind.label.replaceFirstChar(Char::uppercase)
+        val original = collection.find(repository, oldId)
+            ?: return RenameResult.NotFound("$label '$oldId' not found")
+        if (collection.contains(repository, newId)) {
+            return RenameResult.Collision("$label id '$newId' already exists")
+        }
+        collection.replace(repository, oldId, collection.withId(original, newId))
+        SceneryReferences(repository).rename(collection.kind, oldId, newId)
+        onMutated()
+        return RenameResult.Success(selection)
     }
 
     private fun renameProduct(oldId: String, newId: String): RenameResult {

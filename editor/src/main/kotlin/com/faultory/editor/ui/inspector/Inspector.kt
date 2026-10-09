@@ -9,6 +9,9 @@ import com.faultory.core.i18n.MessageKey
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.editor.i18n.TranslationStore
 import com.faultory.editor.model.EditorSession
+import kotlinx.serialization.KSerializer
+import com.faultory.editor.model.SceneryKind
+import com.faultory.editor.model.SceneryCollection
 import com.faultory.editor.repository.EditorJson
 import com.faultory.editor.ui.dialogs.TranslationsDialog
 import com.faultory.editor.ui.inspector.animations.AnimationTargets
@@ -26,12 +29,9 @@ import com.kotcrab.vis.ui.widget.VisSelectBox
 import com.kotcrab.vis.ui.widget.VisTable
 import com.kotcrab.vis.ui.widget.VisTextButton
 import com.kotcrab.vis.ui.widget.VisTextField
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.serializer
 import com.faultory.editor.ui.scrollWhileHovered
 
 class Inspector(
@@ -163,6 +163,7 @@ class Inspector(
         is AssetSelection.Machine -> "machines"
         is AssetSelection.Level -> "levels"
         is AssetSelection.Blueprint -> null
+        is AssetSelection.Scenery -> null
     }
 
     private fun idFor(selection: AssetSelection): String? = when (selection) {
@@ -171,6 +172,7 @@ class Inspector(
         is AssetSelection.Machine -> selection.id
         is AssetSelection.Level -> selection.id
         is AssetSelection.Blueprint -> repository.blueprints[selection.shopAssetPath]?.id
+        is AssetSelection.Scenery -> selection.id
     }
 
     private fun rootIdActor(selection: AssetSelection, currentId: String): VisTable {
@@ -231,6 +233,7 @@ class Inspector(
             catalog = repository.shopCatalog,
             blueprints = repository.blueprints,
             interactions = repository.interactionCatalog,
+            scenery = repository.sceneryContent(),
         )
         if (targets.isEmpty()) return
 
@@ -280,66 +283,55 @@ class Inspector(
         val onChange: () -> Unit,
     )
 
-    private fun buildEditors(selection: AssetSelection): EditorsBundle? {
-        return when (selection) {
-            is AssetSelection.Product -> findProduct(selection.id)?.let { product ->
-                val original = originalJson(product)
-                val editors = ReflectionForm.editorsFor(product)
-                EditorsBundle(editors) {
-                    val updated = EditorJson.instance.decodeFromString<ProductDefinition>(
-                        EditorJson.instance.encodeToString(EditorCommitter.commit(editors, original))
-                    )
-                    session.updateProduct(selection.id, updated)
-                }
-            }
-            is AssetSelection.Worker -> findWorker(selection.id)?.let { worker ->
-                val original = originalJson(worker)
-                val genericEditors = ReflectionForm.editorsFor(worker)
+    private fun buildEditors(selection: AssetSelection): EditorsBundle? = when (selection) {
+        is AssetSelection.Product -> bundleFor(findProduct(selection.id), ProductDefinition.serializer()) {
+            session.updateProduct(selection.id, it)
+        }
+        is AssetSelection.Worker -> bundleFor(
+            instance = findWorker(selection.id),
+            serializer = WorkerProfile.serializer(),
+            customize = { editors, original ->
+                // Role profiles get a hand-written editor: one checkbox slot per role.
                 val rolesArray = original["roleProfiles"] as? JsonArray ?: JsonArray(emptyList())
                 val rolesEditor = WorkerRoleProfilesEditor(initialProfiles = rolesArray)
-                val editors = genericEditors.map { if (it.fieldName == "roleProfiles") rolesEditor else it }
-                EditorsBundle(editors) {
-                    val updated = EditorJson.instance.decodeFromString<WorkerProfile>(
-                        EditorJson.instance.encodeToString(EditorCommitter.commit(editors, original))
-                    )
-                    session.updateWorker(selection.id, updated)
-                }
-            }
-            is AssetSelection.Machine -> findMachine(selection.id)?.let { machine ->
-                val original = originalJson(machine)
-                val editors = ReflectionForm.editorsFor(machine)
-                EditorsBundle(editors) {
-                    val updated = EditorJson.instance.decodeFromString<MachineSpec>(
-                        EditorJson.instance.encodeToString(EditorCommitter.commit(editors, original))
-                    )
-                    session.updateMachine(selection.id, updated)
-                }
-            }
-            is AssetSelection.Level -> findLevel(selection.id)?.let { level ->
-                val original = originalJson(level)
-                val editors = ReflectionForm.editorsFor(level)
-                EditorsBundle(editors) {
-                    val updated = EditorJson.instance.decodeFromString<LevelDefinition>(
-                        EditorJson.instance.encodeToString(EditorCommitter.commit(editors, original))
-                    )
-                    session.updateLevel(selection.id, updated)
-                }
-            }
-            is AssetSelection.Blueprint -> findBlueprint(selection.shopAssetPath)?.let { blueprint ->
-                val original = originalJson(blueprint)
-                val editors = ReflectionForm.editorsFor(blueprint)
-                EditorsBundle(editors) {
-                    val updated = EditorJson.instance.decodeFromString<ShopBlueprint>(
-                        EditorJson.instance.encodeToString(EditorCommitter.commit(editors, original))
-                    )
-                    session.updateBlueprint(selection.shopAssetPath, updated)
-                }
-            }
+                editors.map { if (it.fieldName == "roleProfiles") rolesEditor else it }
+            },
+        ) { session.updateWorker(selection.id, it) }
+        is AssetSelection.Machine -> bundleFor(findMachine(selection.id), MachineSpec.serializer()) {
+            session.updateMachine(selection.id, it)
         }
+        is AssetSelection.Level -> bundleFor(findLevel(selection.id), LevelDefinition.serializer()) {
+            session.updateLevel(selection.id, it)
+        }
+        is AssetSelection.Blueprint -> bundleFor(findBlueprint(selection.shopAssetPath), ShopBlueprint.serializer()) {
+            session.updateBlueprint(selection.shopAssetPath, it)
+        }
+        is AssetSelection.Scenery -> sceneryBundle(selection.kind.collection, selection.id)
     }
 
-    private inline fun <reified T> originalJson(instance: T): JsonObject =
-        EditorJson.instance.encodeToJsonElement(serializer<T>(), instance).jsonObject
+    private fun <T : Any> sceneryBundle(collection: SceneryCollection<T>, id: String): EditorsBundle? =
+        bundleFor(collection.find(repository, id), collection.serializer) {
+            session.updateScenery(collection, id, it)
+        }
+
+    /**
+     * The one way every selection becomes a form: reflect [instance] into editors (optionally
+     * swapping some out in [customize]), and on every change fold them back over the original
+     * JSON - so fields the form cannot show survive - and hand the decoded result to [commit].
+     */
+    private fun <T : Any> bundleFor(
+        instance: T?,
+        serializer: KSerializer<T>,
+        customize: (List<PropertyEditor>, JsonObject) -> List<PropertyEditor> = { editors, _ -> editors },
+        commit: (T) -> Unit,
+    ): EditorsBundle? {
+        if (instance == null) return null
+        val original = EditorJson.instance.encodeToJsonElement(serializer, instance).jsonObject
+        val editors = customize(ReflectionForm.editorsFor(serializer, instance), original)
+        return EditorsBundle(editors) {
+            commit(EditorJson.instance.decodeFromJsonElement(serializer, EditorCommitter.commit(editors, original)))
+        }
+    }
 
     private fun findProduct(id: String): ProductDefinition? =
         repository.shopCatalog.products.firstOrNull { it.id == id }
@@ -361,6 +353,7 @@ class Inspector(
         is AssetSelection.Machine -> "Machine: ${selection.id}"
         is AssetSelection.Level -> "Level: ${selection.id}"
         is AssetSelection.Blueprint -> "Blueprint: ${selection.shopAssetPath}"
+        is AssetSelection.Scenery -> "${selection.kind.label.replaceFirstChar(Char::uppercase)}: ${selection.id}"
     }
 
     private fun actorFor(editor: PropertyEditor, onChange: () -> Unit): com.badlogic.gdx.scenes.scene2d.Actor {
@@ -548,6 +541,10 @@ class Inspector(
             CatalogType.WORKER -> repository.shopCatalog.workers.map { it.id }
             CatalogType.MACHINE -> repository.shopCatalog.machines.map { it.id }
             CatalogType.LEVEL -> repository.levelCatalog.levels.map { it.id }
+            CatalogType.TERRAIN -> SceneryKind.TERRAIN.collection.ids(repository)
+            CatalogType.TILE -> SceneryKind.TILE.collection.ids(repository)
+            CatalogType.WALL -> SceneryKind.WALL.collection.ids(repository)
+            CatalogType.STYLE -> SceneryKind.STYLE.collection.ids(repository)
         }
     }
 

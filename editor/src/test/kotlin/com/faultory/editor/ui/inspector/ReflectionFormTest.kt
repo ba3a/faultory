@@ -11,6 +11,10 @@ import com.faultory.core.content.Manuality
 import com.faultory.core.content.ProductDefinition
 import com.faultory.core.content.QaMachineProfile
 import com.faultory.core.content.RecipeInput
+import com.faultory.core.shop.ScenerySpec
+import com.faultory.core.shop.ShopBlueprint
+import com.faultory.core.shop.TerrainRegion
+import com.faultory.core.shop.TileRect
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -230,5 +234,32 @@ class ReflectionFormTest {
 
         editor.move(0, 2)
         assertEquals(listOf("c", "d", "a"), editor.values)
+    }
+
+    @Test
+    fun `a blueprint's scenery names terrains, styles and pieces through id-reference pickers`() {
+        val blueprint = ShopBlueprint(
+            id = "shop",
+            displayName = "Shop",
+            qualityThresholdPercent = 90f,
+            shiftLengthSeconds = 60f,
+            scenery = ScenerySpec(
+                floorTerrain = "floor",
+                outsideTerrain = "yard",
+                regions = listOf(TerrainRegion(TileRect(0, 0, 1, 1), "yard")),
+            ),
+            conveyorBelts = emptyList(),
+            machineSlots = emptyList(),
+            workerSpawnPoints = emptyList(),
+        )
+
+        val scenery = ReflectionForm.editorsFor(blueprint).single { it.fieldName == "scenery" } as ClassEditor
+        val byName = scenery.children.associateBy { it.fieldName }
+
+        assertEquals(IdReferenceEditor("floorTerrain", "floor", CatalogType.TERRAIN, false), byName["floorTerrain"])
+        assertEquals(IdReferenceEditor("styleId", "", CatalogType.STYLE, true), byName["styleId"])
+        val regions = byName["regions"] as ClassListEditor
+        val regionTerrain = regions.items.single().editors.single { it.fieldName == "terrain" }
+        assertEquals(CatalogType.TERRAIN, (regionTerrain as IdReferenceEditor).catalogType)
     }
 }

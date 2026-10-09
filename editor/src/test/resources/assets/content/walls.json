@@ -1,0 +1,11 @@
+{
+  "walls": [
+    {
+      "id": "brick_far",
+      "skin": "wall_brick_far",
+      "segment": "FAR",
+      "weight": 1.0,
+      "tags": ["brick"]
+    }
+  ]
+}
