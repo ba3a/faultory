@@ -21,6 +21,7 @@ import com.faultory.core.content.ShopCatalog
 import com.faultory.core.screens.shopfloor.BankPanel
 import com.faultory.core.screens.shopfloor.BeltSpriteRenderer
 import com.faultory.core.screens.shopfloor.BankPanelRenderer
+import com.faultory.core.screens.shopfloor.CameraBounds
 import com.faultory.core.screens.shopfloor.CameraInput
 import com.faultory.core.screens.shopfloor.CameraRig
 import com.faultory.core.screens.shopfloor.CaptureDebugLayer
@@ -68,8 +69,8 @@ class ShopFloorScreen(
     private val uiViewport = FitViewport(GameConfig.virtualWidth, GameConfig.virtualHeight)
     private val worldCamera = OrthographicCamera()
     private val worldViewport = FitViewport(GameConfig.virtualWidth, GameConfig.virtualHeight, worldCamera)
-    private val camera = CameraRig()
-    private val pointerState = PointerState(uiViewport, worldViewport)
+    private val camera = CameraRig(CameraBounds.of(shopFloor.blueprint.camera))
+    private val pointerState = PointerState(uiViewport, worldViewport, camera.bounds)
     private val catalogLookup = CatalogLookup(shopCatalog)
     private val titleLayout = GlyphLayout()
     private val hintLayout = GlyphLayout()
@@ -268,6 +269,7 @@ class ShopFloorScreen(
         // take and has to replay frame-exactly like the simulation does.
         camera.update(effectiveDelta)
         applyCameraPose()
+        camera.writeVisibleWorld(renderContext.visibleWorld)
         if (camera.moved) {
             input.refreshPointer()
         }

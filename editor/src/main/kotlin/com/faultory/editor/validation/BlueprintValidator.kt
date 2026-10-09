@@ -1,7 +1,10 @@
 package com.faultory.editor.validation
 
+import com.faultory.core.screens.shopfloor.CameraBounds
+import com.faultory.core.screens.shopfloor.CameraTuning
 import com.faultory.core.shop.ShopBlueprint
 import com.faultory.core.shop.ShopGrid
+import com.faultory.core.shop.TileRect
 import com.faultory.editor.ui.tree.AssetSelection
 
 object BlueprintValidator : Validator<AssetSelection.Blueprint> {
@@ -15,6 +18,7 @@ object BlueprintValidator : Validator<AssetSelection.Blueprint> {
         issues += machineSlotIssues(blueprint)
         issues += beltIssues(blueprint)
         issues += floorIssues(blueprint)
+        issues += cameraIssues(blueprint)
         return issues
     }
 
@@ -104,4 +108,39 @@ object BlueprintValidator : Validator<AssetSelection.Blueprint> {
         }
         return issues
     }
+
+    /**
+     * floor ⊆ rest ⊆ limit, and the limit must hold the play window at every resting pose of every
+     * zoom - otherwise the camera would show past it without any overscroll at all.
+     */
+    private fun cameraIssues(blueprint: ShopBlueprint): List<ValidationIssue> {
+        val framing = blueprint.camera
+        val issues = mutableListOf<ValidationIssue>()
+        if (!framing.rest.encloses(blueprint.floor)) {
+            issues += ValidationIssue(
+                Severity.ERROR,
+                "Camera rest ${describe(framing.rest)} must enclose the floor ${describe(blueprint.floor)}",
+                fieldName = "camera.rest",
+            )
+        }
+        if (!framing.limit.encloses(framing.rest)) {
+            issues += ValidationIssue(
+                Severity.ERROR,
+                "Camera limit ${describe(framing.limit)} must enclose the rest ${describe(framing.rest)}",
+                fieldName = "camera.limit",
+            )
+        }
+        val required = CameraBounds.of(framing).requiredLimit(CameraTuning.ZOOM_LADDER)
+        if (!framing.limit.encloses(required)) {
+            issues += ValidationIssue(
+                Severity.ERROR,
+                "Camera limit ${describe(framing.limit)} must enclose ${describe(required)}, " +
+                    "what the play window shows at rest at every zoom",
+                fieldName = "camera.limit",
+            )
+        }
+        return issues
+    }
+
+    private fun describe(rect: TileRect): String = "(x=${rect.x}, y=${rect.y}, ${rect.width}x${rect.height})"
 }

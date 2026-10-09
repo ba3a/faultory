@@ -17,6 +17,7 @@ import kotlin.io.path.createTempDirectory
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class BlueprintValidatorTest {
@@ -194,6 +195,41 @@ class BlueprintValidatorTest {
         val issues = validate(AssetSelection.Blueprint(blueprintKey))
 
         assertTrue(issues.none { it.fieldName?.startsWith("conveyorBelts") == true }, "got $issues")
+    }
+
+    @Test
+    fun `camera rest that does not cover the floor is an error`() {
+        mutateBlueprint {
+            it.copy(camera = it.camera.copy(rest = TileRect(x = 2, y = 4, width = 38, height = 16)))
+        }
+
+        val issues = validate(AssetSelection.Blueprint(blueprintKey))
+
+        assertTrue(issues.any { it.severity == Severity.ERROR && it.fieldName == "camera.rest" })
+    }
+
+    @Test
+    fun `camera limit that does not cover the rest is an error`() {
+        mutateBlueprint {
+            it.copy(camera = it.camera.copy(limit = TileRect(x = 0, y = 4, width = 30, height = 16)))
+        }
+
+        val issues = validate(AssetSelection.Blueprint(blueprintKey))
+
+        assertTrue(issues.any { it.severity == Severity.ERROR && it.fieldName == "camera.limit" })
+    }
+
+    @Test
+    fun `camera limit too small for the half-zoom window is an error naming what it needs`() {
+        mutateBlueprint {
+            it.copy(camera = it.camera.copy(limit = TileRect(x = -10, y = 0, width = 60, height = 24)))
+        }
+
+        val issues = validate(AssetSelection.Blueprint(blueprintKey))
+
+        val issue = issues.single { it.fieldName == "camera.limit" }
+        assertEquals(Severity.ERROR, issue.severity)
+        assertTrue("(x=-20, y=-4, 80x32)" in issue.message, issue.message)
     }
 
     private fun validate(selection: AssetSelection.Blueprint): List<ValidationIssue> {

@@ -15,6 +15,8 @@ data class ShopBlueprint(
      * in [com.faultory.core.config.GameConfig].
      */
     val floor: TileRect = defaultFloor,
+    /** Where the shop-floor camera rests and how far it may overscroll; see [CameraFraming]. */
+    val camera: CameraFraming = defaultCamera,
     val conveyorBelts: List<ConveyorBelt>,
     val machineSlots: List<MachineSlot>,
     val workerSpawnPoints: List<WorkerSpawnPoint>,
@@ -24,6 +26,15 @@ data class ShopBlueprint(
         /** The 40x16 floor every shop had while its extent was derived from the screen layout:
          * the band between the bank and the HUD at the virtual resolution. */
         val defaultFloor = TileRect(x = 0, y = 4, width = 40, height = 16)
+
+        /**
+         * Rests on [defaultFloor], so at zoom 1 the window is locked to the framing the game always
+         * had, and leaves a few tiles of overscroll beyond what the half-zoom window shows around it.
+         */
+        val defaultCamera = CameraFraming(
+            rest = defaultFloor,
+            limit = TileRect(x = -24, y = -8, width = 88, height = 40)
+        )
     }
 }
 

@@ -25,4 +25,10 @@ class ShopFloorRenderContext(
      * is — every reader is a [ShopFloorLayer] and layers only run through [ShopFloorView.render].
      */
     lateinit var frame: ShopFloorFrame
+
+    /**
+     * The world rectangle the whole virtual screen shows this frame, refreshed from the camera's
+     * render pose before any layer runs. World layers cull to it and paint backgrounds over it.
+     */
+    val visibleWorld: VisibleWorldRect = VisibleWorldRect()
 }

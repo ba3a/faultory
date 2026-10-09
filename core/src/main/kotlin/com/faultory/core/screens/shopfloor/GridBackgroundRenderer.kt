@@ -18,10 +18,11 @@ class GridBackgroundRenderer(
     override fun drawFill(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
 
-        // Wider than the floor on purpose: wherever a chrome band is hidden, the world beyond the
-        // floor's edge rows shows through, and it must read as floor rather than as the clear colour.
+        // Everything on screen, not just the floor: zoomed out, overscrolled, or with a chrome band
+        // hidden, the world beyond the floor shows through and must not read as the clear colour.
+        val visible = ctx.visibleWorld
         renderer.color = PLAY_AREA
-        renderer.rect(0f, 0f, GameConfig.virtualWidth, GameConfig.virtualHeight)
+        renderer.rect(visible.minX, visible.minY, visible.maxX - visible.minX, visible.maxY - visible.minY)
 
         renderer.color = BELT_FILL
         for (beltTile in shopFloor.grid.beltTiles) {

@@ -59,13 +59,13 @@ class CaptureDirectorTest {
     @Test
     fun `a camera cue is handed to the screen exactly once`() {
         val (director, _, session) = fixture(
-            CaptureCue(atSeconds = 1f, action = CaptureAction.Camera(x = 640f, y = 420f, zoom = 2, seconds = 3f))
+            CaptureCue(atSeconds = 1f, action = CaptureAction.Camera(x = 640f, y = 420f, zoom = 2f, seconds = 3f))
         )
         director.advance(0.5f)
         assertNull(session.takeCameraCue())
 
         director.advance(0.5f)
-        assertEquals(CameraShot(x = 640f, y = 420f, zoom = 2, seconds = 3f), session.takeCameraCue())
+        assertEquals(CameraShot(x = 640f, y = 420f, zoom = 2f, seconds = 3f), session.takeCameraCue())
         assertNull(session.takeCameraCue())
     }
 

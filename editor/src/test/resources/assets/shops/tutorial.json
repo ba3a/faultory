@@ -9,6 +9,20 @@
     "width": 40,
     "height": 16
   },
+  "camera": {
+    "rest": {
+      "x": 0,
+      "y": 4,
+      "width": 40,
+      "height": 16
+    },
+    "limit": {
+      "x": -24,
+      "y": -8,
+      "width": 88,
+      "height": 40
+    }
+  },
   "conveyorBelts": [
     {
       "id": "belt-a",

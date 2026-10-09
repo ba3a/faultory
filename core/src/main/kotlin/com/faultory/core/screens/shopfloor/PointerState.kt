@@ -13,7 +13,7 @@ import com.badlogic.gdx.utils.viewport.Viewport
 class PointerState(
     private val uiViewport: Viewport,
     private val worldViewport: Viewport,
-    private val bounds: CameraBounds = CameraBounds.shopFloor
+    private val bounds: CameraBounds
 ) {
     private val scratchVector = Vector3()
     private var screenX: Int = 0
