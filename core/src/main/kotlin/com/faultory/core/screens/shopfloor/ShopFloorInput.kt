@@ -81,7 +81,17 @@ class ShopFloorInput(
         if (button != Input.Buttons.LEFT) {
             return false
         }
-        return machineDrag.finish(pointerState.worldX, pointerState.worldY)
+        return machineDrag.finish(pointerState.uiX, pointerState.uiY)
+    }
+
+    /**
+     * Re-resolves hover from the last pointer position. The camera can move under a still pointer
+     * (inertia, keys, a zoom, a capture glide), and without this the tile under it would go stale.
+     */
+    fun refreshPointer() {
+        if (!pointerState.hasPosition) return
+        pointerState.refresh()
+        resolveHover()
     }
 
     fun clearInteractionStateForShiftEnd() {
@@ -95,9 +105,9 @@ class ShopFloorInput(
 
     private fun handleLeftPress(): Boolean {
         if (upgradeFlow.isModalOpen) {
-            return upgradeFlow.handleClick(pointerState.worldX, pointerState.worldY)
+            return upgradeFlow.handleClick(pointerState.uiX, pointerState.uiY)
         }
-        if (canStartMachineDrag() && machineDrag.tryStart(hoverState.hoveredTile, pointerState.worldX, pointerState.worldY)) {
+        if (canStartMachineDrag() && machineDrag.tryStart(hoverState.hoveredTile, pointerState.uiX, pointerState.uiY)) {
             return true
         }
         return handleLeftClick()
@@ -157,9 +167,9 @@ class ShopFloorInput(
         machineDrag.cancel()
         when (target) {
             is PlacedShopObject.Worker ->
-                workerAssignment.openContextMenuForWorker(target.id, pointerState.worldX, pointerState.worldY)
+                workerAssignment.openContextMenuForWorker(target.id, pointerState.uiX, pointerState.uiY)
             is PlacedShopObject.Machine ->
-                workerAssignment.openContextMenuForMachine(target.id, pointerState.worldX, pointerState.worldY)
+                workerAssignment.openContextMenuForMachine(target.id, pointerState.uiX, pointerState.uiY)
         }
         return true
     }
@@ -187,11 +197,17 @@ class ShopFloorInput(
 
     private fun updatePointerState(screenX: Int, screenY: Int) {
         pointerState.update(screenX, screenY)
+        resolveHover()
+    }
+
+    private fun resolveHover() {
+        val uiX = pointerState.uiX
+        val uiY = pointerState.uiY
 
         if (shiftLifecycle.isShiftEnded) {
             hoverState.hoveredCompletionAction = CompletionModalLayout
                 .buttons(shiftLifecycle.nextLevel != null)
-                .firstOrNull { it.bounds.contains(pointerState.worldX, pointerState.worldY) }
+                .firstOrNull { it.bounds.contains(uiX, uiY) }
                 ?.action
             workerAssignment.clearHover()
             hoverState.isBackButtonHovered = false
@@ -203,7 +219,7 @@ class ShopFloorInput(
             return
         }
 
-        val isUpgradeModalHovered = upgradeFlow.updateHover(pointerState.worldX, pointerState.worldY)
+        val isUpgradeModalHovered = upgradeFlow.updateHover(uiX, uiY)
         if (isUpgradeModalHovered) {
             workerAssignment.clearHover()
             bankPanel.clearHover()
@@ -215,22 +231,19 @@ class ShopFloorInput(
             return
         }
 
-        val isContextMenuHovered = workerAssignment.updateHover(pointerState.worldX, pointerState.worldY)
+        val isContextMenuHovered = workerAssignment.updateHover(uiX, uiY)
         hoverState.hoveredCompletionAction = null
 
-        hoverState.isBackButtonHovered = HudRenderer.backButtonBounds().contains(pointerState.worldX, pointerState.worldY)
-        hoverState.isLanguageButtonHovered = HudRenderer.languageButtonBounds().contains(pointerState.worldX, pointerState.worldY)
+        hoverState.isBackButtonHovered = HudRenderer.backButtonBounds().contains(uiX, uiY)
+        hoverState.isLanguageButtonHovered = HudRenderer.languageButtonBounds().contains(uiX, uiY)
         val isHudHovered = hoverState.isBackButtonHovered || hoverState.isLanguageButtonHovered
-        bankPanel.updateHover(
-            pointerState.worldX,
-            pointerState.worldY,
-            enabled = !isHudHovered && !isContextMenuHovered
-        )
-        val tile = if (bankPanel.hoveredKey == null && !isHudHovered && !isContextMenuHovered) {
-            shopFloor.grid.tileAt(pointerState.worldX, pointerState.worldY)
-        } else {
-            null
-        }
+        bankPanel.updateHover(uiX, uiY, enabled = !isHudHovered && !isContextMenuHovered)
+        // The world only shows through the play window; a tile scrolled under a band is not pickable.
+        val isOverFloor = bankPanel.hoveredKey == null &&
+            !isHudHovered &&
+            !isContextMenuHovered &&
+            pointerState.isOverPlayWindow
+        val tile = if (isOverFloor) shopFloor.grid.tileAt(pointerState.worldX, pointerState.worldY) else null
         hoverState.hoveredTile = tile
         hoverState.hoveredObjectId = tile?.let(shopFloor::objectAt)?.id
     }

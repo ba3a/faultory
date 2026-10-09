@@ -1,9 +1,11 @@
 package com.faultory.core.capture
 
+import com.faultory.core.screens.shopfloor.CameraShot
 import com.faultory.core.shop.systems.ChanceKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CaptureDirectorTest {
@@ -52,6 +54,19 @@ class CaptureDirectorTest {
         assertFalse(session.isRecording)
         director.advance(0f)
         assertTrue(session.isRecording)
+    }
+
+    @Test
+    fun `a camera cue is handed to the screen exactly once`() {
+        val (director, _, session) = fixture(
+            CaptureCue(atSeconds = 1f, action = CaptureAction.Camera(x = 640f, y = 420f, zoom = 2, seconds = 3f))
+        )
+        director.advance(0.5f)
+        assertNull(session.takeCameraCue())
+
+        director.advance(0.5f)
+        assertEquals(CameraShot(x = 640f, y = 420f, zoom = 2, seconds = 3f), session.takeCameraCue())
+        assertNull(session.takeCameraCue())
     }
 
     @Test

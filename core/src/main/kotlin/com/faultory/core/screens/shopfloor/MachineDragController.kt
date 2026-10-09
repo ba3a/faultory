@@ -12,8 +12,8 @@ class MachineDragController(
 ) {
     private data class DragState(
         val machineId: String,
-        val startWorldX: Float,
-        val startWorldY: Float
+        val startUiX: Float,
+        val startUiY: Float
     )
 
     private var dragState: DragState? = null
@@ -21,22 +21,22 @@ class MachineDragController(
     val isDragging: Boolean
         get() = dragState != null
 
-    fun tryStart(hoveredTile: TileCoordinate?, worldX: Float, worldY: Float): Boolean {
+    fun tryStart(hoveredTile: TileCoordinate?, uiX: Float, uiY: Float): Boolean {
         val machine = hoveredTile?.let(shopFloor::objectAt) as? PlacedShopObject.Machine
             ?: return false
 
-        dragState = DragState(machine.id, worldX, worldY)
+        dragState = DragState(machine.id, uiX, uiY)
         return true
     }
 
-    fun finish(worldX: Float, worldY: Float): Boolean {
+    fun finish(uiX: Float, uiY: Float): Boolean {
         val state = dragState ?: return false
         dragState = null
 
         val machine = shopFloor.findObjectById(state.machineId) ?: return true
         val newOrientation = Orientation.fromDrag(
-            deltaX = worldX - state.startWorldX,
-            deltaY = worldY - state.startWorldY
+            deltaX = uiX - state.startUiX,
+            deltaY = uiY - state.startUiY
         ) ?: return true
         if (newOrientation == machine.orientation) {
             return true

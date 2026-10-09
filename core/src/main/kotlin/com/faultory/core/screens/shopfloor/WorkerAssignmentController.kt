@@ -45,10 +45,10 @@ class WorkerAssignmentController(
     }
 
     /** Returns true when the pointer sits over the open context menu. */
-    fun updateHover(worldX: Float, worldY: Float): Boolean {
+    fun updateHover(uiX: Float, uiY: Float): Boolean {
         val menu = contextMenu
-        hoveredContextAction = menu?.options?.firstOrNull { it.bounds.contains(worldX, worldY) }?.action
-        return menu?.bounds?.contains(worldX, worldY) == true
+        hoveredContextAction = menu?.options?.firstOrNull { it.bounds.contains(uiX, uiY) }?.action
+        return menu?.bounds?.contains(uiX, uiY) == true
     }
 
     fun closeContextMenuIfOpen(): Boolean {
@@ -120,7 +120,7 @@ class WorkerAssignmentController(
         }
     }
 
-    fun openContextMenuForWorker(workerId: String, worldX: Float, worldY: Float) {
+    fun openContextMenuForWorker(workerId: String, uiX: Float, uiY: Float) {
         val worker = shopFloor.findObjectById(workerId) ?: return
         if (worker !is PlacedShopObject.Worker) return
         val workerProfile = catalogLookup.workerProfilesById[worker.catalogId] ?: return
@@ -134,16 +134,16 @@ class WorkerAssignmentController(
             }
         }
         if (actions.isEmpty()) return
-        contextMenu = buildMenu(workerId, PlacedShopObjectKind.WORKER, actions, worldX, worldY)
+        contextMenu = buildMenu(workerId, PlacedShopObjectKind.WORKER, actions, uiX, uiY)
         hoveredContextAction = contextMenu?.options?.firstOrNull()?.action
     }
 
-    fun openContextMenuForMachine(machineId: String, worldX: Float, worldY: Float) {
+    fun openContextMenuForMachine(machineId: String, uiX: Float, uiY: Float) {
         val machine = shopFloor.findObjectById(machineId) ?: return
         if (machine !is PlacedShopObject.Machine) return
         if (!upgradeFlow.hasUpgradesFor(machineId)) return
         val actions = listOf(ObjectContextAction.UPGRADE)
-        contextMenu = buildMenu(machineId, PlacedShopObjectKind.MACHINE, actions, worldX, worldY)
+        contextMenu = buildMenu(machineId, PlacedShopObjectKind.MACHINE, actions, uiX, uiY)
         hoveredContextAction = contextMenu?.options?.firstOrNull()?.action
     }
 
@@ -151,16 +151,16 @@ class WorkerAssignmentController(
         objectId: String,
         kind: PlacedShopObjectKind,
         actions: List<ObjectContextAction>,
-        worldX: Float,
-        worldY: Float
+        uiX: Float,
+        uiY: Float
     ): ObjectContextMenuState {
         val width = 188f
         val optionHeight = 38f
         val optionGap = 6f
         val padding = 6f
         val height = padding * 2f + actions.size * optionHeight + (actions.size - 1).coerceAtLeast(0) * optionGap
-        val x = worldX.coerceIn(12f, GameConfig.virtualWidth - width - 12f)
-        val y = worldY.coerceIn(
+        val x = uiX.coerceIn(12f, GameConfig.virtualWidth - width - 12f)
+        val y = uiY.coerceIn(
             GameConfig.bankHeight + 12f,
             GameConfig.virtualHeight - GameConfig.hudHeight - height - 12f
         )

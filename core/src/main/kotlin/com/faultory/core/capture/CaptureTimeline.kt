@@ -27,4 +27,13 @@ sealed interface CaptureAction {
     @Serializable
     @SerialName("record")
     data class Record(val recording: Boolean) : CaptureAction
+
+    /**
+     * Moves the camera so world point ([x], [y]) sits at the centre of the play window at
+     * whole-number [zoom], easing over [seconds] (0 cuts). Frame the shot by hand first and copy the
+     * numbers off the capture overlay, which reads out the current framing in this same convention.
+     */
+    @Serializable
+    @SerialName("camera")
+    data class Camera(val x: Float, val y: Float, val zoom: Int, val seconds: Float = 0f) : CaptureAction
 }

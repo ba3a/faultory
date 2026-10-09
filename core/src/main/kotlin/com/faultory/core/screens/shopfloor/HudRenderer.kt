@@ -30,6 +30,14 @@ class HudRenderer(
     private var lastSelectedKey: PurchaseOffer? = null
     override fun drawFill(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
+        renderer.color = HUD_BAND
+        renderer.rect(
+            0f,
+            GameConfig.virtualHeight - GameConfig.hudHeight,
+            GameConfig.virtualWidth,
+            GameConfig.hudHeight
+        )
+
         val backButtonBounds = backButtonBounds()
         val languageButtonBounds = languageButtonBounds()
         renderer.color = if (hoverState.isBackButtonHovered) BUTTON_FILL_HOVERED else BUTTON_FILL_DEFAULT
@@ -180,6 +188,7 @@ class HudRenderer(
             )
         }
 
+        private val HUD_BAND = Color(0.11f, 0.13f, 0.16f, 1f)
         private val BUTTON_FILL_HOVERED = Color(0.24f, 0.31f, 0.37f, 1f)
         private val BUTTON_FILL_DEFAULT = Color(0.16f, 0.20f, 0.24f, 1f)
         private val BUTTON_BORDER_HOVERED = Color(0.98f, 0.88f, 0.61f, 1f)

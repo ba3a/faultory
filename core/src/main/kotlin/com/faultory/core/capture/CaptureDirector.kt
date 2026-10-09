@@ -1,5 +1,7 @@
 package com.faultory.core.capture
 
+import com.faultory.core.screens.shopfloor.CameraShot
+
 /**
  * Owns the capture clock and fires each of [timeline]'s cues exactly once, in order, when the
  * clock passes its `atSeconds`. Pure logic - no LibGDX dependency - so it is unit-testable without
@@ -32,6 +34,7 @@ class CaptureDirector(
 
             is CaptureAction.Preset -> session.setPreset(action.preset)
             is CaptureAction.Record -> session.isRecording = action.recording
+            is CaptureAction.Camera -> session.cueCamera(CameraShot(action.x, action.y, action.zoom, action.seconds))
         }
     }
 }

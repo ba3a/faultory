@@ -5,9 +5,12 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.faultory.core.config.CaptureSettings
+import com.faultory.core.screens.shopfloor.CameraShot
+import kotlin.math.roundToInt
 
 /**
- * Draws capture mode's status line - tier, seed, preset, recording state - directly to the window.
+ * Draws capture mode's status line - tier, seed, preset, recording state, camera framing - directly
+ * to the window. The framing is printed in a `camera` cue's own convention, ready to paste.
  * Callers must invoke this strictly after the world has rendered and after
  * [FrameRecorder.captureFrame] for the same frame: this text is for the operator only and must
  * never reach an exported PNG.
@@ -15,9 +18,10 @@ import com.faultory.core.config.CaptureSettings
 class CaptureOverlayRenderer(private val settings: CaptureSettings, private val session: CaptureSession) {
     private val layout = GlyphLayout()
 
-    fun render(batch: SpriteBatch, font: BitmapFont) {
+    fun render(batch: SpriteBatch, font: BitmapFont, camera: CameraShot) {
         val recordingLabel = if (session.isRecording) "REC" else "idle"
-        val text = "CAPTURE ${settings.tier} seed=${settings.seed} preset=${session.preset} $recordingLabel"
+        val framing = "camera x=${camera.x.roundToInt()} y=${camera.y.roundToInt()} zoom=${camera.zoom}"
+        val text = "CAPTURE ${settings.tier} seed=${settings.seed} preset=${session.preset} $recordingLabel $framing"
         batch.begin()
         font.color = TEXT_COLOR
         layout.setText(font, text)

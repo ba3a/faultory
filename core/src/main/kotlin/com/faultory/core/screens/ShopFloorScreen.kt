@@ -4,8 +4,10 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.InputMultiplexer
 import com.badlogic.gdx.InputProcessor
 import com.badlogic.gdx.ScreenAdapter
+import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.TextureAtlas
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.faultory.core.FaultoryGame
@@ -19,6 +21,8 @@ import com.faultory.core.content.ShopCatalog
 import com.faultory.core.screens.shopfloor.BankPanel
 import com.faultory.core.screens.shopfloor.BeltSpriteRenderer
 import com.faultory.core.screens.shopfloor.BankPanelRenderer
+import com.faultory.core.screens.shopfloor.CameraInput
+import com.faultory.core.screens.shopfloor.CameraRig
 import com.faultory.core.screens.shopfloor.CaptureDebugLayer
 import com.faultory.core.screens.shopfloor.CatalogLookup
 import com.faultory.core.screens.shopfloor.ChromeElement
@@ -59,8 +63,13 @@ class ShopFloorScreen(
     shopCatalog: ShopCatalog,
     private val captureRuntime: CaptureRuntime = CaptureRuntime.forLevel(level.id)
 ) : ScreenAdapter() {
-    private val viewport = FitViewport(GameConfig.virtualWidth, GameConfig.virtualHeight)
-    private val pointerState = PointerState(viewport)
+    // Two viewports over the same window: chrome stays fixed in virtual-screen units while the
+    // world camera pans and zooms underneath it. Both letterbox identically.
+    private val uiViewport = FitViewport(GameConfig.virtualWidth, GameConfig.virtualHeight)
+    private val worldCamera = OrthographicCamera()
+    private val worldViewport = FitViewport(GameConfig.virtualWidth, GameConfig.virtualHeight, worldCamera)
+    private val camera = CameraRig()
+    private val pointerState = PointerState(uiViewport, worldViewport)
     private val catalogLookup = CatalogLookup(shopCatalog)
     private val titleLayout = GlyphLayout()
     private val hintLayout = GlyphLayout()
@@ -89,7 +98,6 @@ class ShopFloorScreen(
         font = game.renderContext.uiFont,
         titleLayout = titleLayout,
         hintLayout = hintLayout,
-        viewport = viewport,
         frameLookup = frameLookup,
         skinRegistry = game.skinRegistry,
         productOrientations = productOrientations
@@ -122,7 +130,10 @@ class ShopFloorScreen(
     private val spriteDrawnProductIds = mutableSetOf<String>()
     private val spriteDrawnBeltTiles = mutableSetOf<TileCoordinate>()
     private val chromeVisibility = captureRuntime.chromeVisibility
-    private val view = ShopFloorView(
+
+    // World layers draw through the movable world camera; chrome layers draw afterwards, fixed in
+    // virtual-screen units, so the world never paints over the interface however it is framed.
+    private val worldView = ShopFloorView(
         listOf(
             GridBackgroundRenderer(shopFloor, spriteDrawnBeltTiles, chromeVisibility),
             BeltSpriteRenderer(shopFloor, spriteDrawnBeltTiles),
@@ -143,6 +154,11 @@ class ShopFloorScreen(
                 spriteDrawnProductIds,
                 chromeVisibility
             ),
+            GatedLayer(CaptureDebugLayer(shopFloor), ChromeElement.DEBUG_OVERLAY, chromeVisibility)
+        )
+    )
+    private val chromeView = ShopFloorView(
+        listOf(
             GatedLayer(
                 HudRenderer(level, shopFloor, catalogLookup, bankPanel, workerAssignment, shiftLifecycle, hoverState),
                 ChromeElement.HUD_BAND,
@@ -155,8 +171,7 @@ class ShopFloorScreen(
                 CompletionModalRenderer(level, catalogLookup, shiftLifecycle, hoverState),
                 ChromeElement.MODALS,
                 chromeVisibility
-            ),
-            GatedLayer(CaptureDebugLayer(shopFloor), ChromeElement.DEBUG_OVERLAY, chromeVisibility)
+            )
         )
     )
     private val input = ShopFloorInput(
@@ -170,9 +185,23 @@ class ShopFloorScreen(
         shiftLifecycle = shiftLifecycle,
         upgradeFlow = upgradeFlow
     )
+    private val cameraInput = CameraInput(
+        camera = camera,
+        pointerState = pointerState,
+        bankPanel = bankPanel,
+        workerAssignment = workerAssignment,
+        shiftLifecycle = shiftLifecycle,
+        upgradeFlow = upgradeFlow
+    )
+
     // Capture mode's hotkeys, when present, sit ahead of the game's own input so they always work.
-    private val activeInputProcessor: InputProcessor =
-        captureRuntime.input?.let { captureInput -> InputMultiplexer(captureInput, input) } ?: input
+    // The camera sits last: it only receives what the game declined, so a press that means
+    // something never turns into a pan.
+    private val activeInputProcessor: InputProcessor = InputMultiplexer().apply {
+        captureRuntime.input?.let { captureInput -> addProcessor(captureInput) }
+        addProcessor(input)
+        addProcessor(cameraInput)
+    }
     private var lastAppliedRecordingState = false
 
     // Refilled at the end of every render to prune the orientation memory; a fresh set per frame is
@@ -180,7 +209,7 @@ class ShopFloorScreen(
     private val liveProductIds: MutableSet<String> = mutableSetOf()
 
     override fun show() {
-        viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
+        updateViewports(Gdx.graphics.width, Gdx.graphics.height)
         // The live view, deliberately: both of these outlive this call — the context is held by
         // upgradeFlow and the placed-object list by the encounter engine, for the whole shift — and
         // "is this machine placed" should mean now, not at the moment the shift started. Neither
@@ -195,7 +224,7 @@ class ShopFloorScreen(
         game.updateEncounterPlacedObjects(placedObjects)
         upgradeFlow.evaluationContext = ctx
         if (shiftLifecycle.finalizeIfNeeded()) {
-            input.clearInteractionStateForShiftEnd()
+            clearInteractionStateForShiftEnd()
         }
         Gdx.input.inputProcessor = activeInputProcessor
         events.publish { ShiftStartedEvent(levelId = it) }
@@ -203,6 +232,7 @@ class ShopFloorScreen(
 
     override fun hide() {
         shiftLifecycle.persistIfNeededOnHide()
+        cameraInput.clear()
         if (Gdx.input.inputProcessor === activeInputProcessor) {
             Gdx.input.inputProcessor = null
         }
@@ -219,6 +249,7 @@ class ShopFloorScreen(
         // not advance the simulation by seconds in one step - it slows down instead of jumping.
         val effectiveDelta = captureRuntime.fixedDeltaSeconds ?: delta.coerceAtMost(MAX_FRAME_DELTA_SECONDS)
         captureRuntime.tick(effectiveDelta)
+        captureRuntime.session.takeCameraCue()?.let(camera::glideTo)
         if (captureRuntime.isActive) {
             applyRecordingFramePacing()
         }
@@ -229,25 +260,35 @@ class ShopFloorScreen(
                 failureBlink.update(activeDelta)
             }
             if (shiftLifecycle.finalizeIfNeeded()) {
-                input.clearInteractionStateForShiftEnd()
+                clearInteractionStateForShiftEnd()
             }
         }
 
+        // The effective delta, never the raw one: under capture mode a camera move is part of the
+        // take and has to replay frame-exactly like the simulation does.
+        camera.update(effectiveDelta)
+        applyCameraPose()
+        if (camera.moved) {
+            input.refreshPointer()
+        }
+
         ScreenUtils.clear(0.06f, 0.07f, 0.09f, 1f)
-        viewport.apply()
-        viewport.camera.update()
-
-        val shapeRenderer = game.renderContext.shapeRenderer
-        shapeRenderer.projectionMatrix = viewport.camera.combined
-        game.renderContext.spriteBatch.projectionMatrix = viewport.camera.combined
-
         renderContext.delta = effectiveDelta
         renderContext.frame = frameFactory.capture()
-        view.render(renderContext)
+
+        worldViewport.apply()
+        useProjection(worldCamera.combined)
+        worldView.render(renderContext)
+
+        uiViewport.apply()
+        uiViewport.camera.update()
+        useProjection(uiViewport.camera.combined)
+        chromeView.render(renderContext)
+
         // Frame export reads the back buffer here, before any operator-only overlay draws, so the
         // exported PNG never contains capture mode's own status text.
         captureRuntime.captureFrameIfRecording()
-        captureRuntime.overlay?.render(game.renderContext.spriteBatch, game.renderContext.uiFont)
+        captureRuntime.overlay?.render(game.renderContext.spriteBatch, game.renderContext.uiFont, camera.currentShot())
         frameLookup.endFrame()
         liveProductIds.clear()
         shopFloor.activeProducts.mapTo(liveProductIds) { it.id }
@@ -255,7 +296,7 @@ class ShopFloorScreen(
     }
 
     override fun resize(width: Int, height: Int) {
-        viewport.update(width, height, true)
+        updateViewports(width, height)
         bankPanel.layout()
     }
 
@@ -263,6 +304,29 @@ class ShopFloorScreen(
         if (Gdx.input.inputProcessor === activeInputProcessor) {
             Gdx.input.inputProcessor = null
         }
+    }
+
+    private fun clearInteractionStateForShiftEnd() {
+        input.clearInteractionStateForShiftEnd()
+        cameraInput.clear()
+    }
+
+    private fun updateViewports(width: Int, height: Int) {
+        uiViewport.update(width, height, true)
+        // Not re-centred: the camera rig owns the world camera's position, re-applied right after.
+        worldViewport.update(width, height, false)
+        applyCameraPose()
+    }
+
+    private fun applyCameraPose() {
+        worldCamera.position.set(camera.renderCenterX(), camera.renderCenterY(), 0f)
+        worldCamera.zoom = 1f / camera.zoom
+        worldCamera.update()
+    }
+
+    private fun useProjection(projection: Matrix4) {
+        game.renderContext.shapeRenderer.projectionMatrix = projection
+        game.renderContext.spriteBatch.projectionMatrix = projection
     }
 
     /**

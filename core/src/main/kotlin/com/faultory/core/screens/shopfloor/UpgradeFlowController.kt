@@ -48,23 +48,23 @@ class UpgradeFlowController(
         }
     }
 
-    fun updateHover(worldX: Float, worldY: Float): Boolean {
+    fun updateHover(uiX: Float, uiY: Float): Boolean {
         val current = modal ?: return false
         hoveredOptionIndex = current.options
-            .indexOfFirst { it.bounds.contains(worldX, worldY) }
+            .indexOfFirst { it.bounds.contains(uiX, uiY) }
             .takeIf { it >= 0 }
-        return current.bounds.contains(worldX, worldY)
+        return current.bounds.contains(uiX, uiY)
     }
 
-    fun handleClick(worldX: Float, worldY: Float): Boolean {
+    fun handleClick(uiX: Float, uiY: Float): Boolean {
         val current = modal ?: return false
-        val option = current.options.firstOrNull { it.bounds.contains(worldX, worldY) }
+        val option = current.options.firstOrNull { it.bounds.contains(uiX, uiY) }
         if (option != null) {
             applyUpgrade(current.objectId, option.targetCatalogId, option.cost)
             closeModal()
             return true
         }
-        if (current.bounds.contains(worldX, worldY)) {
+        if (current.bounds.contains(uiX, uiY)) {
             return true
         }
         // Clicking outside dismisses the modal.

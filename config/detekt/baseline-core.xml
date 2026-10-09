@@ -24,7 +24,6 @@
     <ID>LongParameterList:PlannedSprite.kt$PlannedSprite.Companion$( region: TextureRegion, holderTileWorldX: Float, holderTileWorldY: Float, tileSize: Float, socket: SocketPoint, grip: SocketPoint?, tint: Color? = null, depth: Float = socket.depth, sortAnchorX: Float = holderTileWorldX, sortAnchorY: Float = holderTileWorldY )</ID>
     <ID>LongParameterList:SecuritySystem.kt$SecuritySystem$( securityIndex: Int, security: PlacedShopObject.Worker, profile: WorkerProfile, roleProfile: WorkerRoleProfile, saboteursById: Map&lt;String, PlacedShopObject.Worker&gt;, pursuedSaboteurIds: MutableSet&lt;String&gt; )</ID>
     <ID>LongParameterList:ShopFloorInput.kt$ShopFloorInput$( private val shopFloor: ShopFloor, private val pointerState: PointerState, private val hoverState: HoverState, private val bankPanel: BankPanel, private val placement: PlacementController, private val workerAssignment: WorkerAssignmentController, private val machineDrag: MachineDragController, private val shiftLifecycle: ShiftLifecycleController, private val upgradeFlow: UpgradeFlowController )</ID>
-    <ID>LongParameterList:ShopFloorRenderContext.kt$ShopFloorRenderContext$( val shapeRenderer: ShapeRenderer, val spriteBatch: SpriteBatch, val font: BitmapFont, val titleLayout: GlyphLayout, val hintLayout: GlyphLayout, val viewport: Viewport, val frameLookup: SkinFrameLookup, val skinRegistry: SkinRegistry? = null, val productOrientations: ProductOrientationMemory = ProductOrientationMemory(), var delta: Float = 0f )</ID>
     <ID>LongParameterList:SkinFrameLookup.kt$SkinFrameLookup$( definition: SkinDefinition, resolution: SkinFrameResolver.Resolution?, animationId: String, action: String, orientation: Orientation, delta: Float )</ID>
     <ID>LongParameterList:SpritePlacement.kt$SpritePlacement.Companion$( regionWidth: Float, regionHeight: Float, holderTileWorldX: Float, holderTileWorldY: Float, tileSize: Float, socket: SocketPoint, grip: SocketPoint?, depth: Float = socket.depth, sortAnchorX: Float = holderTileWorldX, sortAnchorY: Float = holderTileWorldY )</ID>
     <ID>LoopWithTooManyJumpStatements:BeltSpriteRenderer.kt$BeltSpriteRenderer$for</ID>
@@ -128,7 +127,6 @@
     <ID>MaxLineLength:ConditionEvaluationTest.kt$StubSaveRepo$return</ID>
     <ID>MaxLineLength:ConditionJsonRoundTripTest.kt$ConditionJsonRoundTripTest$val json = """{"encounters":[{"id":"e1","condition":{"type":"always"},"effect":{"type":"markTriggered"},"oneShot":true}]}"""</ID>
     <ID>MaxLineLength:EncounterProgressRepository.kt$LocalEncounterProgressRepository$FaultoryJson.instance.decodeFromString(EncounterProgress.serializer(), handle.readString(Charsets.UTF_8.name()))</ID>
-    <ID>MaxLineLength:GridBackgroundRenderer.kt$GridBackgroundRenderer$renderer.rect(0f, GameConfig.virtualHeight - GameConfig.hudHeight, GameConfig.virtualWidth, GameConfig.hudHeight)</ID>
     <ID>MaxLineLength:HudRenderer.kt$HudRenderer$font.color = if (hoverState.isLanguageButtonHovered) ShopFloorPalette.TEXT_HIGHLIGHT_GOLD else BUTTON_TEXT_DEFAULT</ID>
     <ID>MaxLineLength:HudRenderer.kt$HudRenderer$renderer.rect(languageButtonBounds.x, languageButtonBounds.y, languageButtonBounds.width, languageButtonBounds.height)</ID>
     <ID>MaxLineLength:JsonAsynchronousAssetLoader.kt$JsonAsynchronousAssetLoader$override</ID>
@@ -159,9 +157,6 @@
     <ID>MaxLineLength:ShopFloorBeltRideTest.kt$ShopFloorBeltRideTest$worker(id = "worker-1", position = TileCoordinate(4, 5), movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5)))</ID>
     <ID>MaxLineLength:ShopFloorBeltRideTest.kt$ShopFloorBeltRideTest$worker(position = TileCoordinate(4, 5), movementPath = listOf(TileCoordinate(5, 5), TileCoordinate(6, 5)))</ID>
     <ID>MaxLineLength:ShopFloorCleanerTest.kt$ShopFloorCleanerTest$random = Random(seed = 1L)</ID>
-    <ID>MaxLineLength:ShopFloorInput.kt$ShopFloorInput$hoverState.isBackButtonHovered = HudRenderer.backButtonBounds().contains(pointerState.worldX, pointerState.worldY)</ID>
-    <ID>MaxLineLength:ShopFloorInput.kt$ShopFloorInput$hoverState.isLanguageButtonHovered = HudRenderer.languageButtonBounds().contains(pointerState.worldX, pointerState.worldY)</ID>
-    <ID>MaxLineLength:ShopFloorInput.kt$ShopFloorInput$if</ID>
     <ID>MaxLineLength:ShopFloorPalette.kt$ShopFloorPalette$machine.type == MachineType.PRODUCER &amp;&amp; machine.manuality == Manuality.AUTOMATIC -&gt; MACHINE_FILL_PRODUCER_AUTOMATIC</ID>
     <ID>MaxLineLength:ShopFloorPalette.kt$ShopFloorPalette$machine.type == MachineType.PRODUCER &amp;&amp; machine.manuality == Manuality.HUMAN_OPERATED -&gt; MACHINE_FILL_PRODUCER_HUMAN</ID>
     <ID>MaxLineLength:ShopFloorSecurityTest.kt$ShopFloorSecurityTest$operator(id = "operator-1", catalogId = operatorProfile.id, position = TileCoordinate(5, 9), assignedMachineId = "machine-1")</ID>

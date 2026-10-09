@@ -5,6 +5,11 @@ import com.faultory.core.config.GameConfig
 import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.TileCoordinate
 
+/**
+ * The world's floor: the floor colour under everything the camera can show, then belts, wet tiles
+ * and grid lines. World space only - the HUD and bank band backgrounds belong to their own chrome
+ * layers, which draw over the world afterwards.
+ */
 class GridBackgroundRenderer(
     private val shopFloor: ShopFloor,
     private val spriteDrawnBeltTiles: Set<TileCoordinate> = emptySet(),
@@ -12,36 +17,11 @@ class GridBackgroundRenderer(
 ) : ShopFloorLayer {
     override fun drawFill(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
-        val hudVisible = chromeVisibility.isVisible(ChromeElement.HUD_BAND)
-        val bankVisible = chromeVisibility.isVisible(ChromeElement.BANK_PANEL)
 
-        if (hudVisible || bankVisible) {
-            renderer.color = BACKGROUND
-            renderer.rect(0f, 0f, GameConfig.virtualWidth, GameConfig.virtualHeight)
-
-            renderer.color = PLAY_AREA
-            renderer.rect(
-                0f,
-                GameConfig.bankHeight,
-                GameConfig.virtualWidth,
-                GameConfig.virtualHeight - GameConfig.hudHeight - GameConfig.bankHeight
-            )
-
-            if (hudVisible) {
-                renderer.color = HUD_BAND
-                renderer.rect(0f, GameConfig.virtualHeight - GameConfig.hudHeight, GameConfig.virtualWidth, GameConfig.hudHeight)
-            }
-
-            if (bankVisible) {
-                renderer.color = BANK_BAND
-                renderer.rect(0f, 0f, GameConfig.virtualWidth, GameConfig.bankHeight)
-            }
-        } else {
-            // Both bands hidden: one uniform floor edge-to-edge, or the empty strips where they
-            // used to be would still read as "screenshot of a game UI" in otherwise clean footage.
-            renderer.color = PLAY_AREA
-            renderer.rect(0f, 0f, GameConfig.virtualWidth, GameConfig.virtualHeight)
-        }
+        // Wider than the floor on purpose: wherever a chrome band is hidden, the world beyond the
+        // floor's edge rows shows through, and it must read as floor rather than as the clear colour.
+        renderer.color = PLAY_AREA
+        renderer.rect(0f, 0f, GameConfig.virtualWidth, GameConfig.virtualHeight)
 
         renderer.color = BELT_FILL
         for (beltTile in shopFloor.grid.beltTiles) {
@@ -102,10 +82,7 @@ class GridBackgroundRenderer(
     }
 
     private companion object {
-        private val BACKGROUND = Color(0.08f, 0.09f, 0.11f, 1f)
         private val PLAY_AREA = Color(0.12f, 0.15f, 0.18f, 1f)
-        private val HUD_BAND = Color(0.11f, 0.13f, 0.16f, 1f)
-        private val BANK_BAND = Color(0.10f, 0.11f, 0.14f, 1f)
         private val BELT_FILL = Color(0.20f, 0.33f, 0.42f, 1f)
         private val GRID_LINE = Color(0.18f, 0.22f, 0.26f, 1f)
         private val BELT_OUTLINE = Color(0.37f, 0.54f, 0.67f, 1f)

@@ -159,6 +159,8 @@ that one call site.
   capture run leaks into real progress.
 - **Reads wall-clock time or the real frame delta directly?** Capture mode runs a fixed timestep
   (`CaptureRuntime.fixedDeltaSeconds`); anything bypassing it breaks repeatability.
+- **Moves the camera?** Through `CameraRig` (`core.screens.shopfloor`), advanced with the screen's
+  effective delta; a scripted move is a timeline `camera` cue, never a direct camera write.
 - **Adds a `CaptureTier`?** `CaptureIsolationTest` is exhaustive over `CaptureTier.entries` and will
   fail until you state whether the new tier is tainted.
 
@@ -263,6 +265,17 @@ When a refactor clears out a mistake that could be made again, leave something b
   one system depend on another for a helper — extract a shared collaborator (as `QaPostLocator` /
   `WetFloor` did).
 - Do not add simulation logic directly to `ShopFloor` — it wires systems, runs the `schedule`, and delegates; it contains no rules. New `update*` behaviour belongs in one of the focused system classes (`ConveyorSystem`, `ProductionSystem`, `QaSystem`, `WorkerObjectiveSystem`, `WorkerMovementSystem`, `SecuritySystem`) or in a new system class if the responsibility is genuinely distinct. A new system implements `SimulationSystem`, declares its `SimulationPhase` (add one — with its rationale in the KDoc — if none fits), and is registered in `ShopFloor.schedule`; `SimulationScheduleTest` locks that order. Placement / rotation / upgrade / purchase rules go in `PlacementSystem`, worker→machine/QA assignment in `AssignmentSystem` (both command handlers, not scheduled); a new UI command handled by `ShopFloor` is a one-line delegate to one of these. `ShopFloor` must remain a thin facade. Do not put a purchase cost, an upgrade's unlock gating, or a placement-candidate rule in a screen controller (`core.screens.shopfloor`) or in `core.headless` — both call the same `PlacementSystem`/`AssignmentSystem` method, and a rule duplicated into either one is a rule that can silently drift from what the other does.
+- **The shop floor draws in two spaces.** `ShopFloorScreen` renders a world view through the movable
+  world camera (`CameraRig` owns its pose; at zoom 1 it is locked to the fixed framing the game
+  always had) and then a chrome view in fixed virtual-screen units. A layer that draws the floor or
+  anything on it goes in the world view; a layer that draws interface goes in the chrome view —
+  never one layer doing both, which is how `GridBackgroundRenderer` once painted the HUD band.
+  Likewise every chrome hit-test, drag threshold and menu anchor reads `PointerState.uiX`/`uiY`;
+  only tile picking reads `worldX`/`worldY`. Mixing them up is invisible at zoom 1 and wrong the
+  moment the camera moves. `CameraRigTest` locks the zoom-1 framing. Camera gestures live in
+  `CameraInput`, last in the screen's multiplexer, so it only receives what `ShopFloorInput`
+  declined: a new click gets its handler in `ShopFloorInput` (returning true), and then it can never
+  turn into a pan.
 - State that goes in the save is captured and restored by its owner through a slice on
   `ShopFloorSnapshot` (`core.shop`) or `DayProgress` (`core.save`) — a system with persisted state
   exposes `snapshot()` and takes its initial state as a constructor parameter, the way

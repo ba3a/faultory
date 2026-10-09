@@ -12,7 +12,8 @@ class CaptureTimelineJsonTest {
             cues = listOf(
                 CaptureCue(atSeconds = 1f, action = CaptureAction.Chance(ChanceKind.SABOTAGE, outcome = true)),
                 CaptureCue(atSeconds = 2f, action = CaptureAction.Preset(ChromePreset.TECHNICAL)),
-                CaptureCue(atSeconds = 3f, action = CaptureAction.Record(recording = true))
+                CaptureCue(atSeconds = 3f, action = CaptureAction.Record(recording = true)),
+                CaptureCue(atSeconds = 4f, action = CaptureAction.Camera(x = 640f, y = 420f, zoom = 2, seconds = 3f))
             )
         )
 
@@ -27,14 +28,18 @@ class CaptureTimelineJsonTest {
         val json = """
             {"cues":[
               {"atSeconds":5.0,"action":{"type":"chance","kind":"SABOTAGE","outcome":true}},
-              {"atSeconds":10.0,"action":{"type":"preset","preset":"CLEAN"}}
+              {"atSeconds":10.0,"action":{"type":"preset","preset":"CLEAN"}},
+              {"atSeconds":12.0,"action":{"type":"camera","x":640.0,"y":420.0,"zoom":2,"seconds":3.0}},
+              {"atSeconds":15.0,"action":{"type":"camera","x":800.0,"y":480.0,"zoom":1}}
             ]}
         """.trimIndent()
 
         val timeline = FaultoryJson.instance.decodeFromString(CaptureTimeline.serializer(), json)
 
-        assertEquals(2, timeline.cues.size)
+        assertEquals(4, timeline.cues.size)
         assertEquals(CaptureAction.Chance(ChanceKind.SABOTAGE, outcome = true), timeline.cues[0].action)
         assertEquals(CaptureAction.Preset(ChromePreset.CLEAN), timeline.cues[1].action)
+        assertEquals(CaptureAction.Camera(x = 640f, y = 420f, zoom = 2, seconds = 3f), timeline.cues[2].action)
+        assertEquals(CaptureAction.Camera(x = 800f, y = 480f, zoom = 1, seconds = 0f), timeline.cues[3].action)
     }
 }

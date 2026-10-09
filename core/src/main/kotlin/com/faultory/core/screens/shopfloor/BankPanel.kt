@@ -54,9 +54,9 @@ class BankPanel(private val catalogLookup: CatalogLookup) {
         hoveredKey = null
     }
 
-    fun updateHover(worldX: Float, worldY: Float, enabled: Boolean) {
+    fun updateHover(uiX: Float, uiY: Float, enabled: Boolean) {
         hoveredKey = if (enabled) {
-            mutableEntries.firstOrNull { it.bounds.contains(worldX, worldY) }?.key
+            mutableEntries.firstOrNull { it.bounds.contains(uiX, uiY) }?.key
         } else {
             null
         }

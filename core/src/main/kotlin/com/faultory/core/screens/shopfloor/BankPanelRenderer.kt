@@ -10,6 +10,9 @@ import com.faultory.core.shop.PlacedShopObjectKind
 class BankPanelRenderer(private val bankPanel: BankPanel) : ShopFloorLayer {
     override fun drawFill(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
+        renderer.color = BANK_BAND
+        renderer.rect(0f, 0f, GameConfig.virtualWidth, GameConfig.bankHeight)
+
         for (entry in bankPanel.entries) {
             renderer.color = when {
                 entry.key == bankPanel.selectedKey -> CARD_FILL_SELECTED
@@ -68,6 +71,7 @@ class BankPanelRenderer(private val bankPanel: BankPanel) : ShopFloorLayer {
     }
 
     private companion object {
+        private val BANK_BAND = Color(0.10f, 0.11f, 0.14f, 1f)
         private val CARD_FILL_SELECTED = Color(0.31f, 0.56f, 0.63f, 1f)
         private val CARD_FILL_HOVERED = Color(0.24f, 0.29f, 0.34f, 1f)
         private val CARD_FILL_DEFAULT = Color(0.18f, 0.21f, 0.25f, 1f)

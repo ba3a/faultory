@@ -31,6 +31,20 @@ Desktop-only factory-quality scaffold built with Kotlin, LibGDX, and `kotlinx.se
 `./gradlew build`
 `./gradlew :editor:run`
 
+## Shop-floor camera
+
+The floor sits under a pan-and-zoom camera; the HUD, bank panel, menus and modals stay fixed on top.
+
+| Input | Action |
+|---|---|
+| mouse wheel | zoom in / out in whole steps — 1×, 2×, 3× — toward the cursor |
+| left-drag on empty floor, a worker or a belt | grab the floor and pan; let go mid-motion to fling it |
+| `W` `A` `S` `D` / arrow keys | pan |
+
+At 1× the 40×16 floor exactly fills the play area, so the view cannot move until you zoom in. A left
+press that already means something — a machine (rotate-drag), a bank card, a context-menu option, a
+pending assignment target, any tile while a bank item is selected — keeps its meaning and never pans.
+
 ## Capture mode
 
 A flag-gated filming rig for promo footage: chrome that can be switched off and back on, a seeded
@@ -92,6 +106,18 @@ ffmpeg -framerate 60 -i frame_%06d.png -c:v libx264 -crf 16 -pix_fmt yuv420p pro
 
 The window is native 1600×900 so LibGDX's `FitViewport` scales it exactly 1:1 — no resampling of
 the Nearest-filtered pixel art. Upscale in your video editor rather than asking the window for a
-larger size. There is no in-game camera: a level only fills the frame if it is authored to fill the
-40×16 play area, and a shift never ends mid-take if its blueprint's `shiftLengthSeconds` is set well
-beyond how long you intend to film.
+larger size. A shift never ends mid-take if its blueprint's `shiftLengthSeconds` is set well beyond
+how long you intend to film.
+
+**Camera moves.** The status line reads out the current framing as `camera x=… y=… zoom=…`: the
+world point at the centre of the play area and the whole-number zoom. Frame a shot by hand, copy
+those numbers into a timeline `camera` cue, and the move replays frame-exactly on every take
+(`seconds` is the ease duration; omit it or use `0` to cut). A hand-driven move is not repeatable —
+script it once it looks right.
+
+```json
+{"cues": [
+  {"atSeconds": 2.0, "action": {"type": "camera", "x": 640.0, "y": 420.0, "zoom": 2, "seconds": 3.0}},
+  {"atSeconds": 9.0, "action": {"type": "camera", "x": 800.0, "y": 480.0, "zoom": 1, "seconds": 2.0}}
+]}
+```
