@@ -6,9 +6,9 @@ import com.faultory.core.shop.ShopFloor
 import com.faultory.core.shop.TileCoordinate
 
 /**
- * The world's floor: the floor colour under everything the camera can show, then belts, wet tiles
- * and grid lines. World space only - the HUD and bank band backgrounds belong to their own chrome
- * layers, which draw over the world afterwards.
+ * Floor overlays drawn as shapes over the scenery: belts that have no sprite, wet tiles and grid
+ * lines. The ground itself is [TerrainRenderer]'s. World space only - the HUD and bank band
+ * backgrounds belong to their own chrome layers, which draw over the world afterwards.
  */
 class GridBackgroundRenderer(
     private val shopFloor: ShopFloor,
@@ -17,12 +17,6 @@ class GridBackgroundRenderer(
 ) : ShopFloorLayer {
     override fun drawFill(ctx: ShopFloorRenderContext) {
         val renderer = ctx.shapeRenderer
-
-        // Everything on screen, not just the floor: zoomed out, overscrolled, or with a chrome band
-        // hidden, the world beyond the floor shows through and must not read as the clear colour.
-        val visible = ctx.visibleWorld
-        renderer.color = PLAY_AREA
-        renderer.rect(visible.minX, visible.minY, visible.maxX - visible.minX, visible.maxY - visible.minY)
 
         renderer.color = BELT_FILL
         for (beltTile in shopFloor.grid.beltTiles) {
@@ -80,7 +74,6 @@ class GridBackgroundRenderer(
     }
 
     private companion object {
-        private val PLAY_AREA = Color(0.12f, 0.15f, 0.18f, 1f)
         private val BELT_FILL = Color(0.20f, 0.33f, 0.42f, 1f)
         private val GRID_LINE = Color(0.18f, 0.22f, 0.26f, 1f)
         private val BELT_OUTLINE = Color(0.37f, 0.54f, 0.67f, 1f)

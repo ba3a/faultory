@@ -50,6 +50,7 @@ import com.faultory.core.save.LocalSaveRepository
 import com.faultory.core.save.PlayerPreferences
 import com.faultory.core.save.PlayerPreferencesRepository
 import com.faultory.core.save.SaveRepository
+import com.faultory.core.scenery.SceneryContent
 import com.faultory.core.screens.BootScreen
 import com.faultory.core.screens.shopfloor.ShiftLifecycleHost
 import com.faultory.core.screens.LevelSelectionScreen
@@ -218,6 +219,20 @@ class FaultoryGame : Game(), ShiftLifecycleHost {
         } else {
             null
         }
+
+    /**
+     * The scenery catalogs, queued at boot alongside the others. One not yet resident reads as
+     * empty, which the scenery survives - it falls back to plain colours - rather than failing.
+     */
+    fun sceneryContent(): SceneryContent = SceneryContent(
+        terrains = loadedOrNull(AssetPaths.terrainCatalog, TerrainCatalog::class.java) ?: TerrainCatalog(),
+        tiles = loadedOrNull(AssetPaths.tileCatalog, TileCatalog::class.java) ?: TileCatalog(),
+        walls = loadedOrNull(AssetPaths.wallCatalog, WallCatalog::class.java) ?: WallCatalog(),
+        styles = loadedOrNull(AssetPaths.sceneryStyleCatalog, SceneryStyleCatalog::class.java) ?: SceneryStyleCatalog()
+    )
+
+    private fun <T> loadedOrNull(path: String, type: Class<T>): T? =
+        if (assetManager.isLoaded(path)) assetManager.get(path, type) else null
 
     private fun ensureEncounterEngineReady() {
         if (encounterEngine != null) return

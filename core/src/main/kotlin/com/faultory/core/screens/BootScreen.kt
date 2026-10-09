@@ -44,11 +44,11 @@ class BootScreen(
         drawProgress(game.assetManager.progress)
 
         if (done && !transitioned) {
-            // Skin JSON names the atlas it needs, and a blueprint names the belt skins it needs,
-            // so each is discovered one loading pass after the asset that referenced it.
+            // Skin JSON names the atlas it needs, and a blueprint names the belt and scenery skins
+            // it needs, so each is discovered one loading pass after the asset that referenced it.
             when (phase) {
                 BootPhase.SKIN_DEFINITIONS -> {
-                    enqueueBeltSkinDefinitions()
+                    enqueueLevelSkinDefinitions()
                     phase = BootPhase.ATLASES
                     return
                 }
@@ -95,10 +95,10 @@ class BootScreen(
         game.openLevel(captureLevel)
     }
 
-    private fun enqueueBeltSkinDefinitions() {
+    private fun enqueueLevelSkinDefinitions() {
         val assetManager = game.assetManager
         val blueprint = levelBlueprint() ?: return
-        SkinReferences.referencedBeltSkinIds(blueprint).forEach { skinId ->
+        SkinReferences.referencedLevelSkinIds(blueprint, game.sceneryContent()).forEach { skinId ->
             val path = AssetPaths.skinPath(skinId)
             if (assetManager.isLoaded(path)) return@forEach
             if (!Gdx.files.internal(path).exists()) return@forEach
@@ -127,7 +127,9 @@ class BootScreen(
                 val catalog = assetManager.get(AssetPaths.shopCatalog, ShopCatalog::class.java)
                 addAll(SkinReferences.referencedAtlasPaths(catalog, definitionLookup))
             }
-            levelBlueprint()?.let { addAll(SkinReferences.referencedAtlasPaths(it, definitionLookup)) }
+            levelBlueprint()?.let { blueprint ->
+                addAll(SkinReferences.referencedAtlasPaths(blueprint, game.sceneryContent(), definitionLookup))
+            }
         }.distinct()
         atlasPaths.forEach { atlasPath ->
             if (assetManager.isLoaded(atlasPath)) return@forEach

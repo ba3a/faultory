@@ -18,6 +18,7 @@ import com.faultory.core.content.LevelDefinition
 import com.faultory.core.graphics.ProductOrientationMemory
 import com.faultory.core.graphics.SkinFrameLookup
 import com.faultory.core.content.ShopCatalog
+import com.faultory.core.scenery.SceneryLayout
 import com.faultory.core.screens.shopfloor.BankPanel
 import com.faultory.core.screens.shopfloor.BeltSpriteRenderer
 import com.faultory.core.screens.shopfloor.BankPanelRenderer
@@ -46,8 +47,10 @@ import com.faultory.core.screens.shopfloor.ShopFloorInput
 import com.faultory.core.screens.shopfloor.ShopFloorRenderContext
 import com.faultory.core.screens.shopfloor.ShopFloorView
 import com.faultory.core.screens.shopfloor.ObjectContextMenuRenderer
+import com.faultory.core.screens.shopfloor.TerrainRenderer
 import com.faultory.core.screens.shopfloor.UpgradeFlowController
 import com.faultory.core.screens.shopfloor.UpgradeModalRenderer
+import com.faultory.core.screens.shopfloor.WallRenderer
 import com.faultory.core.screens.shopfloor.WorkerAssignmentController
 import com.faultory.core.save.GameSave
 import com.faultory.core.encounters.ShiftStartedEvent
@@ -131,6 +134,20 @@ class ShopFloorScreen(
     private val spriteDrawnProductIds = mutableSetOf<String>()
     private val spriteDrawnBeltTiles = mutableSetOf<TileCoordinate>()
     private val chromeVisibility = captureRuntime.chromeVisibility
+    private val sceneryContent = game.sceneryContent()
+    private val sceneryLayout = SceneryLayout.build(
+        spec = shopFloor.blueprint.scenery,
+        floor = shopFloor.grid.floor,
+        beltPaths = shopFloor.grid.orderedBeltPaths,
+        content = sceneryContent,
+        extent = camera.bounds.sceneryExtent(camera.zoomLadder)
+    )
+
+    // Scenery draws first, in views of its own: a ShopFloorView runs each pass across all of its
+    // layers, so ground art inside the world view would paint over the world's fill-pass shapes
+    // (belt fallbacks, wet tiles), and the ground's sprites would likewise bury the walls' fill.
+    private val groundView = ShopFloorView(listOf(TerrainRenderer(sceneryLayout, sceneryContent.tiles.tiles)))
+    private val wallView = ShopFloorView(listOf(WallRenderer(sceneryLayout, sceneryContent.walls.walls)))
 
     // World layers draw through the movable world camera; chrome layers draw afterwards, fixed in
     // virtual-screen units, so the world never paints over the interface however it is framed.
@@ -280,6 +297,8 @@ class ShopFloorScreen(
 
         worldViewport.apply()
         useProjection(worldCamera.combined)
+        groundView.render(renderContext)
+        wallView.render(renderContext)
         worldView.render(renderContext)
 
         uiViewport.apply()

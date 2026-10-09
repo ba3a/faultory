@@ -23,6 +23,17 @@
       "height": 40
     }
   },
+  "scenery": {
+    "floorTerrain": "shop_floor",
+    "outsideTerrain": "yard",
+    "styleId": null,
+    "tagWeights": [],
+    "regions": [],
+    "patches": [],
+    "tilePins": [],
+    "wallPins": [],
+    "seed": 0
+  },
   "conveyorBelts": [],
   "machineSlots": [],
   "workerSpawnPoints": []

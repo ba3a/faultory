@@ -3,6 +3,8 @@ package com.faultory.core.content
 import com.faultory.core.TestAssets
 import com.faultory.core.config.FaultoryJson
 import com.faultory.core.scenery.SceneryColor
+import com.faultory.core.shop.ShopBlueprint
+import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.readText
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -61,6 +63,22 @@ class SceneryCatalogAssetTest {
         assertEquals(0x1F262E80, SceneryColor.parseOrNull("#1f262e80"))
         listOf("1F262E", "#1F262", "#1F262E8", "#GGGGGG", "").forEach { malformed ->
             assertEquals(null, SceneryColor.parseOrNull(malformed), "'$malformed'")
+        }
+    }
+
+    @Test
+    fun `shipped blueprints build their scenery from shipped content`() {
+        val terrainIds = terrains.terrains.map { it.id }.toSet()
+        val shops = TestAssets.root.resolve("shops").listDirectoryEntries("*.json")
+        assertTrue(shops.isNotEmpty())
+        shops.forEach { path ->
+            val scenery = FaultoryJson.instance.decodeFromString(ShopBlueprint.serializer(), path.readText()).scenery
+            val named = listOf(scenery.floorTerrain, scenery.outsideTerrain) +
+                scenery.regions.map { it.terrain } + scenery.patches.map { it.terrain }
+            named.forEach { assertTrue(it in terrainIds, "${path.fileName} names unknown terrain '$it'") }
+            scenery.styleId?.let { id -> assertTrue(styles.styles.any { it.id == id }, "${path.fileName} style '$id'") }
+            scenery.tilePins.forEach { pin -> assertTrue(tiles.tiles.any { it.id == pin.tileId }, "${path.fileName}") }
+            scenery.wallPins.forEach { pin -> assertTrue(walls.walls.any { it.id == pin.wallId }, "${path.fileName}") }
         }
     }
 

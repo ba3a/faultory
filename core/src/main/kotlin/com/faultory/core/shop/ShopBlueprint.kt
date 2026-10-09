@@ -17,6 +17,8 @@ data class ShopBlueprint(
     val floor: TileRect = defaultFloor,
     /** Where the shop-floor camera rests and how far it may overscroll; see [CameraFraming]. */
     val camera: CameraFraming = defaultCamera,
+    /** The ground in and around the shop and the walls that ring its floor; see [ScenerySpec]. */
+    val scenery: ScenerySpec = ScenerySpec(),
     val conveyorBelts: List<ConveyorBelt>,
     val machineSlots: List<MachineSlot>,
     val workerSpawnPoints: List<WorkerSpawnPoint>,

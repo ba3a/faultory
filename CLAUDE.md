@@ -77,6 +77,7 @@ Package-by-responsibility under `core/src/main/kotlin/com/faultory/core`:
 | `core.systems` | Time-step and simulation coordinators (noun names, e.g. `ProductionDayDirector`), and `BeltSupplyFeederFactory` |
 | `core.save` | Save models, codecs, `SaveRepository` / `LocalSaveRepository`, and the in-memory `InMemorySaveRepository` / `InMemoryEncounterProgressRepository` a headless run or a test uses instead |
 | `core.capture` | Capture mode's composition root and supporting types - see **Capture mode** below |
+| `core.scenery` | Procedural, visual-only scenery: the ground in and around a shop and the walls ringing its floor, laid out from a blueprint's `ScenerySpec` and the terrain / tile / wall / scenery-style catalogs (`SceneryContent`). `TerrainMap` gives every cell a terrain; `TerrainAutotiler` picks the dual-grid ground tile whose four corner terrains match; `WallRing` gives each ring cell a `WallSegment` (with belt openings) and a piece; `StyleWeights` is the one place a piece's per-level weight is computed; `SceneryLayout` precomputes it all for the extent `CameraBounds.sceneryExtent` says the camera can show. Pure Kotlin with no LibGDX, so `TerrainRenderer` / `WallRenderer` and the editor's preview draw the same layout. Variation comes from `PositionHash`, never from the simulation. |
 | `core.headless` | `HeadlessGame` / `HeadlessLevelSession`: runs a level with no screen, no `AssetManager` and no `LWJGL3` window, for testing levels/balance from code or a REPL. Opens a level through the same `ShopFloorFactory` `BootScreen` uses and drives time through the same `ShiftLifecycleController`, so a headless run and a played shift are the same simulation. Defaults to in-memory persistence, so it can never touch the player's real saves — the same invariant `core.capture` keeps for capture mode. |
 
 Data flow:
@@ -106,6 +107,10 @@ may request it, and its optional stand-in. `SkinActionCatalog`'s per-kind lists 
 `SkinFrameResolver`'s stand-in chain both derive from that one entry, so nothing can drift; an
 action the runtime asks for but the table does not list is an animation that never plays, and
 `SkinActionCatalogTest` / `SpriteActionTest` enforce this.
+
+Scenery pieces (ground tiles, wall pieces) are skins too, of `SpriteKind.TILE`: one static `idle`
+frame facing south. What decides where a piece goes is its own rule — corner terrains for a tile, a
+`WallSegment` for a wall — not an action.
 
 Full contract — degradation order, sockets vs. interactions, mirroring, layer discipline — is in
 the **`skin-actions`** skill (`.claude/skills/skin-actions/`). Load it before touching a resolver,
@@ -152,7 +157,10 @@ that one call site.
 **Check every new feature against capture mode — some will need tweaking to work under it:**
 
 - **Rolls a random?** Route it through `ChanceOracle` with a `ChanceKind` (`core.shop.systems`), not
-  `random.nextFloat()` at the call site, or it can be neither cued nor made repeatable.
+  `random.nextFloat()` at the call site, or it can be neither cued nor made repeatable. The one
+  exception is randomness that only decides how something *looks* and never touches the
+  simulation — scenery variants, noise patches: that is a pure function of position through
+  `PositionHash` (`core.scenery`), so it repeats by construction and never perturbs the seeded stream.
 - **Draws interface?** Give it a `ChromeElement` (`core.screens.shopfloor`) and gate it with
   `GatedLayer` or an injected `ChromeVisibility`, or it will show up in clean footage.
 - **Persists anything?** It must go through a repository built in `FaultoryGame.create()`, or a
@@ -283,6 +291,22 @@ When a refactor clears out a mistake that could be made again, leave something b
   `CameraInput`, last in the screen's multiplexer, so it only receives what `ShopFloorInput`
   declined: a new click gets its handler in `ShopFloorInput` (returning true), and then it can never
   turn into a pan.
+- **Static scenery draws in views of its own, before the world view.** `ShopFloorView` runs each
+  pass (fill, sprite, line, text) across all of its layers at once, so a layer that paints the
+  ground with sprites inside the world view buries every fill-pass shape the world draws — belt
+  fallbacks, wet tiles. `ShopFloorScreen` renders `groundView` (`TerrainRenderer`), then `wallView`
+  (`WallRenderer`), then `worldView`; anything static that belongs under the floor's entities joins
+  one of the scenery views, never the world view.
+- **Wall art overhangs away from the floor only.** A wall piece is drawn at its authored size,
+  anchored on the edge of its cell that faces the floor (`WallSegment.towardFloorX/Y`), so a tall far
+  wall grows up into the yard and a deep near wall grows down — neither can cover the floor or
+  anything on it, which is why walls need no depth sorting against entities. Keep it that way: do
+  not anchor a wall piece on its outer edge.
+- **A scenery piece's per-level weight comes only from `StyleWeights`.** A level opts into a look
+  through `ScenerySpec.styleId` and its own `tagWeights`; tags on tiles and wall pieces are the only
+  hook. Do not filter pieces by level, shop id or anything else at a call site — the autotiler, the
+  wall ring and the editor's preview all ask `StyleWeights`, and a second filter is a level that
+  looks one way in the editor and another in the game.
 - State that goes in the save is captured and restored by its owner through a slice on
   `ShopFloorSnapshot` (`core.shop`) or `DayProgress` (`core.save`) — a system with persisted state
   exposes `snapshot()` and takes its initial state as a constructor parameter, the way

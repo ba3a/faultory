@@ -92,6 +92,9 @@ class CameraRig(
     /** The ladder step the camera is settling on. */
     val targetZoom: Float get() = tuning.zoomLadder[targetZoomIndex]
 
+    /** Every magnification the camera can settle at - what coverage of the world must allow for. */
+    val zoomLadder: List<Float> get() = tuning.zoomLadder
+
     var isGrabbing: Boolean = false
         private set
 

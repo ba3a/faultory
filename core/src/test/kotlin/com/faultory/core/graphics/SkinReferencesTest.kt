@@ -5,11 +5,20 @@ import com.faultory.core.content.MachineType
 import com.faultory.core.content.Manuality
 import com.faultory.core.content.ShopCatalog
 import com.faultory.core.content.ProductDefinition
+import com.faultory.core.content.TileCatalog
+import com.faultory.core.content.TileCorners
+import com.faultory.core.content.TileDefinition
+import com.faultory.core.content.WallCatalog
+import com.faultory.core.content.WallDefinition
+import com.faultory.core.content.WallSegment
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.assets.AssetPaths
+import com.faultory.core.scenery.SceneryContent
 import com.faultory.core.shop.BeltNode
 import com.faultory.core.shop.ConveyorBelt
+import com.faultory.core.shop.ScenerySpec
 import com.faultory.core.shop.ShopBlueprint
+import com.faultory.core.shop.TilePin
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -68,6 +77,40 @@ class SkinReferencesTest {
     fun `referencedBeltSkinIds is empty when a blueprint has no belts`() {
         assertEquals(emptyList(), SkinReferences.referencedBeltSkinIds(blueprint()))
     }
+
+    @Test
+    fun `scenery skins are the tiles the blueprint's terrains can use, every wall piece, and pins`() {
+        val scenery = SceneryContent(
+            tiles = TileCatalog(
+                listOf(
+                    tile("floor_full", "floor", "floor", "floor", "floor"),
+                    tile("floor_grass", "grass", "grass", "floor", "floor"),
+                    tile("lava_full", "lava", "lava", "lava", "lava"),
+                    tile("pinned_lava", "lava", "lava", "lava", "lava")
+                )
+            ),
+            walls = WallCatalog(listOf(WallDefinition("brick", "wall_brick", WallSegment.FAR)))
+        )
+        val blueprint = blueprint(belt("belt-a", null)).copy(
+            scenery = ScenerySpec(
+                floorTerrain = "floor",
+                outsideTerrain = "grass",
+                tilePins = listOf(TilePin(0, 0, "pinned_lava"))
+            )
+        )
+
+        assertEquals(
+            listOf("tile_floor_full", "tile_floor_grass", "tile_pinned_lava", "wall_brick"),
+            SkinReferences.referencedScenerySkinIds(blueprint, scenery)
+        )
+        assertEquals(
+            listOf(AssetPaths.defaultBeltSkin, "tile_floor_full", "tile_floor_grass", "tile_pinned_lava", "wall_brick"),
+            SkinReferences.referencedLevelSkinIds(blueprint, scenery)
+        )
+    }
+
+    private fun tile(id: String, nw: String, ne: String, se: String, sw: String) =
+        TileDefinition(id = id, skin = "tile_$id", corners = TileCorners(nw, ne, se, sw))
 
     private fun belt(id: String, skin: String?): ConveyorBelt = ConveyorBelt(
         id = id,

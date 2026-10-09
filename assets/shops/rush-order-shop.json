@@ -23,6 +23,23 @@
       "height": 40
     }
   },
+  "scenery": {
+    "floorTerrain": "shop_floor",
+    "outsideTerrain": "asphalt",
+    "styleId": null,
+    "tagWeights": [],
+    "regions": [],
+    "patches": [
+      {
+        "terrain": "yard",
+        "scale": 5.0,
+        "threshold": 0.62
+      }
+    ],
+    "tilePins": [],
+    "wallPins": [],
+    "seed": 0
+  },
   "conveyorBelts": [
     {
       "id": "belt-a",
