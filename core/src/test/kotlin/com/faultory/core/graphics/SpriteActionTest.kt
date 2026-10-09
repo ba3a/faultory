@@ -65,12 +65,14 @@ class SpriteActionTest {
             listOf("idle", "straight", "turn_cw", "turn_ccw", "start", "end"),
             SpriteAction.idsFor(SpriteKind.BELT)
         )
+        assertEquals(listOf("idle"), SpriteAction.idsFor(SpriteKind.TILE))
     }
 
     @Test
     fun `the derived catalog and fallback map agree with the table`() {
         assertEquals(SpriteAction.idsFor(SpriteKind.WORKER), SkinActionCatalog.worker)
         assertEquals(SpriteAction.idsFor(SpriteKind.BELT), SkinActionCatalog.belt)
+        assertEquals(SpriteAction.idsFor(SpriteKind.TILE), SkinActionCatalog.tile)
         assertEquals(
             mapOf(
                 "belt_enter" to listOf("belt_ride"),

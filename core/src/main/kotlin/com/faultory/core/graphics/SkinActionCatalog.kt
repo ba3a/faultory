@@ -21,6 +21,9 @@ object SkinActionCatalog {
 
     val belt: List<String> = SpriteAction.idsFor(SpriteKind.BELT)
 
+    /** Ground tiles and wall pieces: one static frame, so only `idle`. */
+    val tile: List<String> = SpriteAction.idsFor(SpriteKind.TILE)
+
     /**
      * Worker actions including both halves of every authored interaction, since a worker can be
      * asked to play either side and each side comes off its own skin.

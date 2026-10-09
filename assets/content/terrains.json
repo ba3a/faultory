@@ -1,0 +1,12 @@
+{
+  "terrains": [
+    {
+      "id": "shop_floor",
+      "fallbackColor": "#1F262E"
+    },
+    {
+      "id": "yard",
+      "fallbackColor": "#2A3324"
+    }
+  ]
+}

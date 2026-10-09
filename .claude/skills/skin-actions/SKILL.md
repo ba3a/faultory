@@ -5,7 +5,8 @@ description: How sprites resolve in Faultory — SkinDefinition, the *ActionReso
 
 # Sprites, actions and skins
 
-Workers, machines, products and belt tiles are all drawn the same way: a skin id resolves to a
+Workers, machines, products, belt tiles and scenery pieces (ground tiles and shop walls) are all
+drawn the same way: a skin id resolves to a
 `SkinDefinition` (`assets/skins/<id>.json`), an `*ActionResolver` maps entity state to an action
 name and an orientation, and `SkinFrameResolver` picks the clip to draw.
 
@@ -40,9 +41,14 @@ frame; without mask art the base sprite is tinted instead. Belt tiles have no ca
 `BeltTopology` derives flow direction and tile shape from `ShopGrid.orderedBeltPaths`, and the skin
 is `ConveyorBelt.skin` or `AssetPaths.defaultBeltSkin`.
 
+Scenery pieces are `SpriteKind.TILE`: one static frame, so the only action is `idle`, always
+requested facing `SOUTH`. A ground tile (`content/tiles.json`) or wall piece (`content/walls.json`)
+names its skin; what decides *where* it goes is the piece's own rule (corner terrains, wall
+segment), not an action.
+
 ## When a resolver learns a new action, add a SpriteAction entry
 
-`SkinActionCatalog`'s per-kind lists (`worker` / `machine` / `product` / `belt`) and
+`SkinActionCatalog`'s per-kind lists (`worker` / `machine` / `product` / `belt` / `tile`) and
 `SkinFrameResolver`'s stand-in chain both **derive** from `SpriteAction`, so one entry catalogues
 the action and gives it its fallback — nothing to keep in sync by hand. `SkinActionCatalog` is what
 the editor turns into animation grid rows (`AnimationTargets` maps a selected asset to its grids;

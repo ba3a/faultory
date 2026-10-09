@@ -15,8 +15,16 @@ import com.faultory.core.config.CaptureMode
 import com.faultory.core.content.LevelCatalog
 import com.faultory.core.content.LevelCatalogAssetLoader
 import com.faultory.core.content.LevelDefinition
+import com.faultory.core.content.SceneryStyleCatalog
+import com.faultory.core.content.SceneryStyleCatalogAssetLoader
 import com.faultory.core.content.ShopCatalog
 import com.faultory.core.content.ShopCatalogAssetLoader
+import com.faultory.core.content.TerrainCatalog
+import com.faultory.core.content.TerrainCatalogAssetLoader
+import com.faultory.core.content.TileCatalog
+import com.faultory.core.content.TileCatalogAssetLoader
+import com.faultory.core.content.WallCatalog
+import com.faultory.core.content.WallCatalogAssetLoader
 import com.faultory.core.encounters.ConditionLibrary
 import com.faultory.core.encounters.ConditionLibraryAssetLoader
 import com.faultory.core.encounters.EncounterCatalog
@@ -106,11 +114,19 @@ class FaultoryGame : Game(), ShiftLifecycleHost {
             setLoader(ConditionLibrary::class.java, ConditionLibraryAssetLoader(fileHandleResolver))
             setLoader(EncounterCatalog::class.java, EncounterCatalogAssetLoader(fileHandleResolver))
             setLoader(InteractionCatalog::class.java, InteractionCatalogAssetLoader(fileHandleResolver))
+            setLoader(TerrainCatalog::class.java, TerrainCatalogAssetLoader(fileHandleResolver))
+            setLoader(TileCatalog::class.java, TileCatalogAssetLoader(fileHandleResolver))
+            setLoader(WallCatalog::class.java, WallCatalogAssetLoader(fileHandleResolver))
+            setLoader(SceneryStyleCatalog::class.java, SceneryStyleCatalogAssetLoader(fileHandleResolver))
             load(AssetPaths.levelCatalog, LevelCatalog::class.java)
             load(AssetPaths.shopCatalog, ShopCatalog::class.java)
             load(AssetPaths.conditionLibrary, ConditionLibrary::class.java)
             load(AssetPaths.encounterCatalog, EncounterCatalog::class.java)
             load(AssetPaths.interactionCatalog, InteractionCatalog::class.java)
+            load(AssetPaths.terrainCatalog, TerrainCatalog::class.java)
+            load(AssetPaths.tileCatalog, TileCatalog::class.java)
+            load(AssetPaths.wallCatalog, WallCatalog::class.java)
+            load(AssetPaths.sceneryStyleCatalog, SceneryStyleCatalog::class.java)
             finishLoadingAsset<ShopCatalog>(AssetPaths.shopCatalog)
             enqueueSkinDefinitions(fileHandleResolver)
         }

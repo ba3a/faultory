@@ -3,11 +3,16 @@ package com.faultory.core.graphics
 import com.faultory.core.graphics.SpriteKind.BELT
 import com.faultory.core.graphics.SpriteKind.MACHINE
 import com.faultory.core.graphics.SpriteKind.PRODUCT
+import com.faultory.core.graphics.SpriteKind.TILE
 import com.faultory.core.graphics.SpriteKind.WORKER
 import com.faultory.core.shop.BeltTileShape
 import com.faultory.core.shop.ProductFaultReason
 
-enum class SpriteKind { WORKER, MACHINE, PRODUCT, BELT }
+/**
+ * What a skin is drawn for, which decides the actions it may author. [TILE] is a static grid piece
+ * of the scenery - a ground tile or a shop wall piece - drawn with nothing but [SpriteAction.IDLE].
+ */
+enum class SpriteKind { WORKER, MACHINE, PRODUCT, BELT, TILE }
 
 /**
  * Every animation action the runtime can request, declared once.
@@ -30,7 +35,7 @@ enum class SpriteAction(
     /** Action id to borrow when this one is unauthored, tried before `idle`; see [SkinFrameResolver]. */
     val standInId: String? = null
 ) {
-    IDLE("idle", setOf(WORKER, MACHINE, PRODUCT, BELT)),
+    IDLE("idle", setOf(WORKER, MACHINE, PRODUCT, BELT, TILE)),
     WALK("walk", setOf(WORKER)),
     BELT_ENTER("belt_enter", setOf(WORKER), standInId = "belt_ride"),
     BELT_RIDE("belt_ride", setOf(WORKER)),
