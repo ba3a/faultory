@@ -122,6 +122,16 @@ class WallRingTest {
     }
 
     @Test
+    fun `roleAt answers for any cell, openings included, and null off the ring`() {
+        val openings = WallRing.openingsThrough(floor, listOf(path(3 to 2, 4 to 2, 5 to 2)))
+
+        assertEquals(WallSegment.RIGHT_OPENING, WallRing.roleAt(floor, openings, TileCoordinate(6, 2)))
+        assertEquals(WallSegment.RIGHT, WallRing.roleAt(floor, openings, TileCoordinate(6, 1)))
+        assertEquals(null, WallRing.roleAt(floor, openings, TileCoordinate(2, 2)))
+        assertEquals(null, WallRing.roleAt(floor, openings, TileCoordinate(8, 2)))
+    }
+
+    @Test
     fun `the same inputs always pick the same pieces`() {
         val walls = listOf(wall("a", WallSegment.NEAR), wall("b", WallSegment.NEAR), wall("c", WallSegment.NEAR))
 

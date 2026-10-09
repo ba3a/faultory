@@ -148,6 +148,43 @@ class SceneryValidatorTest {
     }
 
     @Test
+    fun `a pinned tile that matches its surroundings passes, a mismatched one warns`() {
+        // Vertex (5, 10) is deep inside the fixture's 40x16 floor at y 4..19.
+        withScenery { it.copy(tilePins = listOf(TilePin(5, 10, "floor_full"), TilePin(6, 10, "yard_full"))) }
+
+        val pinIssues = validateBlueprint().filter { it.fieldName?.startsWith("scenery.tilePins") == true }
+
+        assertEquals(listOf("scenery.tilePins[1]"), pinIssues.map { it.fieldName })
+        assertEquals(Severity.WARNING, pinIssues.single().severity)
+    }
+
+    @Test
+    fun `a tile pin outside the scenery warns`() {
+        withScenery { it.copy(tilePins = listOf(TilePin(500, 500, "yard_full"))) }
+
+        assertTrue(validateBlueprint().any { it.fieldName == "scenery.tilePins[0]" && "outside" in it.message })
+    }
+
+    @Test
+    fun `a wall pin off the ring or on another segment's cell warns`() {
+        withScenery {
+            it.copy(
+                wallPins = listOf(
+                    WallPin(5, 20, "brick_far"),
+                    WallPin(5, 3, "brick_far"),
+                    WallPin(5, 10, "brick_far")
+                )
+            )
+        }
+
+        val warnings = validateBlueprint().filter { it.fieldName?.startsWith("scenery.wallPins") == true }
+
+        assertEquals(listOf("scenery.wallPins[1]", "scenery.wallPins[2]"), warnings.map { it.fieldName })
+        assertTrue("NEAR" in warnings[0].message)
+        assertTrue("not on the wall ring" in warnings[1].message)
+    }
+
+    @Test
     fun `the fixture blueprint's scenery is valid`() {
         assertTrue(validateBlueprint().isEmpty(), "${validateBlueprint()}")
     }

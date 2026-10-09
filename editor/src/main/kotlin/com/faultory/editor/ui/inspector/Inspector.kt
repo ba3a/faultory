@@ -61,6 +61,7 @@ class Inspector(
     private val listener: (AssetSelection?) -> Unit = { render(it) }
     private val dropListener: (FileDropBus.Drop) -> Unit = { routeDrop(it) }
     private val currentAnimations = mutableListOf<AnimationsPanel>()
+    private var currentPreview: SceneryPreviewActor? = null
     private var currentSelectionIssues: List<com.faultory.editor.validation.ValidationIssue> = emptyList()
     private var currentSkinIssues: List<com.faultory.editor.validation.ValidationIssue> = emptyList()
 
@@ -122,6 +123,7 @@ class Inspector(
         val onChangeWithValidation = {
             bundle.onChange()
             refreshIssues(selection)
+            refreshPreview(selection)
         }
         for (editor in bundle.editors) {
             when {
@@ -141,7 +143,23 @@ class Inspector(
         }
         appendLocalizable(selection, onChangeWithValidation)
         appendAnimations(selection)
+        appendSceneryPreview(selection)
         refreshIssues(selection)
+    }
+
+    private fun appendSceneryPreview(selection: AssetSelection) {
+        if (selection !is AssetSelection.Blueprint) return
+        val preview = SceneryPreviewActor(repository.rootPath)
+        currentPreview = preview
+        refreshPreview(selection)
+        content.add(VisLabel("Scenery preview")).colspan(2).left().pad(6f).row()
+        content.add(preview).colspan(2).left().pad(4f).row()
+    }
+
+    private fun refreshPreview(selection: AssetSelection) {
+        val preview = currentPreview ?: return
+        val blueprint = (selection as? AssetSelection.Blueprint)?.let { findBlueprint(it.shopAssetPath) } ?: return
+        preview.show(blueprint, repository.sceneryContent())
     }
 
     private fun appendLocalizable(selection: AssetSelection, onChange: () -> Unit) {
@@ -259,6 +277,8 @@ class Inspector(
     private fun disposeAnimations() {
         currentAnimations.forEach(AnimationsPanel::dispose)
         currentAnimations.clear()
+        currentPreview?.dispose()
+        currentPreview = null
     }
 
     private fun republishIssues() {

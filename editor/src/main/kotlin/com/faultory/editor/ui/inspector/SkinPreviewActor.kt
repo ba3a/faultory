@@ -1,8 +1,6 @@
 package com.faultory.editor.ui.inspector
 
 import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.Pixmap
-import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.graphics.g2d.TextureAtlas
 import com.badlogic.gdx.graphics.g2d.TextureRegion
@@ -71,8 +69,8 @@ class SkinPreviewActor(
         val centerY = fit.drawY + point.y * fit.scale
         val previous = batch.packedColor
         batch.color = MARKER_COLOR
-        batch.draw(whitePixel, centerX - MARKER_ARM, centerY - 0.5f, MARKER_ARM * 2f, 1f)
-        batch.draw(whitePixel, centerX - 0.5f, centerY - MARKER_ARM, 1f, MARKER_ARM * 2f)
+        batch.draw(WhitePixel.region, centerX - MARKER_ARM, centerY - 0.5f, MARKER_ARM * 2f, 1f)
+        batch.draw(WhitePixel.region, centerX - 0.5f, centerY - MARKER_ARM, 1f, MARKER_ARM * 2f)
         batch.packedColor = previous
     }
 
@@ -125,18 +123,5 @@ class SkinPreviewActor(
     private companion object {
         val MARKER_COLOR: Color = Color(1f, 0.35f, 0.25f, 1f)
         const val MARKER_ARM = 4f
-
-        /**
-         * One 1x1 white texture stretched into the crosshair arms. Held for the editor's lifetime
-         * rather than per-actor, since previews are rebuilt on every grid refresh.
-         */
-        private val whitePixel: TextureRegion by lazy {
-            val pixmap = Pixmap(1, 1, Pixmap.Format.RGBA8888)
-            pixmap.setColor(Color.WHITE)
-            pixmap.fill()
-            val texture = Texture(pixmap)
-            pixmap.dispose()
-            TextureRegion(texture)
-        }
     }
 }

@@ -65,8 +65,7 @@ class WallRing(
         val openings = openingsThrough(floor, beltPaths)
 
         cells = ringCells(floor).map { tile ->
-            val baseSegment = requireNotNull(segmentAt(floor, tile.x, tile.y))
-            val segment = if (tile in openings) baseSegment.asOpening() else baseSegment
+            val segment = requireNotNull(roleAt(floor, openings, tile))
             val choice = choices[segment] ?: segment.cornerSide()?.let(choices::get)
             WallCell(
                 x = tile.x,
@@ -104,6 +103,15 @@ class WallRing(
             listOf(WallSegment.LEFT, null, WallSegment.RIGHT),
             listOf(WallSegment.FAR_LEFT, WallSegment.FAR, WallSegment.FAR_RIGHT)
         )
+
+        /**
+         * The segment of [tile] given the belt [openings] through the ring (see [openingsThrough]):
+         * what [segmentAt] says, turned into an opening where a belt passes. Null off the ring.
+         */
+        fun roleAt(floor: TileRect, openings: Set<TileCoordinate>, tile: TileCoordinate): WallSegment? {
+            val segment = segmentAt(floor, tile.x, tile.y) ?: return null
+            return if (tile in openings) segment.asOpening() else segment
+        }
 
         /** The ring around [floor], far row first, then the sides top-down, then the near row. */
         fun ringCells(floor: TileRect): List<TileCoordinate> = buildList {

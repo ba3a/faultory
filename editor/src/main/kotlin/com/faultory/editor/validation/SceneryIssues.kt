@@ -2,7 +2,14 @@ package com.faultory.editor.validation
 
 import com.faultory.core.content.WallSegment
 import com.faultory.core.scenery.StyleWeights
+import com.faultory.core.scenery.TerrainMap
+import com.faultory.core.scenery.WallRing
+import com.faultory.core.screens.shopfloor.CameraBounds
+import com.faultory.core.screens.shopfloor.CameraTuning
 import com.faultory.core.shop.ScenerySpec
+import com.faultory.core.shop.ShopBlueprint
+import com.faultory.core.shop.ShopGrid
+import com.faultory.core.shop.TileCoordinate
 import com.faultory.editor.repository.AssetRepository
 
 /**
@@ -12,11 +19,68 @@ import com.faultory.editor.repository.AssetRepository
  * degrades to its fallbacks - which is exactly why the editor has to catch it.
  */
 object SceneryIssues {
-    fun of(spec: ScenerySpec, repository: AssetRepository): List<ValidationIssue> =
-        referenceIssues(spec, repository) +
+    fun of(blueprint: ShopBlueprint, repository: AssetRepository): List<ValidationIssue> {
+        val spec = blueprint.scenery
+        return referenceIssues(spec, repository) +
             patchIssues(spec) +
             TagWeightChecks.issues(spec.tagWeights, "scenery.tagWeights", repository) +
-            styleCoverageIssues(spec, repository)
+            styleCoverageIssues(spec, repository) +
+            tilePinIssues(blueprint, repository) +
+            wallPinIssues(blueprint, repository)
+    }
+
+    /**
+     * A pinned tile is drawn whatever the terrains around it are - that is what a pin is for - so a
+     * mismatch is only a warning: it is usually a terrain painted after the pin went down.
+     */
+    private fun tilePinIssues(blueprint: ShopBlueprint, repository: AssetRepository): List<ValidationIssue> {
+        val map = TerrainMap(blueprint.scenery, blueprint.floor, repository.terrainCatalog)
+        val extent = CameraBounds.of(blueprint.camera).sceneryExtent(CameraTuning.ZOOM_LADDER)
+        val tiles = repository.tileCatalog.tiles.associateBy { it.id }
+        return blueprint.scenery.tilePins.mapIndexedNotNull { index, pin ->
+            val tile = tiles[pin.tileId] ?: return@mapIndexedNotNull null
+            val field = "scenery.tilePins[$index]"
+            if (!extent.expandedBy(1).contains(pin.x, pin.y)) {
+                return@mapIndexedNotNull ValidationIssue(Severity.WARNING, "Pin is outside the scenery", field)
+            }
+            val around = listOf(
+                map.terrainAt(pin.x - 1, pin.y),
+                map.terrainAt(pin.x, pin.y),
+                map.terrainAt(pin.x, pin.y - 1),
+                map.terrainAt(pin.x - 1, pin.y - 1)
+            ).map { map.terrainIds.getOrElse(it) { "?" } }
+            if (around == tile.corners.terrainIds()) return@mapIndexedNotNull null
+            ValidationIssue(
+                Severity.WARNING,
+                "Pinned tile '${tile.id}' has corners ${tile.corners.terrainIds()} " +
+                    "but the cells around (${pin.x}, ${pin.y}) are $around",
+                field,
+            )
+        }
+    }
+
+    /** A wall pin must sit on the ring, and a piece made for another segment will look wrong there. */
+    private fun wallPinIssues(blueprint: ShopBlueprint, repository: AssetRepository): List<ValidationIssue> {
+        val floor = blueprint.floor
+        val openings = WallRing.openingsThrough(floor, ShopGrid(blueprint).orderedBeltPaths)
+        val walls = repository.wallCatalog.walls.associateBy { it.id }
+        return blueprint.scenery.wallPins.mapIndexedNotNull { index, pin ->
+            val wall = walls[pin.wallId] ?: return@mapIndexedNotNull null
+            val field = "scenery.wallPins[$index]"
+            val cellSegment = WallRing.roleAt(floor, openings, TileCoordinate(pin.x, pin.y))
+                ?: return@mapIndexedNotNull ValidationIssue(
+                    Severity.WARNING,
+                    "Cell (${pin.x}, ${pin.y}) is not on the wall ring; the pin is ignored",
+                    field,
+                )
+            if (wall.segment == cellSegment) return@mapIndexedNotNull null
+            ValidationIssue(
+                Severity.WARNING,
+                "Pinned ${wall.segment} piece '${wall.id}' sits on a $cellSegment cell",
+                field,
+            )
+        }
+    }
 
     private fun referenceIssues(spec: ScenerySpec, repository: AssetRepository): List<ValidationIssue> = buildList {
         val terrains = repository.terrainCatalog.terrains.map { it.id }.toSet()
