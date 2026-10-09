@@ -23,8 +23,8 @@ import kotlin.test.assertTrue
  * Exercises [WorkerObjectiveSystem]'s replan budget + failed-plan back-off end to end — nothing
  * exercised `update()` at the system level before this (see CODE_REVIEW.md 1.4b).
  *
- * [ShopGrid.orthogonalNeighbors] filters to [ShopGrid.isBuildable] tiles only (`GameConfig`-derived:
- * `x` in `0..39`, `y` in `4..19` at the default window/tile-size constants), so a search can never
+ * [ShopGrid.orthogonalNeighbors] filters to [ShopGrid.isBuildable] tiles only (the blueprint's
+ * floor - [ShopBlueprint.defaultFloor] here: `x` in `0..39`, `y` in `4..19`), so a search can never
  * step outside that band regardless of occupancy. Every coordinate below sits inside it — an
  * unreachable goal is manufactured by surrounding a tile *within the buildable band* with blocker
  * workers, so the failure is genuinely about occupancy (via [ShopFloorState.blockedTilesForPath]),

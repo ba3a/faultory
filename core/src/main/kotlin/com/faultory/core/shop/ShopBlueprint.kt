@@ -9,11 +9,23 @@ data class ShopBlueprint(
     val displayName: String,
     val qualityThresholdPercent: Float,
     val shiftLengthSeconds: Float,
+    /**
+     * The buildable floor, in absolute world tiles. The single source of the floor's extent:
+     * [ShopGrid] and everything that asks it which tiles exist read this, never the screen layout
+     * in [com.faultory.core.config.GameConfig].
+     */
+    val floor: TileRect = defaultFloor,
     val conveyorBelts: List<ConveyorBelt>,
     val machineSlots: List<MachineSlot>,
     val workerSpawnPoints: List<WorkerSpawnPoint>,
     val floorTuning: FloorTuning = FloorTuning.default()
-)
+) {
+    companion object {
+        /** The 40x16 floor every shop had while its extent was derived from the screen layout:
+         * the band between the bank and the HUD at the virtual resolution. */
+        val defaultFloor = TileRect(x = 0, y = 4, width = 40, height = 16)
+    }
+}
 
 @Serializable
 data class FloorTuning(

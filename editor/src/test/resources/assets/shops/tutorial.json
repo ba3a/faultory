@@ -3,6 +3,12 @@
   "displayName": "Morning Ceramic Run",
   "qualityThresholdPercent": 92.0,
   "shiftLengthSeconds": 180.0,
+  "floor": {
+    "x": 0,
+    "y": 4,
+    "width": 40,
+    "height": 16
+  },
   "conveyorBelts": [
     {
       "id": "belt-a",

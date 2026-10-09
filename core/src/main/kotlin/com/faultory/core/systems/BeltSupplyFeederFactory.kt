@@ -47,7 +47,7 @@ object BeltSupplyFeederFactory {
         val grid = ShopGrid(blueprint)
         return grid.orderedBeltPaths
             .mapNotNull { path -> path.firstOrNull() }
-            .filter { it.x == 0 }
+            .filter { it.x == grid.floor.x }
             .sortedByDescending { it.y }
     }
 }

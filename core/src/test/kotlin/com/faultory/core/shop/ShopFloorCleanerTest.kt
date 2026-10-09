@@ -1,6 +1,5 @@
 package com.faultory.core.shop
 
-import com.faultory.core.config.GameConfig
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.content.WorkerRoleProfile
@@ -39,8 +38,11 @@ class ShopFloorCleanerTest {
         val cleanersAfterFirstTick = shopFloor.cleaners()
         assertEquals(1, cleanersAfterFirstTick.size)
         val spawnedTile = cleanersAfterFirstTick.first().position
-        val maxX = (GameConfig.virtualWidth / GameConfig.tileSize).toInt() - 1
-        assertTrue(spawnedTile.x == 0 || spawnedTile.x == maxX, "spawn tile must be on a side edge, got $spawnedTile")
+        val floor = shopFloor.grid.floor
+        assertTrue(
+            spawnedTile.x == floor.x || spawnedTile.x == floor.maxX,
+            "spawn tile must be on a side edge, got $spawnedTile"
+        )
 
         repeat(5) { shopFloor.update(0.05f, mapOf(cleanerProfile.id to cleanerProfile)) }
         assertEquals(1, shopFloor.cleaners().size)

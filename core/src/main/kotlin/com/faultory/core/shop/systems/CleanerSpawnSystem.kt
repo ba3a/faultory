@@ -1,6 +1,5 @@
 package com.faultory.core.shop.systems
 
-import com.faultory.core.config.GameConfig
 import com.faultory.core.content.WorkerProfile
 import com.faultory.core.content.WorkerRole
 import com.faultory.core.encounters.CleanerSpawnedEvent
@@ -48,15 +47,10 @@ internal class CleanerSpawnSystem(
 
     private fun pickEdgeSpawnTile(): TileCoordinate? {
         val grid = access.grid
-        val minBuildableY = (GameConfig.bankHeight / GameConfig.tileSize).toInt()
-        val maxBuildableY = ((GameConfig.virtualHeight - GameConfig.hudHeight) / GameConfig.tileSize).toInt() - 1
-        val minBuildableX = 0
-        val maxBuildableX = (GameConfig.virtualWidth / GameConfig.tileSize).toInt() - 1
-
-        val edgeColumns = listOf(minBuildableX, maxBuildableX)
+        val edgeColumns = listOf(grid.floor.x, grid.floor.maxX).distinct()
         val candidates = mutableListOf<TileCoordinate>()
         for (x in edgeColumns) {
-            for (y in minBuildableY..maxBuildableY) {
+            for (y in grid.floor.yRange) {
                 val tile = TileCoordinate(x, y)
                 if (!grid.isBuildable(tile)) continue
                 if (tile in grid.beltTiles) continue

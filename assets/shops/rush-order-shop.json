@@ -3,6 +3,12 @@
   "displayName": "Rush Order Bottling",
   "qualityThresholdPercent": 95.0,
   "shiftLengthSeconds": 150.0,
+  "floor": {
+    "x": 0,
+    "y": 4,
+    "width": 40,
+    "height": 16
+  },
   "conveyorBelts": [
     {
       "id": "belt-a",

@@ -50,22 +50,19 @@ class GridBackgroundRenderer(
 
         if (chromeVisibility.isVisible(ChromeElement.GRID_LINES)) {
             renderer.color = GRID_LINE
+            val floor = shopFloor.grid.floor
+            val left = floor.x * GameConfig.tileSize
+            val right = (floor.maxX + 1) * GameConfig.tileSize
+            val bottom = floor.y * GameConfig.tileSize
+            val top = (floor.maxY + 1) * GameConfig.tileSize
 
-            var currentX = 0f
-            while (currentX <= GameConfig.virtualWidth) {
-                renderer.line(
-                    currentX,
-                    GameConfig.bankHeight,
-                    currentX,
-                    GameConfig.virtualHeight - GameConfig.hudHeight
-                )
-                currentX += GameConfig.tileSize
+            for (column in floor.x..floor.maxX + 1) {
+                val x = column * GameConfig.tileSize
+                renderer.line(x, bottom, x, top)
             }
-
-            var currentY = GameConfig.bankHeight
-            while (currentY <= GameConfig.virtualHeight - GameConfig.hudHeight) {
-                renderer.line(0f, currentY, GameConfig.virtualWidth, currentY)
-                currentY += GameConfig.tileSize
+            for (row in floor.y..floor.maxY + 1) {
+                val y = row * GameConfig.tileSize
+                renderer.line(left, y, right, y)
             }
         }
 

@@ -5,6 +5,8 @@ import com.faultory.core.shop.BeltNode
 import com.faultory.core.shop.ConveyorBelt
 import com.faultory.core.shop.MachineSlot
 import com.faultory.core.shop.ShopBlueprint
+import com.faultory.core.shop.TileRect
+import com.faultory.core.shop.WorkerSpawnPoint
 import com.faultory.editor.repository.AssetRepository
 import com.faultory.editor.ui.tree.AssetSelection
 import java.nio.file.Files
@@ -118,9 +120,9 @@ class BlueprintValidatorTest {
                     ConveyorBelt(
                         id = "good",
                         checkpoints = listOf(
-                            BeltNode(0f, 0f),
-                            BeltNode(10f, 0f),
-                            BeltNode(10f, 10f),
+                            BeltNode(0f, 200f),
+                            BeltNode(200f, 200f),
+                            BeltNode(200f, 400f),
                         ),
                     ),
                 ),
@@ -130,6 +132,68 @@ class BlueprintValidatorTest {
         val issues = validate(AssetSelection.Blueprint(blueprintKey))
 
         assertTrue(issues.none { it.fieldName?.startsWith("conveyorBelts") == true })
+    }
+
+    @Test
+    fun `empty floor is an error`() {
+        mutateBlueprint { it.copy(floor = TileRect(x = 0, y = 4, width = 0, height = 16)) }
+
+        val issues = validate(AssetSelection.Blueprint(blueprintKey))
+
+        assertTrue(issues.any { it.severity == Severity.ERROR && it.fieldName == "floor" })
+    }
+
+    @Test
+    fun `belt leaving the floor is an error`() {
+        mutateBlueprint {
+            it.copy(
+                conveyorBelts = listOf(
+                    ConveyorBelt(id = "runaway", checkpoints = listOf(BeltNode(200f, 200f), BeltNode(200f, 40f))),
+                ),
+            )
+        }
+
+        val issues = validate(AssetSelection.Blueprint(blueprintKey))
+
+        assertTrue(issues.any { it.severity == Severity.ERROR && it.fieldName == "conveyorBelts[0]" })
+    }
+
+    @Test
+    fun `machine slot outside the floor is an error`() {
+        mutateBlueprint {
+            it.copy(machineSlots = listOf(MachineSlot(id = "a", type = MachineType.PRODUCER, x = 100f, y = 20f)))
+        }
+
+        val issues = validate(AssetSelection.Blueprint(blueprintKey))
+
+        assertTrue(issues.any { it.severity == Severity.ERROR && it.fieldName == "machineSlots[0]" })
+    }
+
+    @Test
+    fun `worker spawn point outside the floor is an error`() {
+        mutateBlueprint {
+            it.copy(workerSpawnPoints = listOf(WorkerSpawnPoint(id = "s", x = 1700f, y = 300f)))
+        }
+
+        val issues = validate(AssetSelection.Blueprint(blueprintKey))
+
+        assertTrue(issues.any { it.severity == Severity.ERROR && it.fieldName == "workerSpawnPoints[0]" })
+    }
+
+    @Test
+    fun `an offset floor accepts belts placed on it`() {
+        mutateBlueprint {
+            it.copy(
+                floor = TileRect(x = -10, y = -5, width = 12, height = 8),
+                conveyorBelts = listOf(
+                    ConveyorBelt(id = "west", checkpoints = listOf(BeltNode(-400f, -200f), BeltNode(40f, -200f))),
+                ),
+            )
+        }
+
+        val issues = validate(AssetSelection.Blueprint(blueprintKey))
+
+        assertTrue(issues.none { it.fieldName?.startsWith("conveyorBelts") == true }, "got $issues")
     }
 
     private fun validate(selection: AssetSelection.Blueprint): List<ValidationIssue> {

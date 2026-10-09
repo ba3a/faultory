@@ -1,12 +1,14 @@
 package com.faultory.core.shop
 
 import com.faultory.core.config.GameConfig
-import kotlin.math.floor
 import kotlinx.serialization.Serializable
 
 class ShopGrid(
     blueprint: ShopBlueprint
 ) {
+    /** The buildable floor - [ShopBlueprint.floor]. Every tile this grid treats as existing lies inside it. */
+    val floor: TileRect = blueprint.floor
+
     val orderedBeltPaths: List<List<TileCoordinate>> = blueprint.conveyorBelts.map(::tilesForBelt)
     val beltTiles: Set<TileCoordinate> = orderedBeltPaths
         .flatten()
@@ -28,41 +30,18 @@ class ShopGrid(
      * `listOf(...).filter { }` was pure allocation on the hot path.
      */
     private val neighborsByTile: Map<TileCoordinate, List<TileCoordinate>> = buildMap {
-        val maxTileX = (GameConfig.virtualWidth / GameConfig.tileSize).toInt()
-        val maxTileY = (GameConfig.virtualHeight / GameConfig.tileSize).toInt()
-        for (x in 0..maxTileX) {
-            for (y in 0..maxTileY) {
+        for (x in floor.xRange) {
+            for (y in floor.yRange) {
                 val tile = TileCoordinate(x, y)
-                if (isBuildable(tile)) {
-                    put(tile, computeOrthogonalNeighbors(tile))
-                }
+                put(tile, computeOrthogonalNeighbors(tile))
             }
         }
     }
 
-    fun tileAt(worldX: Float, worldY: Float): TileCoordinate? {
-        if (worldX < 0f || worldX >= GameConfig.virtualWidth) {
-            return null
-        }
-        if (worldY < GameConfig.bankHeight || worldY >= GameConfig.virtualHeight - GameConfig.hudHeight) {
-            return null
-        }
+    fun tileAt(worldX: Float, worldY: Float): TileCoordinate? =
+        tileFromWorld(worldX, worldY).takeIf(::isBuildable)
 
-        val tile = TileCoordinate(
-            x = floor(worldX / GameConfig.tileSize).toInt(),
-            y = floor(worldY / GameConfig.tileSize).toInt()
-        )
-        return tile.takeIf(::isBuildable)
-    }
-
-    fun isBuildable(tile: TileCoordinate): Boolean {
-        val worldX = worldXFor(tile)
-        val worldY = worldYFor(tile)
-        return worldX >= 0f &&
-            worldX + GameConfig.tileSize <= GameConfig.virtualWidth &&
-            worldY >= GameConfig.bankHeight &&
-            worldY + GameConfig.tileSize <= GameConfig.virtualHeight - GameConfig.hudHeight
-    }
+    fun isBuildable(tile: TileCoordinate): Boolean = tile in floor
 
     fun worldXFor(tile: TileCoordinate): Float = tile.x * GameConfig.tileSize
 
@@ -82,15 +61,11 @@ class ShopGrid(
 
     fun nextBeltTile(tile: TileCoordinate): TileCoordinate? = nextBeltTileByTile[tile]
 
-    fun isShippingEdge(tile: TileCoordinate): Boolean {
-        val maxBuildableX = (GameConfig.virtualWidth / GameConfig.tileSize).toInt() - 1
-        val minBuildableY = (GameConfig.bankHeight / GameConfig.tileSize).toInt()
-        val maxBuildableY = ((GameConfig.virtualHeight - GameConfig.hudHeight) / GameConfig.tileSize).toInt() - 1
-        return tile.x <= 0 ||
-            tile.x >= maxBuildableX ||
-            tile.y <= minBuildableY ||
-            tile.y >= maxBuildableY
-    }
+    fun isShippingEdge(tile: TileCoordinate): Boolean =
+        tile.x <= floor.x ||
+            tile.x >= floor.maxX ||
+            tile.y <= floor.y ||
+            tile.y >= floor.maxY
 
     private fun tilesForBelt(belt: ConveyorBelt): List<TileCoordinate> {
         val tiles = mutableListOf<TileCoordinate>()
@@ -131,8 +106,8 @@ class ShopGrid(
 
     private fun tileFromWorld(worldX: Float, worldY: Float): TileCoordinate {
         return TileCoordinate(
-            x = floor(worldX / GameConfig.tileSize).toInt(),
-            y = floor(worldY / GameConfig.tileSize).toInt()
+            x = kotlin.math.floor(worldX / GameConfig.tileSize).toInt(),
+            y = kotlin.math.floor(worldY / GameConfig.tileSize).toInt()
         )
     }
 

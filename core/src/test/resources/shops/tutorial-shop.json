@@ -3,6 +3,12 @@
   "displayName": "Test Shop",
   "qualityThresholdPercent": 80.0,
   "shiftLengthSeconds": 180.0,
+  "floor": {
+    "x": 0,
+    "y": 4,
+    "width": 40,
+    "height": 16
+  },
   "conveyorBelts": [],
   "machineSlots": [],
   "workerSpawnPoints": []

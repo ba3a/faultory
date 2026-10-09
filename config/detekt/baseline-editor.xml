@@ -52,7 +52,6 @@
     <ID>MagicNumber:WorkerRoleProfilesEditor.kt$WorkerRoleProfilesEditor.Companion$1.5</ID>
     <ID>MagicNumber:WorkerRoleProfilesEditor.kt$WorkerRoleProfilesEditor.Companion$5.0</ID>
     <ID>MaxLineLength:AtomicJsonWriterTest.kt$AtomicJsonWriterTest$assertFalse(Files.exists(dir.resolve("products.json.tmp")), "tmp file should be gone after successful write")</ID>
-    <ID>MaxLineLength:BlueprintValidator.kt$BlueprintValidator$"Conveyor belt '${belt.id}' has a zero-length segment between checkpoints $segmentIndex and ${segmentIndex + 1}"</ID>
     <ID>MaxLineLength:Inspector.kt$Inspector.&lt;no name provided&gt;$com.faultory.editor.ui.dialogs.ConfirmDialog.info(stage, "Rename failed", result.message)</ID>
     <ID>MaxLineLength:ReflectionFormTest.kt$ReflectionFormTest$EnumEditor("faultyProductStrategy", "DESTROY", listOf("DESTROY", "PUT_ON_FREE_TILE", "HAND_TO_PRODUCER"))</ID>
     <ID>MaxLineLength:ReflectionFormTest.kt$ReflectionFormTest$assertEquals(IntEditor("faultyProductCapacity", 3), recipe.children.single { it.fieldName == "faultyProductCapacity" })</ID>

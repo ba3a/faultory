@@ -38,11 +38,9 @@ class CaptureDebugLayer(private val shopFloor: ShopFloor) : ShopFloorLayer {
         val layout = ctx.hintLayout
         font.color = TILE_LABEL
 
-        val minBuildableY = (GameConfig.bankHeight / GameConfig.tileSize).toInt()
-        val maxBuildableY = ((GameConfig.virtualHeight - GameConfig.hudHeight) / GameConfig.tileSize).toInt() - 1
-        val maxBuildableX = (GameConfig.virtualWidth / GameConfig.tileSize).toInt() - 1
-        for (x in 0..maxBuildableX) {
-            for (y in minBuildableY..maxBuildableY) {
+        val floor = shopFloor.grid.floor
+        for (x in floor.xRange) {
+            for (y in floor.yRange) {
                 val tile = TileCoordinate(x, y)
                 layout.setText(font, "$x,$y")
                 font.draw(

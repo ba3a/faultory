@@ -223,6 +223,11 @@ When a refactor clears out a mistake that could be made again, leave something b
 - Do not add code to `desktop` beyond launcher concerns.
 - Do not revive `core.world` — active domain packages are `core.shop`, `core.content`, `core.systems`, `core.save`.
 - Do not rename JSON fields or asset paths casually — they are part of the save/content format.
+- **The floor's extent comes only from `ShopBlueprint.floor`** — a `TileRect` in absolute world
+  tiles, read through `ShopGrid.floor`. Never derive buildable bounds, edge columns or tile ranges
+  from `GameConfig`'s screen layout (`virtualWidth`, `bankHeight`, `hudHeight`): those size the
+  chrome, and coincided with the floor only while every shop was 40×16. `ShopGridFloorTest` locks
+  the default.
 - `PlacedShopObject` is a `@Serializable sealed interface` (`Worker` / `Machine`, polymorphic
   `"type"` discriminator). A field lives on the subtype that owns it — do not add a nullable
   field to both. Branch on the subtype (`is PlacedShopObject.Worker`), not `.kind` (that member
