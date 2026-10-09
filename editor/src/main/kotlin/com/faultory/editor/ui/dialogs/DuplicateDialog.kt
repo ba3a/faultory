@@ -2,14 +2,13 @@ package com.faultory.editor.ui.dialogs
 
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.faultory.editor.model.DuplicateResult
-import com.faultory.editor.model.Duplicator
 import com.faultory.editor.ui.tree.AssetSelection
 
 object DuplicateDialog {
     fun open(
         stage: Stage,
         selection: AssetSelection,
-        duplicator: Duplicator,
+        duplicate: (AssetSelection, String) -> DuplicateResult,
         onSuccess: (AssetSelection) -> Unit,
     ) {
         val (title, prompt, initial) = labelsFor(selection)
@@ -18,7 +17,7 @@ object DuplicateDialog {
             prompt = prompt,
             initialValue = initial,
             onConfirm = { newId ->
-                when (val result = duplicator.duplicate(selection, newId)) {
+                when (val result = duplicate(selection, newId)) {
                     is DuplicateResult.Success -> onSuccess(result.newSelection)
                     is DuplicateResult.Collision ->
                         ConfirmDialog.info(stage, "Duplicate failed", result.message)

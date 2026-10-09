@@ -119,7 +119,7 @@ class SceneryEditingTest {
     @Test
     fun `duplicating a scenery entry copies it under the new id`() {
         val selection = AssetSelection.Scenery(SceneryKind.WALL, "brick_far")
-        val result = Duplicator(repository, session).duplicate(selection, "brick_far_2")
+        val result = session.duplicate(selection, "brick_far_2")
 
         assertIs<DuplicateResult.Success>(result)
         val original = WallCollection.find(repository, "brick_far")!!

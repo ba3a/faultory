@@ -13,7 +13,7 @@ sealed class DuplicateResult {
 
 class Duplicator(
     private val repository: AssetRepository,
-    private val session: EditorSession? = null,
+    private val onMutated: () -> Unit = {},
 ) {
     fun duplicate(selection: AssetSelection, newId: String): DuplicateResult {
         if (newId.isBlank()) {
@@ -41,7 +41,7 @@ class Duplicator(
             return DuplicateResult.Collision("$label id '$newId' already exists")
         }
         collection.add(repository, collection.withId(original, newId))
-        session?.markDirty()
+        onMutated()
         return DuplicateResult.Success(AssetSelection.Scenery(collection.kind, newId))
     }
 
@@ -54,7 +54,7 @@ class Duplicator(
         }
         val duplicate = original.copy(id = newId)
         repository.shopCatalog = catalog.copy(products = catalog.products + duplicate)
-        session?.markDirty()
+        onMutated()
         return DuplicateResult.Success(AssetSelection.Product(newId))
     }
 
@@ -67,7 +67,7 @@ class Duplicator(
         }
         val duplicate = original.copy(id = newId)
         repository.shopCatalog = catalog.copy(workers = catalog.workers + duplicate)
-        session?.markDirty()
+        onMutated()
         return DuplicateResult.Success(AssetSelection.Worker(newId))
     }
 
@@ -80,7 +80,7 @@ class Duplicator(
         }
         val duplicate = original.copy(id = newId)
         repository.shopCatalog = catalog.copy(machines = catalog.machines + duplicate)
-        session?.markDirty()
+        onMutated()
         return DuplicateResult.Success(AssetSelection.Machine(newId))
     }
 
@@ -93,7 +93,7 @@ class Duplicator(
         }
         val duplicate = original.copy(id = newId)
         repository.levelCatalog = catalog.copy(levels = catalog.levels + duplicate)
-        session?.markDirty()
+        onMutated()
         return DuplicateResult.Success(AssetSelection.Level(newId))
     }
 
@@ -109,7 +109,7 @@ class Duplicator(
         }
         val duplicate = original.copy(id = newId)
         repository.blueprints[newPath] = duplicate
-        session?.markDirty()
+        onMutated()
         return DuplicateResult.Success(AssetSelection.Blueprint(newPath))
     }
 }

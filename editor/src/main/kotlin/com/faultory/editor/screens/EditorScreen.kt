@@ -13,7 +13,6 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.faultory.editor.backup.BackupService
 import com.faultory.editor.model.CreateResult
 import com.faultory.editor.model.DeleteResult
-import com.faultory.editor.model.Duplicator
 import com.faultory.editor.model.EditorSession
 import com.faultory.editor.model.ReferenceIndex
 import com.faultory.editor.model.RenameResult
@@ -300,8 +299,7 @@ class EditorScreen(
             ConfirmDialog.info(stage, "Duplicate", "Select an asset to duplicate.")
             return
         }
-        val duplicator = Duplicator(session.repository, session)
-        DuplicateDialog.open(stage, selection, duplicator) { newSelection ->
+        DuplicateDialog.open(stage, selection, session::duplicate) { newSelection ->
             SelectionBus.select(newSelection)
         }
     }

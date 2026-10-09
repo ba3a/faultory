@@ -1,6 +1,7 @@
 package com.faultory.editor.model
 
 import com.faultory.editor.repository.AssetRepository
+import com.faultory.editor.ui.tree.AssetSelection
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -11,6 +12,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class EditorSessionTest {
@@ -33,6 +35,33 @@ class EditorSessionTest {
 
     @Test
     fun `new session starts clean`() {
+        assertFalse(session.isDirty)
+    }
+
+    @Test
+    fun `a successful duplicate tells the tree exactly once`() {
+        var structureChanges = 0
+        session.addStructureListener { structureChanges++ }
+        val product = repository.shopCatalog.products.single()
+
+        val result = session.duplicate(AssetSelection.Product(product.id), "${product.id}-copy")
+
+        assertIs<DuplicateResult.Success>(result)
+        assertEquals(1, structureChanges)
+        assertTrue(session.isDirty)
+    }
+
+    @Test
+    fun `a rejected duplicate leaves the tree and the dirty flag alone`() {
+        var structureChanges = 0
+        session.addStructureListener { structureChanges++ }
+        val product = repository.shopCatalog.products.single()
+
+        assertIs<DuplicateResult.Collision>(session.duplicate(AssetSelection.Product(product.id), product.id))
+        assertIs<DuplicateResult.InvalidId>(session.duplicate(AssetSelection.Product(product.id), " "))
+        assertIs<DuplicateResult.NotFound>(session.duplicate(AssetSelection.Product("missing"), "copy"))
+
+        assertEquals(0, structureChanges)
         assertFalse(session.isDirty)
     }
 

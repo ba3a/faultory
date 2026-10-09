@@ -26,7 +26,7 @@ class DuplicatorTest {
         tempRoot = copyFixturesToTempDir()
         repository = AssetRepository(tempRoot)
         session = EditorSession(repository)
-        duplicator = Duplicator(repository, session)
+        duplicator = Duplicator(repository, session::markDirty)
     }
 
     @AfterTest

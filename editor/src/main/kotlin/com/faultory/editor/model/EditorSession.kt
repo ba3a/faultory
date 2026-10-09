@@ -96,6 +96,13 @@ class EditorSession(
         if (collection.replace(repository, originalId, updated)) markDirty()
     }
 
+    /** Copies [selection] under [newId] and tells the tree, which has to show the copy. */
+    fun duplicate(selection: com.faultory.editor.ui.tree.AssetSelection, newId: String): DuplicateResult {
+        val result = Duplicator(repository) { markDirty() }.duplicate(selection, newId)
+        if (result is DuplicateResult.Success) fireStructureChanged()
+        return result
+    }
+
     /** Adds a blank scenery entry named [id] and tells the tree, which has to show it. */
     fun create(kind: SceneryKind, id: String): CreateResult {
         val result = AssetCreator(repository) { markDirty() }.create(kind, id)
