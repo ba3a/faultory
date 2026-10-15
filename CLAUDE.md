@@ -8,7 +8,7 @@ Kotlin-first Gradle multi-module LibGDX desktop game. Modules:
 
 - `core` — game runtime, domain models, JSON loaders, save handling, screen flow, simulation systems
 - `desktop` — LWJGL3 launcher only (keep thin)
-- `editor` — standalone LibGDX asset editor (`.\gradlew.bat :editor:run`); owns validation, atlas baking, backup/restore, i18n, and reflection-driven inspector UI. Keep editor logic in `editor`; do not bleed it into `core`.
+- `editor` — standalone LibGDX asset editor (`./gradlew :editor:run` on Linux, `./gradlew.bat :editor:run` on Windows); owns validation, atlas baking, backup/restore, i18n, and reflection-driven inspector UI. Keep editor logic in `editor`; do not bleed it into `core`.
 - `assets` — runtime JSON content loaded by LibGDX at startup (not a Gradle module)
 - `buildSrc` — shared Gradle convention plugin (`buildsrc.convention.kotlin-jvm`)
 
@@ -16,8 +16,19 @@ No HTTP stack, REST API, database, ORM, web framework, or DTO/entity/mapper pack
 
 ## Shell
 
-This is Windows 10. Two shells are available and they are **not** interchangeable — pick one per
-command and use that shell's syntax.
+### Linux / Ubuntu (CI runners)
+
+One shell: the runner's standard **Bash**. All Unix tools work (`cat`, `grep`, `find`, `sed`,
+`head`, pipes, `&&`, heredocs, `/dev/null`). There is no `.bat` wrapper — use `./gradlew` directly:
+
+```bash
+./gradlew test --console plain
+```
+
+### Windows 10 (local development)
+
+Two shells are available and they are **not** interchangeable — pick one per command and use that
+shell's syntax.
 
 - **Bash tool = Git Bash.** The default for everything. `cat`, `grep`, `find`, `sed`, `head`, pipes,
   `&&`, heredocs and `/dev/null` all work. Use forward slashes.
@@ -41,15 +52,23 @@ Two more rules that follow from the above:
 
 ## Build & Test Commands
 
-Shown in Bash form; swap `./` for `.\` in PowerShell.
+The Gradle wrapper differs by environment:
+
+| Environment | Command prefix |
+|---|---|
+| Linux / Ubuntu | `./gradlew` |
+| Windows — Git Bash | `./gradlew.bat` |
+| Windows — PowerShell | `.\gradlew.bat` |
+
+Examples below use the Linux form; substitute the appropriate prefix for your environment.
 
 ```bash
-./gradlew.bat build --console plain        # full build
-./gradlew.bat test --console plain         # run tests
-./gradlew.bat :desktop:run --console plain # run the game (working dir set to assets/)
-./gradlew.bat :editor:run --console plain  # run the asset editor
-./gradlew.bat :core:test --tests "com.faultory.core.shop.ShopFloorQaTest" --console plain
-./gradlew.bat detekt --console plain    # static analysis; also runs as part of `check`/`build`
+./gradlew build --console plain        # full build
+./gradlew test --console plain         # run tests
+./gradlew :desktop:run --console plain # run the game (working dir set to assets/)
+./gradlew :editor:run --console plain  # run the asset editor
+./gradlew :core:test --tests "com.faultory.core.shop.ShopFloorQaTest" --console plain
+./gradlew detekt --console plain       # static analysis; also runs as part of `check`/`build`
 ```
 
 A cold Gradle daemon pushes `build` and `:core:test` past the 2-minute default tool timeout — pass
