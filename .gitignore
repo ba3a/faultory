@@ -49,3 +49,15 @@ bin/
 /raw-art/
 /.claude/settings.local.json
 /CODE_REVIEW.md
+
+# DMTools local secrets
+dmtools.env
+dmtools-local.env
+
+# DMTools agent run artifacts
+/input/
+/outputs/
+/.dmtools-logs/
+/.claude-session-id
+/.codegraph/
+/cacheBasicDial*/
