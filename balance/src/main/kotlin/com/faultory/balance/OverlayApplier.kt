@@ -27,6 +27,9 @@ object OverlayApplier {
     // always present in the patched JSON tree and navigable by path.
     private val overlayJson: Json = Json(FaultoryJson.instance) { encodeDefaults = true }
 
+    /** Constant context threaded through a single navigate call. */
+    private data class NavConfig(val op: PatchOp, val value: JsonElement, val fullPath: String)
+
     fun apply(base: GameContent, patches: List<PatchOperation>): ApplyResult {
         var content = base
         for (patch in patches) {
@@ -51,14 +54,16 @@ object OverlayApplier {
 
     private fun applyCatalog(content: GameContent, patch: PatchOperation, segments: List<String>): GameContent {
         val catalogJson = overlayJson.encodeToJsonElement(ShopCatalog.serializer(), content.shopCatalog) as JsonObject
-        val patched = navigate(catalogJson, ArrayDeque(segments), patch.op, patch.value, patch.path) as JsonObject
+        val patched = navigate(
+            catalogJson, ArrayDeque(segments), NavConfig(patch.op, patch.value, patch.path)
+        ) as JsonObject
         return content.copy(shopCatalog = overlayJson.decodeFromJsonElement(ShopCatalog.serializer(), patched))
     }
 
     private fun applyLevels(content: GameContent, patch: PatchOperation, segments: List<String>): GameContent {
         val levelsJson = overlayJson.encodeToJsonElement(LevelCatalog.serializer(), content.levelCatalog) as JsonObject
         val fullSegments = ArrayDeque(listOf("levels") + segments)
-        val patched = navigate(levelsJson, fullSegments, patch.op, patch.value, patch.path) as JsonObject
+        val patched = navigate(levelsJson, fullSegments, NavConfig(patch.op, patch.value, patch.path)) as JsonObject
         return content.copy(levelCatalog = overlayJson.decodeFromJsonElement(LevelCatalog.serializer(), patched))
     }
 
@@ -66,7 +71,9 @@ object OverlayApplier {
         val (levelId, fieldSegments) = validateBlueprintPath(patch.path, segments)
         val (blueprint, blueprintPath) = resolveBlueprint(content, levelId, patch.path)
         val blueprintJson = overlayJson.encodeToJsonElement(ShopBlueprint.serializer(), blueprint) as JsonObject
-        val patched = navigate(blueprintJson, ArrayDeque(fieldSegments), patch.op, patch.value, patch.path) as JsonObject
+        val patched = navigate(
+            blueprintJson, ArrayDeque(fieldSegments), NavConfig(patch.op, patch.value, patch.path)
+        ) as JsonObject
         val newBlueprint = overlayJson.decodeFromJsonElement(ShopBlueprint.serializer(), patched)
         return content.copy(blueprintsByPath = content.blueprintsByPath + (blueprintPath to newBlueprint))
     }
@@ -101,20 +108,14 @@ object OverlayApplier {
         return blueprint to blueprintPath
     }
 
-    internal fun navigate(
-        element: JsonElement,
-        segments: ArrayDeque<String>,
-        op: PatchOp,
-        value: JsonElement,
-        fullPath: String
-    ): JsonElement {
-        if (segments.isEmpty()) return applyOp(element, op, value, fullPath)
+    private fun navigate(element: JsonElement, segments: ArrayDeque<String>, cfg: NavConfig): JsonElement {
+        if (segments.isEmpty()) return applyOp(element, cfg)
         val seg = segments.removeFirst()
         return when (element) {
-            is JsonObject -> navigateObject(element, seg, segments, op, value, fullPath)
-            is JsonArray -> navigateArray(element, seg, segments, op, value, fullPath)
+            is JsonObject -> navigateObject(element, seg, segments, cfg)
+            is JsonArray -> navigateArray(element, seg, segments, cfg)
             else -> throw OverlayException(
-                "NOT_NAVIGABLE", fullPath,
+                "NOT_NAVIGABLE", cfg.fullPath,
                 "Cannot navigate into ${element::class.simpleName} at segment '$seg'"
             )
         }
@@ -124,13 +125,11 @@ object OverlayApplier {
         obj: JsonObject,
         seg: String,
         segments: ArrayDeque<String>,
-        op: PatchOp,
-        value: JsonElement,
-        fullPath: String
+        cfg: NavConfig
     ): JsonElement {
         val child = obj[seg]
-            ?: throw OverlayException("UNKNOWN_KEY", fullPath, "Key '$seg' not found in object")
-        val updated = navigate(child, segments, op, value, fullPath)
+            ?: throw OverlayException("UNKNOWN_KEY", cfg.fullPath, "Key '$seg' not found in object")
+        val updated = navigate(child, segments, cfg)
         return JsonObject(obj.toMutableMap().also { it[seg] = updated })
     }
 
@@ -138,9 +137,7 @@ object OverlayApplier {
         arr: JsonArray,
         seg: String,
         segments: ArrayDeque<String>,
-        op: PatchOp,
-        value: JsonElement,
-        fullPath: String
+        cfg: NavConfig
     ): JsonElement {
         val list = arr.toMutableList()
         val idx = list.indexOfFirst { el ->
@@ -150,18 +147,18 @@ object OverlayApplier {
             )
         }
         if (idx < 0) {
-            throw OverlayException("UNKNOWN_ELEMENT", fullPath, "No element with id/role='$seg' in array")
+            throw OverlayException("UNKNOWN_ELEMENT", cfg.fullPath, "No element with id/role='$seg' in array")
         }
-        list[idx] = navigate(list[idx], segments, op, value, fullPath)
+        list[idx] = navigate(list[idx], segments, cfg)
         return JsonArray(list)
     }
 
-    private fun applyOp(current: JsonElement, op: PatchOp, value: JsonElement, path: String): JsonElement {
-        return when (op) {
-            PatchOp.SET -> value
+    private fun applyOp(current: JsonElement, cfg: NavConfig): JsonElement {
+        return when (cfg.op) {
+            PatchOp.SET -> cfg.value
             PatchOp.UNSET -> JsonNull
-            PatchOp.ADD -> applyAdd(current, value, path)
-            PatchOp.MUL -> applyMul(current, value, path)
+            PatchOp.ADD -> applyAdd(current, cfg.value, cfg.fullPath)
+            PatchOp.MUL -> applyMul(current, cfg.value, cfg.fullPath)
         }
     }
 
