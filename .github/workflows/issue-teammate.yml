@@ -41,7 +41,7 @@ permissions:
 jobs:
   teammate:
     if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'dmtools:develop'
-    uses: ba3a/ci-pipelines/.github/workflows/ai-teammate.yml@state-machine
+    uses: ba3a/ci-pipelines/.github/workflows/ai-teammate.yml@v1
     with:
       issue_number: ${{ github.event.issue.number || inputs.issue }}
       pr_number: ${{ inputs.pr }}

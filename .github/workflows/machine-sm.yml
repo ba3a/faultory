@@ -32,7 +32,7 @@ permissions:
 
 jobs:
   sm:
-    uses: ba3a/ci-pipelines/.github/workflows/sm.yml@state-machine
+    uses: ba3a/ci-pipelines/.github/workflows/sm.yml@v1
     with:
       dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dryRun && 'true' || 'false' }}
       machine_author: 'ba3a'

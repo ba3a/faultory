@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   gradle:
-    uses: ba3a/ci-pipelines/.github/workflows/gradle-ci.yml@state-machine
+    uses: ba3a/ci-pipelines/.github/workflows/gradle-ci.yml@v1
     with:
       java_version: '21'
       gradle_tasks: 'test detekt'
