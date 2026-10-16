@@ -98,7 +98,7 @@ class BalanceServer(
 
         tool(server, "scenario_list", "List all scenarios with summary info.",
             Tool.Input()
-        ) { _ -> handleScenarioList(store, buildJsonObject {}) }
+        ) { _ -> handleScenarioList(store) }
 
         tool(server, "scenario_get", "Get the full patch list of a scenario.",
             Tool.Input(
@@ -139,7 +139,7 @@ class BalanceServer(
 
         tool(server, "reload_base", "Re-read assets/ from disk. Reports scenarios created against an older base.",
             Tool.Input()
-        ) { _ -> handleReloadBase(cm, store, buildJsonObject {}) }
+        ) { _ -> handleReloadBase(cm, store) }
 
         // --- Plans ---
         tool(server, "plan_put", "Store a named plan for a level.",
@@ -213,7 +213,7 @@ class BalanceServer(
     ) {
         server.addTool(name, description, inputSchema) { req ->
             try {
-                val args = req.arguments ?: buildJsonObject {}
+                val args = req.arguments
                 val result = handler(args)
                 CallToolResult(content = listOf(TextContent(
                     text = FaultoryJson.instance.encodeToString(JsonElement.serializer(), result)

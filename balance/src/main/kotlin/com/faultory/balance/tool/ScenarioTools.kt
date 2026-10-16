@@ -58,7 +58,7 @@ fun handleScenarioPatch(cm: ContentManager, store: ScenarioStore, args: JsonObje
     return scenarioJson(updated, result.warnings)
 }
 
-fun handleScenarioList(store: ScenarioStore, args: JsonObject): JsonElement {
+fun handleScenarioList(store: ScenarioStore): JsonElement {
     return buildJsonArray {
         for (s in store.list()) {
             add(buildJsonObject {
@@ -127,7 +127,7 @@ fun handleScenarioDiscard(store: ScenarioStore, args: JsonObject): JsonElement {
     return buildJsonObject { put("discarded", id) }
 }
 
-fun handleReloadBase(cm: ContentManager, store: ScenarioStore, args: JsonObject): JsonElement {
+fun handleReloadBase(cm: ContentManager, store: ScenarioStore): JsonElement {
     val oldHash = cm.baseHash
     cm.reload()
     val newHash = cm.baseHash
