@@ -12,5 +12,6 @@ plugins {
 include(":core")
 include(":desktop")
 include(":editor")
+include(":balance")
 
 rootProject.name = "faultory"
