@@ -25,7 +25,11 @@ class OverlayApplierTest {
     @Test
     fun `SET replaces a nested roleProfile field`() {
         val result = OverlayApplier.apply(base, listOf(
-            PatchOperation(PatchOp.SET, "catalog/workers/target-intern/roleProfiles/QA/detectionAccuracy", JsonPrimitive(0.9f))
+            PatchOperation(
+                PatchOp.SET,
+                "catalog/workers/target-intern/roleProfiles/QA/detectionAccuracy",
+                JsonPrimitive(0.9f)
+            )
         ))
         val worker = result.content.shopCatalog.workers.first { it.id == "target-intern" }
         val qa = worker.roleProfiles.first { it.role.name == "QA" }
@@ -35,7 +39,11 @@ class OverlayApplierTest {
     @Test
     fun `SET replaces a machine recipe field`() {
         val result = OverlayApplier.apply(base, listOf(
-            PatchOperation(PatchOp.SET, "catalog/machines/bench-assembler/recipe/defectChance", JsonPrimitive(0.05f))
+            PatchOperation(
+                PatchOp.SET,
+                "catalog/machines/bench-assembler/recipe/defectChance",
+                JsonPrimitive(0.05f)
+            )
         ))
         val machine = result.content.shopCatalog.machines.first { it.id == "bench-assembler" }
         assertEquals(0.05f, machine.recipe!!.defectChance, 0.001f)
@@ -63,7 +71,11 @@ class OverlayApplierTest {
     @Test
     fun `SET replaces a blueprint floorTuning field`() {
         val result = OverlayApplier.apply(base, listOf(
-            PatchOperation(PatchOp.SET, "blueprint/tutorial-shop/floorTuning/conveyorSpeedTilesPerSecond", JsonPrimitive(5.0f))
+            PatchOperation(
+                PatchOp.SET,
+                "blueprint/tutorial-shop/floorTuning/conveyorSpeedTilesPerSecond",
+                JsonPrimitive(5.0f)
+            )
         ))
         val level = result.content.levelCatalog.levels.first { it.id == "tutorial-shop" }
         val blueprint = result.content.blueprintFor(level)
@@ -129,28 +141,36 @@ class OverlayApplierTest {
     @Test
     fun `unknown worker id throws OverlayException`() {
         assertFailsWith<OverlayException> {
-            OverlayApplier.apply(base, listOf(PatchOperation(PatchOp.SET, "catalog/workers/nonexistent/hireCost", JsonPrimitive(1))))
+            OverlayApplier.apply(base, listOf(
+                PatchOperation(PatchOp.SET, "catalog/workers/nonexistent/hireCost", JsonPrimitive(1))
+            ))
         }.also { assertEquals("UNKNOWN_ELEMENT", it.code) }
     }
 
     @Test
     fun `unknown field key throws OverlayException`() {
         assertFailsWith<OverlayException> {
-            OverlayApplier.apply(base, listOf(PatchOperation(PatchOp.SET, "catalog/workers/target-intern/nonExistentField", JsonPrimitive(1))))
+            OverlayApplier.apply(base, listOf(
+                PatchOperation(PatchOp.SET, "catalog/workers/target-intern/nonExistentField", JsonPrimitive(1))
+            ))
         }.also { assertEquals("UNKNOWN_KEY", it.code) }
     }
 
     @Test
     fun `blueprint geometry path throws READ_ONLY_PATH`() {
         assertFailsWith<OverlayException> {
-            OverlayApplier.apply(base, listOf(PatchOperation(PatchOp.SET, "blueprint/tutorial-shop/floor/x", JsonPrimitive(1))))
+            OverlayApplier.apply(base, listOf(
+                PatchOperation(PatchOp.SET, "blueprint/tutorial-shop/floor/x", JsonPrimitive(1))
+            ))
         }.also { assertEquals("READ_ONLY_PATH", it.code) }
     }
 
     @Test
     fun `ADD on non-numeric field throws NOT_NUMERIC`() {
         assertFailsWith<OverlayException> {
-            OverlayApplier.apply(base, listOf(PatchOperation(PatchOp.ADD, "catalog/workers/target-intern/skin", JsonPrimitive(1))))
+            OverlayApplier.apply(base, listOf(
+                PatchOperation(PatchOp.ADD, "catalog/workers/target-intern/skin", JsonPrimitive(1))
+            ))
         }.also { assertEquals("NOT_NUMERIC", it.code) }
     }
 
@@ -159,9 +179,16 @@ class OverlayApplierTest {
     @Test
     fun `range warning when detectionAccuracy exceeds 1`() {
         val result = OverlayApplier.apply(base, listOf(
-            PatchOperation(PatchOp.SET, "catalog/workers/target-intern/roleProfiles/QA/detectionAccuracy", JsonPrimitive(1.5f))
+            PatchOperation(
+                PatchOp.SET,
+                "catalog/workers/target-intern/roleProfiles/QA/detectionAccuracy",
+                JsonPrimitive(1.5f)
+            )
         ))
-        assertTrue(result.warnings.any { "detectionAccuracy" in it }, "Expected detectionAccuracy warning; got: ${result.warnings}")
+        assertTrue(
+            result.warnings.any { "detectionAccuracy" in it },
+            "Expected detectionAccuracy warning; got: ${result.warnings}"
+        )
     }
 
     @Test
@@ -169,6 +196,9 @@ class OverlayApplierTest {
         val result = OverlayApplier.apply(base, listOf(
             PatchOperation(PatchOp.SET, "levels/tutorial-shop/starThresholds/twoStar", JsonPrimitive(1))
         ))
-        assertTrue(result.warnings.any { "starThresholds" in it }, "Expected starThresholds warning; got: ${result.warnings}")
+        assertTrue(
+            result.warnings.any { "starThresholds" in it },
+            "Expected starThresholds warning; got: ${result.warnings}"
+        )
     }
 }

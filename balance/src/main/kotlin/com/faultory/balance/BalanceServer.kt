@@ -84,6 +84,12 @@ class BalanceServer(private val cm: ContentManager, private val store: ScenarioS
     }
 
     private fun registerScenarioTools(server: Server) {
+        registerScenarioCreateAndPatch(server)
+        registerScenarioQueryTools(server)
+        registerScenarioDiscardTool(server)
+    }
+
+    private fun registerScenarioCreateAndPatch(server: Server) {
         tool(server, "scenario_create", "Create a new named scenario forked from a parent.",
             Tool.Input(
                 properties = buildJsonObject {
@@ -127,7 +133,9 @@ class BalanceServer(private val cm: ContentManager, private val store: ScenarioS
                 required = listOf("id", "patches")
             )
         ) { args -> handleScenarioPatch(cm, store, args) }
+    }
 
+    private fun registerScenarioQueryTools(server: Server) {
         tool(server, "scenario_list", "List all scenarios with summary info.", Tool.Input()) {
             handleScenarioList(store)
         }
@@ -159,7 +167,9 @@ class BalanceServer(private val cm: ContentManager, private val store: ScenarioS
                 required = listOf("a", "b")
             )
         ) { args -> handleScenarioDiff(cm, store, args) }
+    }
 
+    private fun registerScenarioDiscardTool(server: Server) {
         tool(server, "scenario_discard", "Remove a scenario and its cached results.",
             Tool.Input(
                 properties = buildJsonObject {

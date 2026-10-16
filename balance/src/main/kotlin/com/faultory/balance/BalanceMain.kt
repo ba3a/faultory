@@ -21,5 +21,6 @@ fun main(args: Array<String>) {
     val server = BalanceServer(cm, store).buildServer()
     System.err.println("balance: MCP server ready, listening on stdio")
 
-    runBlocking { server.connect(StdioServerTransport(System.`in`.asSource().buffered(), System.out.asSink().buffered())) }
+    val transport = StdioServerTransport(System.`in`.asSource().buffered(), System.out.asSink().buffered())
+    runBlocking { server.connect(transport) }
 }

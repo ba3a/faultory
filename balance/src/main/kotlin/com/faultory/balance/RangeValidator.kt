@@ -70,7 +70,8 @@ object RangeValidator {
                     warnings += "$mPath/qaProfile/falsePositiveChance=${qa.falsePositiveChance} outside [0,1]"
                 }
                 if (qa.inspectionDurationSeconds <= 0f) {
-                    warnings += "$mPath/qaProfile/inspectionDurationSeconds=${qa.inspectionDurationSeconds} must be positive"
+                    warnings += "$mPath/qaProfile/inspectionDurationSeconds=${qa.inspectionDurationSeconds}" +
+                        " must be positive"
                 }
             }
         }

@@ -84,10 +84,13 @@ private fun prefixedContent(content: GameContent, prefix: String, depth: Int): J
             val levelId = subParts[0]
             val level = content.levelCatalog.levels.firstOrNull { it.id == levelId }
                 ?: return buildJsonObject { put("error", "Unknown level '$levelId'") }
-            val json = FaultoryJson.instance.encodeToJsonElement(ShopBlueprint.serializer(), content.blueprintFor(level))
+            val json = FaultoryJson.instance
+                .encodeToJsonElement(ShopBlueprint.serializer(), content.blueprintFor(level))
             Triple(json, "blueprint/$levelId", true)
         }
-        else -> return buildJsonObject { put("error", "Unknown document '$document'; use 'catalog', 'levels', or 'blueprint'") }
+        else -> return buildJsonObject {
+            put("error", "Unknown document '$document'; use 'catalog', 'levels', or 'blueprint'")
+        }
     }
 
     val navSegments: List<String> = when (document) {
