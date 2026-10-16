@@ -25,7 +25,7 @@ jobs:
     with:
       issue_number: ${{ github.event.issue.number || inputs.issue_number }}
       java_version: '21'
-      claude_max_turns: '60'
+      claude_max_turns: '150'
     secrets:
       PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
       CLAUDE_CODE_API_KEY: ${{ secrets.CLAUDE_CODE_API_KEY }}
