@@ -23,10 +23,23 @@
       "Bash(find:*)",
       "Bash(du:*)",
       "Bash(unzip -l:*)",
-      "Bash(javap:*)"
+      "Bash(javap:*)",
+
+      "mcp__codegraph__*",
+      "Bash(codegraph status:*)",
+      "Bash(codegraph sync:*)",
+      "Bash(codegraph query:*)",
+      "Bash(codegraph context:*)",
+      "Bash(codegraph callers:*)",
+      "Bash(codegraph callees:*)",
+      "Bash(codegraph impact:*)",
+      "Bash(codegraph affected:*)"
     ],
     "deny": [
       "Read(./.sofa/**)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "codegraph"
+  ]
 }

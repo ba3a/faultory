@@ -80,6 +80,60 @@ The Gradle daemon is pinned to Java 21 by `gradle/gradle-daemon-jvm.properties`,
 `jvmToolchain(21)` the modules compile against. Do not remove it: detekt 1.23.x bundles the Kotlin
 1.9 compiler, which dies with `IllegalArgumentException: 25.0.2` on a JDK 25 daemon.
 
+## Code navigation tools
+
+Two tools help an agent read this codebase without grepping blind. Both are optional local tooling:
+neither is a Gradle dependency, and the build and tests never need them.
+
+### CodeGraph — structural questions
+
+CodeGraph indexes the Kotlin sources into a local knowledge graph (`.codegraph/`, gitignored) and
+serves it over MCP (`.mcp.json`, server `codegraph`). Its project settings are in `codegraph.json`
+(excluded paths such as `.claude/worktrees/` and the `agents/` submodule).
+
+- **Use it first** for "where is X defined", "who calls X", "what breaks if I change X" and "how does
+  X work" questions: `codegraph_explore` over MCP, or `codegraph query|callers|callees|impact|context`
+  on the command line. Treat the returned source as already read; do not re-open the same files.
+- **Fall back to `Grep`/`Read`** for exact-string searches (JSON field names, `counterName` values,
+  asset paths) and for any file the index may not have caught up with. The index auto-syncs while an
+  MCP session runs; run `codegraph sync` after large edits made outside one.
+- **Check blast radius before a refactor.** `codegraph impact <Symbol>` before changing a shared
+  interface (`*Access`, `SimulationSystem`, `PlacedObjectWrites`) shows every system that depends on it.
+- **Setup:** install the standalone binary (no Node needed) and build the index once per clone:
+
+  ```bash
+  powershell -Command "irm https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.ps1 | iex"   # Windows
+  curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh                    # Linux / macOS
+  codegraph init
+  codegraph status
+  ```
+
+  Restart Claude Code afterwards so the `codegraph` MCP server in `.mcp.json` loads. CI installs
+  CodeGraph through the `agents/` submodule instead; do not duplicate that in a workflow here.
+- **Never commit `.codegraph/`.** It is in `.gitignore` and is rebuilt per clone.
+
+### Repomix — whole-codebase snapshots
+
+Repomix packs the repository into one AI-friendly file (`repomix-output.xml`, gitignored). It is
+configured by `repomix.config.json` (what is included) and `.repomixignore` (what is left out:
+worktrees, the `agents/` submodule, binary art).
+
+- **Use it to hand a whole module to another model or a fresh session**, or to review a large
+  change in one read. It is the wrong tool for a targeted question — use CodeGraph for those.
+- **Pack a slice, not everything:**
+
+  ```bash
+  npx repomix@latest --include "core/src/main/kotlin/com/faultory/core/shop/**" --output repomix-output.xml
+  npx repomix@latest --compress   # signatures only, far fewer tokens
+  ```
+
+- **Keep secrets out.** `security.enableSecurityCheck` stays on; never pass `--no-security-check`,
+  and never pack `.sofa/`, `dmtools.env` or `dmtools-local.env` (all gitignored, so skipped by default).
+- **Repomix needs Node.js** (`npx`). It is not part of the Gradle build; if Node is missing, say so
+  rather than installing it unprompted.
+- The packed file is a snapshot: it goes stale on the next edit. Regenerate it, never edit it, and
+  never commit it.
+
 ## Architecture
 
 Package-by-responsibility under `core/src/main/kotlin/com/faultory/core`:

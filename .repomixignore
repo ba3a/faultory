@@ -1,0 +1,13 @@
+# Repomix-only exclusions; .gitignore is honoured as well.
+
+# Local agent worktrees: full checkouts of the repository, they would duplicate every file.
+.claude/worktrees/
+
+# AI Teammate submodule (dmtools-agents), not part of the game.
+agents/
+
+# Binary and generated assets that carry no code context.
+raw-art/
+*.png
+*.ttf
+*.atlas

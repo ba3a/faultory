@@ -1,0 +1,12 @@
+{
+  "exclude": [
+    ".claude/worktrees/",
+    "agents/",
+    "raw-art/",
+    "assets/i18n/"
+  ],
+  "deprioritize": [
+    "docs/",
+    "config/detekt/"
+  ]
+}

@@ -67,3 +67,6 @@ dmtools-local.env
 
 # Balance server scratch: named scenarios, result cache, autosaves — never in assets/
 .balance/
+
+# Repomix packed output — regenerated on demand, must never be committed
+repomix-output.*

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://repomix.com/schemas/latest/schema.json",
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "compress": false,
+    "removeComments": false,
+    "removeEmptyLines": false,
+    "topFilesLength": 10,
+    "git": {
+      "sortByChanges": true,
+      "includeDiffs": false,
+      "includeLogs": false
+    }
+  },
+  "include": [
+    "core/**",
+    "desktop/**",
+    "editor/**",
+    "buildSrc/**",
+    "assets/**/*.json",
+    "config/**",
+    "*.kts",
+    "*.properties",
+    "gradle/libs.versions.toml",
+    "CLAUDE.md",
+    "README.md",
+    ".claude/skills/**"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDotIgnore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "**/build/**",
+      "assets/i18n/**",
+      "config/detekt/baseline-*.xml"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}
