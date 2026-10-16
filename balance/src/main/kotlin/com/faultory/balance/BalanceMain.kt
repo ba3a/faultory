@@ -2,6 +2,9 @@ package com.faultory.balance
 
 import io.modelcontextprotocol.kotlin.sdk.server.StdioServerTransport
 import kotlinx.coroutines.runBlocking
+import kotlinx.io.asSink
+import kotlinx.io.asSource
+import kotlinx.io.buffered
 import java.nio.file.Paths
 
 fun main(args: Array<String>) {
@@ -18,5 +21,5 @@ fun main(args: Array<String>) {
     val server = BalanceServer(cm, store).buildServer()
     System.err.println("balance: MCP server ready, listening on stdio")
 
-    runBlocking { server.connect(StdioServerTransport()) }
+    runBlocking { server.connect(StdioServerTransport(System.`in`.asSource().buffered(), System.out.asSink().buffered())) }
 }
