@@ -17,6 +17,12 @@ module.exports = {
 
     agentConfigsDir: 'agents',
 
+    // Planned issues (the issue_planning agent, label dmtools:plan): each step of a plan is started
+    // with the label that starts development here, the trigger of the Issue Teammate workflow.
+    issuePlanning: {
+        devLabel: 'dmtools:develop'
+    },
+
     cliPrompts: {
         story_development: [
             './.dmtools/prompts/faultory_ci.md'
