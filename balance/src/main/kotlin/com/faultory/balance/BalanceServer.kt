@@ -33,18 +33,31 @@ class BalanceServer(private val cm: ContentManager, private val store: ScenarioS
                 capabilities = ServerCapabilities(tools = ServerCapabilities.Tools(listChanged = false))
             )
         )
-        registerAll(server)
+        registerContentTools(server)
+        registerScenarioTools(server)
         return server
     }
 
-    private fun registerAll(server: Server) {
+    private fun registerContentTools(server: Server) {
         tool(server, "describe_content", "What exists in the game content and what can be tuned.",
             Tool.Input(
                 properties = buildJsonObject {
-                    putJsonObject("scenario") { put("type", "string"); put("description", "Scenario id to read (default: baseline)") }
-                    putJsonObject("document") { put("type", "string"); put("description", "Filter to 'catalog', 'levels', or 'blueprint'") }
-                    putJsonObject("prefix") { put("type", "string"); put("description", "Path prefix to drill into, e.g. 'catalog/workers/anywork-1'") }
-                    putJsonObject("depth") { put("type", "integer"); put("description", "Walk depth from the prefix (default: 2)") }
+                    putJsonObject("scenario") {
+                        put("type", "string")
+                        put("description", "Scenario id to read (default: baseline)")
+                    }
+                    putJsonObject("document") {
+                        put("type", "string")
+                        put("description", "Filter to 'catalog', 'levels', or 'blueprint'")
+                    }
+                    putJsonObject("prefix") {
+                        put("type", "string")
+                        put("description", "Path prefix to drill into, e.g. 'catalog/workers/anywork-1'")
+                    }
+                    putJsonObject("depth") {
+                        put("type", "integer")
+                        put("description", "Walk depth from the prefix (default: 2)")
+                    }
                 }
             )
         ) { args -> handleDescribeContent(cm, store, args) }
@@ -52,20 +65,44 @@ class BalanceServer(private val cm: ContentManager, private val store: ScenarioS
         tool(server, "get_value", "Current base and tuned value for one or more paths.",
             Tool.Input(
                 properties = buildJsonObject {
-                    putJsonObject("scenario") { put("type", "string"); put("description", "Scenario id (default: baseline)") }
-                    putJsonObject("paths") { put("type", "array"); put("description", "Paths to read, e.g. ['catalog/workers/anywork-1/hireCost']") }
+                    putJsonObject("scenario") {
+                        put("type", "string")
+                        put("description", "Scenario id (default: baseline)")
+                    }
+                    putJsonObject("paths") {
+                        put("type", "array")
+                        put("description", "Paths to read, e.g. ['catalog/workers/anywork-1/hireCost']")
+                    }
                 },
                 required = listOf("paths")
             )
         ) { args -> handleGetValue(cm, store, args) }
 
+        tool(server, "reload_base", "Re-read assets/ from disk. Reports scenarios created against an older base.",
+            Tool.Input()
+        ) { handleReloadBase(cm, store) }
+    }
+
+    private fun registerScenarioTools(server: Server) {
         tool(server, "scenario_create", "Create a new named scenario forked from a parent.",
             Tool.Input(
                 properties = buildJsonObject {
-                    putJsonObject("id") { put("type", "string"); put("description", "Unique scenario id") }
-                    putJsonObject("parent") { put("type", "string"); put("description", "Parent scenario to fork from (default: baseline)") }
-                    putJsonObject("note") { put("type", "string"); put("description", "Human-readable description") }
-                    putJsonObject("patches") { put("type", "array"); put("description", "Initial patch operations") }
+                    putJsonObject("id") {
+                        put("type", "string")
+                        put("description", "Unique scenario id")
+                    }
+                    putJsonObject("parent") {
+                        put("type", "string")
+                        put("description", "Parent scenario to fork from (default: baseline)")
+                    }
+                    putJsonObject("note") {
+                        put("type", "string")
+                        put("description", "Human-readable description")
+                    }
+                    putJsonObject("patches") {
+                        put("type", "array")
+                        put("description", "Initial patch operations")
+                    }
                 },
                 required = listOf("id")
             )
@@ -74,22 +111,34 @@ class BalanceServer(private val cm: ContentManager, private val store: ScenarioS
         tool(server, "scenario_patch", "Apply patch operations to a scenario.",
             Tool.Input(
                 properties = buildJsonObject {
-                    putJsonObject("id") { put("type", "string"); put("description", "Scenario id to patch") }
-                    putJsonObject("patches") { put("type", "array"); put("description", "List of patch operations") }
-                    putJsonObject("replace") { put("type", "boolean"); put("description", "If true, replace the whole patch list instead of appending") }
+                    putJsonObject("id") {
+                        put("type", "string")
+                        put("description", "Scenario id to patch")
+                    }
+                    putJsonObject("patches") {
+                        put("type", "array")
+                        put("description", "List of patch operations")
+                    }
+                    putJsonObject("replace") {
+                        put("type", "boolean")
+                        put("description", "If true, replace the whole patch list instead of appending")
+                    }
                 },
                 required = listOf("id", "patches")
             )
         ) { args -> handleScenarioPatch(cm, store, args) }
 
-        tool(server, "scenario_list", "List all scenarios with summary info.",
-            Tool.Input()
-        ) { _ -> handleScenarioList(store, buildJsonObject {}) }
+        tool(server, "scenario_list", "List all scenarios with summary info.", Tool.Input()) {
+            handleScenarioList(store)
+        }
 
         tool(server, "scenario_get", "Get the full patch list of a scenario.",
             Tool.Input(
                 properties = buildJsonObject {
-                    putJsonObject("id") { put("type", "string"); put("description", "Scenario id") }
+                    putJsonObject("id") {
+                        put("type", "string")
+                        put("description", "Scenario id")
+                    }
                 },
                 required = listOf("id")
             )
@@ -98,8 +147,14 @@ class BalanceServer(private val cm: ContentManager, private val store: ScenarioS
         tool(server, "scenario_diff", "Paths whose effective value differs between two scenarios.",
             Tool.Input(
                 properties = buildJsonObject {
-                    putJsonObject("a") { put("type", "string"); put("description", "First scenario id") }
-                    putJsonObject("b") { put("type", "string"); put("description", "Second scenario id") }
+                    putJsonObject("a") {
+                        put("type", "string")
+                        put("description", "First scenario id")
+                    }
+                    putJsonObject("b") {
+                        put("type", "string")
+                        put("description", "Second scenario id")
+                    }
                 },
                 required = listOf("a", "b")
             )
@@ -108,15 +163,14 @@ class BalanceServer(private val cm: ContentManager, private val store: ScenarioS
         tool(server, "scenario_discard", "Remove a scenario and its cached results.",
             Tool.Input(
                 properties = buildJsonObject {
-                    putJsonObject("id") { put("type", "string"); put("description", "Scenario id to discard") }
+                    putJsonObject("id") {
+                        put("type", "string")
+                        put("description", "Scenario id to discard")
+                    }
                 },
                 required = listOf("id")
             )
         ) { args -> handleScenarioDiscard(store, args) }
-
-        tool(server, "reload_base", "Re-read assets/ from disk. Reports scenarios created against an older base.",
-            Tool.Input()
-        ) { _ -> handleReloadBase(cm, store, buildJsonObject {}) }
     }
 
     private fun tool(
@@ -128,8 +182,7 @@ class BalanceServer(private val cm: ContentManager, private val store: ScenarioS
     ) {
         server.addTool(name, description, inputSchema) { req ->
             try {
-                val args = req.arguments
-                val result = handler(args)
+                val result = handler(req.arguments)
                 CallToolResult(content = listOf(TextContent(
                     text = FaultoryJson.instance.encodeToString(JsonElement.serializer(), result)
                 )))
@@ -150,7 +203,7 @@ class BalanceServer(private val cm: ContentManager, private val store: ScenarioS
                     }.toString())),
                     isError = true
                 )
-            } catch (e: Exception) {
+            } catch (e: IllegalStateException) {
                 CallToolResult(
                     content = listOf(TextContent(text = buildJsonObject {
                         put("code", "INTERNAL_ERROR")
