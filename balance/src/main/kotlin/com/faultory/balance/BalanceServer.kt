@@ -128,7 +128,7 @@ class BalanceServer(private val cm: ContentManager, private val store: ScenarioS
     ) {
         server.addTool(name, description, inputSchema) { req ->
             try {
-                val args = req.params.arguments ?: buildJsonObject {}
+                val args = req.arguments
                 val result = handler(args)
                 CallToolResult(content = listOf(TextContent(
                     text = FaultoryJson.instance.encodeToString(JsonElement.serializer(), result)
