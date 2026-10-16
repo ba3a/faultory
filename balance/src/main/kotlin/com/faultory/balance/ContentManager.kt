@@ -26,6 +26,8 @@ class ContentManager(private val assetsRoot: Path) {
         return OverlayApplier.apply(base, scenario.patches).content
     }
 
+    fun contentHash(content: GameContent): String = computeHash(content)
+
     private fun computeHash(content: GameContent): String {
         val json = FaultoryJson.instance
         val parts = buildString {

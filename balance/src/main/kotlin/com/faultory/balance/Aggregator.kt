@@ -127,6 +127,7 @@ object Aggregator {
 
     private fun List<Double>.mean(): Double = if (isEmpty()) 0.0 else sum() / size
 
+    @JvmName("meanInt")
     private fun List<Int>.mean(): Double = if (isEmpty()) 0.0 else sumOf { it.toDouble() } / size
 
     internal fun List<Double>.percentile(p: Int): Double {
