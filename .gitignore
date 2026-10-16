@@ -64,3 +64,6 @@ dmtools-local.env
 
 # CodeGraph generated index — regenerated per-run, must never be committed
 .codegraph/
+
+# Balance server scratch: named scenarios, result cache, autosaves — never in assets/
+.balance/
