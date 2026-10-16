@@ -38,12 +38,10 @@ object Aggregator {
         val cashValues = reports.map { it.finalCash.toDouble() }
         val goodDelivered = reports.map { it.goodProductsDelivered.toDouble() }
         val faultyDelivered = reports.map { it.faultyProductsDelivered.toDouble() }
-        val totalDelivered = reports.map { (it.goodProductsDelivered + it.faultyProductsDelivered).toDouble() }
         val faultyShare = reports.map { r ->
             val total = r.goodProductsDelivered + r.faultyProductsDelivered
             if (total > 0) r.faultyProductsDelivered.toDouble() / total else 0.0
         }
-
         val allFailures = results.flatMap { it.playerFailures }
         val allCounterKeys = (reports.flatMap { it.counters.keys } + requestedCounters).toSet()
 

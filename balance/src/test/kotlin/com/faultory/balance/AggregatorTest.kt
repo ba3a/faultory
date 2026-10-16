@@ -1,8 +1,11 @@
 package com.faultory.balance
 
 import com.faultory.core.headless.HeadlessRunReport
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.double
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
@@ -50,8 +53,12 @@ class AggregatorTest {
             seedResult(report(passed = true, stars = 3, cash = 100, good = 5, faulty = 0))
         )
         val agg = Aggregator.aggregate(CellKey("baseline", "l", "p"), results, null, emptyList())
-        val hist = agg["stars"]!!.jsonObject["hist"]!!
-        assertEquals(4, hist.jsonPrimitive.content.let { 0 } + 1) // not exactly checking individual values here
+        val hist = agg["stars"]!!.jsonObject["hist"]!!.jsonArray
+        assertEquals(4, hist.size, "hist must have 4 entries (0..3)")
+        // Each star bucket should have exactly 1 count
+        hist.forEach { elem ->
+            assertEquals(1, elem.jsonPrimitive.int)
+        }
     }
 
     @Test

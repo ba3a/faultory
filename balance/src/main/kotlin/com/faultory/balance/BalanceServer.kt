@@ -201,7 +201,7 @@ class BalanceServer(
                 },
                 required = listOf("player")
             )
-        ) { args -> handleRun(cm, store, planStore, engine, args) }
+        ) { args -> handleRun(cm, planStore, engine, args) }
     }
 
     private fun tool(
