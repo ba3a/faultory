@@ -7,13 +7,16 @@ on:
   pull_request:
   push:
     branches: [master]
+  # The state machine (machine-sm.yml) starts CI on a pull request head by dispatching this
+  # workflow, so a head that no event has built still gets a verdict.
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   gradle:
-    uses: ba3a/ci-pipelines/.github/workflows/gradle-ci.yml@v1
+    uses: ba3a/ci-pipelines/.github/workflows/gradle-ci.yml@state-machine
     with:
       java_version: '21'
       gradle_tasks: 'test detekt'
