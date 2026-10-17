@@ -30,7 +30,9 @@ class ScenarioStore(private val scratchDir: Path) {
     ): Scenario {
         require(id != BASELINE_ID) { "Cannot create a scenario with the reserved id '$BASELINE_ID'" }
         require(!scenarios.containsKey(id)) { "Scenario '$id' already exists" }
-        require(scenarios.size < hardCap) { "Scenario hard cap ($hardCap) reached; discard some before creating new ones" }
+        require(scenarios.size < hardCap) {
+            "Scenario hard cap ($hardCap) reached; discard some before creating new ones"
+        }
         val parentId = parent ?: BASELINE_ID
         require(scenarios.containsKey(parentId)) { "Parent scenario '$parentId' does not exist" }
         val scenario = Scenario(id = id, parent = parentId, note = note, baseHash = baseHash, patches = patches)

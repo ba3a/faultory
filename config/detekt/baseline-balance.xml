@@ -17,8 +17,6 @@
     <ID>MagicNumber:Aggregator.kt$Aggregator$50</ID>
     <ID>MagicNumber:Aggregator.kt$Aggregator$90</ID>
     <ID>MagicNumber:ContentManager.kt$ContentManager$8</ID>
-    <ID>MaxLineLength:BalanceIsolationTest.kt$BalanceIsolationTest$val after = Files.walk(assetsRoot).toList().filter { Files.isRegularFile(it) }.map { it to Files.getLastModifiedTime(it) }</ID>
-    <ID>MaxLineLength:BalanceIsolationTest.kt$BalanceIsolationTest$val before = Files.walk(assetsRoot).toList().filter { Files.isRegularFile(it) }.map { it to Files.getLastModifiedTime(it) }</ID>
     <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("baseSeed") { put("type", "integer"); put("description", "First seed value (default: 1)") }</ID>
     <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("depth") { put("type", "integer"); put("description", "Walk depth from the prefix (default: 2)") }</ID>
     <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("document") { put("type", "string"); put("description", "Filter to 'catalog', 'levels', or 'blueprint'") }</ID>
@@ -35,50 +33,10 @@
     <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("scenarios") { put("type", "array"); put("description", "Scenario ids (default: ['baseline'])") }</ID>
     <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("seeds") { put("type", "integer"); put("description", "Number of seeds (default: 30)") }</ID>
     <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("strict") { put("type", "boolean"); put("description", "Fail on validation warnings (default: false)") }</ID>
-    <ID>MaxLineLength:ContentTools.kt$else -&gt; return buildJsonObject { put("error", "Unknown document '$document'; use 'catalog', 'levels', or 'blueprint'") }</ID>
-    <ID>MaxLineLength:ContentTools.kt$val json = FaultoryJson.instance.encodeToJsonElement(ShopBlueprint.serializer(), content.blueprintFor(level))</ID>
-    <ID>MaxLineLength:OverlayApplier.kt$OverlayApplier$?:</ID>
-    <ID>MaxLineLength:OverlayApplier.kt$OverlayApplier$if (idx &lt; 0) throw OverlayException("UNKNOWN_ELEMENT", fullPath, "No element with id/role='$seg' in array")</ID>
-    <ID>MaxLineLength:OverlayApplier.kt$OverlayApplier$private val geometryFields = setOf("floor", "camera", "conveyorBelts", "machineSlots", "workerSpawnPoints", "scenery")</ID>
-    <ID>MaxLineLength:OverlayApplier.kt$OverlayApplier$return content.copy(levelCatalog = FaultoryJson.instance.decodeFromJsonElement(LevelCatalog.serializer(), patched))</ID>
-    <ID>MaxLineLength:OverlayApplier.kt$OverlayApplier$return content.copy(shopCatalog = FaultoryJson.instance.decodeFromJsonElement(ShopCatalog.serializer(), patched))</ID>
-    <ID>MaxLineLength:OverlayApplier.kt$OverlayApplier$throw OverlayException("INCOMPLETE_PATH", patch.path, "blueprint path needs a levelId and at least one field")</ID>
-    <ID>MaxLineLength:OverlayApplier.kt$OverlayApplier$val catalogJson = jsonWithDefaults.encodeToJsonElement(ShopCatalog.serializer(), content.shopCatalog) as JsonObject</ID>
-    <ID>MaxLineLength:OverlayApplier.kt$OverlayApplier$val levelsJson = jsonWithDefaults.encodeToJsonElement(LevelCatalog.serializer(), content.levelCatalog) as JsonObject</ID>
-    <ID>MaxLineLength:OverlayApplier.kt$OverlayApplier$val patched = navigate(blueprintJson, ArrayDeque(fieldSegments), patch.op, patch.value, patch.path) as JsonObject</ID>
-    <ID>MaxLineLength:OverlayApplierTest.kt$OverlayApplierTest$OverlayApplier.apply(base, listOf(PatchOperation(PatchOp.ADD, "catalog/workers/target-intern/skin", JsonPrimitive(1))))</ID>
-    <ID>MaxLineLength:OverlayApplierTest.kt$OverlayApplierTest$OverlayApplier.apply(base, listOf(PatchOperation(PatchOp.SET, "blueprint/tutorial-shop/floor/x", JsonPrimitive(1))))</ID>
-    <ID>MaxLineLength:OverlayApplierTest.kt$OverlayApplierTest$OverlayApplier.apply(base, listOf(PatchOperation(PatchOp.SET, "catalog/workers/nonexistent/hireCost", JsonPrimitive(1))))</ID>
-    <ID>MaxLineLength:OverlayApplierTest.kt$OverlayApplierTest$OverlayApplier.apply(base, listOf(PatchOperation(PatchOp.SET, "catalog/workers/target-intern/nonExistentField", JsonPrimitive(1))))</ID>
-    <ID>MaxLineLength:OverlayApplierTest.kt$OverlayApplierTest$PatchOperation(PatchOp.SET, "blueprint/tutorial-shop/floorTuning/conveyorSpeedTilesPerSecond", JsonPrimitive(5.0f))</ID>
-    <ID>MaxLineLength:OverlayApplierTest.kt$OverlayApplierTest$PatchOperation(PatchOp.SET, "catalog/workers/target-intern/roleProfiles/QA/detectionAccuracy", JsonPrimitive(0.9f))</ID>
-    <ID>MaxLineLength:OverlayApplierTest.kt$OverlayApplierTest$PatchOperation(PatchOp.SET, "catalog/workers/target-intern/roleProfiles/QA/detectionAccuracy", JsonPrimitive(1.5f))</ID>
-    <ID>MaxLineLength:OverlayApplierTest.kt$OverlayApplierTest$assertTrue(result.warnings.any { "detectionAccuracy" in it }, "Expected detectionAccuracy warning; got: ${result.warnings}")</ID>
-    <ID>MaxLineLength:OverlayApplierTest.kt$OverlayApplierTest$assertTrue(result.warnings.any { "starThresholds" in it }, "Expected starThresholds warning; got: ${result.warnings}")</ID>
     <ID>MaxLineLength:PlanPlayer.kt$PlanPlayer$return if (session.rotate(id, orientation)) null else "rotate $id: failed (not a machine or invalid orientation)"</ID>
-    <ID>MaxLineLength:RangeValidator.kt$RangeValidator$if (blueprint.shiftLengthSeconds &lt;= 0f) warnings += "$bPath/shiftLengthSeconds=${blueprint.shiftLengthSeconds} must be positive"</ID>
-    <ID>MaxLineLength:RangeValidator.kt$RangeValidator$if (ft.conveyorSpeedTilesPerSecond &lt;= 0f) warnings += "$bPath/floorTuning/conveyorSpeedTilesPerSecond must be positive"</ID>
-    <ID>MaxLineLength:RangeValidator.kt$RangeValidator$if (ft.wetTileSlipBaseChance !in 0f..1f) warnings += "$bPath/floorTuning/wetTileSlipBaseChance outside [0,1]"</ID>
-    <ID>MaxLineLength:RangeValidator.kt$RangeValidator$if (ft.wetTileSlipJitterChance !in 0f..1f) warnings += "$bPath/floorTuning/wetTileSlipJitterChance outside [0,1]"</ID>
-    <ID>MaxLineLength:RangeValidator.kt$RangeValidator$if (machine.operationDurationSeconds &lt;= 0f) warnings += "$mPath/operationDurationSeconds=${machine.operationDurationSeconds} must be positive"</ID>
-    <ID>MaxLineLength:RangeValidator.kt$RangeValidator$if (qa.detectionAccuracy !in 0f..1f) warnings += "$mPath/qaProfile/detectionAccuracy=${qa.detectionAccuracy} outside [0,1]"</ID>
-    <ID>MaxLineLength:RangeValidator.kt$RangeValidator$if (qa.falsePositiveChance !in 0f..1f) warnings += "$mPath/qaProfile/falsePositiveChance=${qa.falsePositiveChance} outside [0,1]"</ID>
-    <ID>MaxLineLength:RangeValidator.kt$RangeValidator$if (qa.inspectionDurationSeconds &lt;= 0f) warnings += "$mPath/qaProfile/inspectionDurationSeconds=${qa.inspectionDurationSeconds} must be positive"</ID>
-    <ID>MaxLineLength:RangeValidator.kt$RangeValidator$if (recipe.defectChance !in 0f..1f) warnings += "$mPath/recipe/defectChance=${recipe.defectChance} outside [0,1]"</ID>
-    <ID>MaxLineLength:RangeValidator.kt$RangeValidator$if (recipe.durationSeconds &lt;= 0f) warnings += "$mPath/recipe/durationSeconds=${recipe.durationSeconds} must be positive"</ID>
-    <ID>MaxLineLength:RangeValidator.kt$RangeValidator$if (rp.falsePositiveChance !in 0f..1f) warnings += "$rpPath/falsePositiveChance=${rp.falsePositiveChance} outside [0,1]"</ID>
-    <ID>MaxLineLength:RangeValidator.kt$RangeValidator$if (rp.sabotageChance !in 0f..1f) warnings += "$rpPath/sabotageChance=${rp.sabotageChance} outside [0,1]"</ID>
-    <ID>MaxLineLength:RangeValidator.kt$RangeValidator$rp.detectionAccuracy?.let { if (it !in 0f..1f) warnings += "$rpPath/detectionAccuracy=$it outside [0,1]" }</ID>
-    <ID>MaxLineLength:RangeValidator.kt$RangeValidator$warnings += "levels/${level.id}/starThresholds must be non-decreasing (got ${t.oneStar},${t.twoStar},${t.threeStar})"</ID>
-    <ID>MaxLineLength:ScenarioStore.kt$ScenarioStore$require(scenarios.size &lt; hardCap) { "Scenario hard cap ($hardCap) reached; discard some before creating new ones" }</ID>
-    <ID>MaxLineLength:ScenarioTools.kt$(el as? JsonObject)?.let { it["id"]?.jsonPrimitive?.contentOrNull ?: it["role"]?.jsonPrimitive?.contentOrNull }</ID>
-    <ID>MaxLineLength:ScenarioTools.kt$private val geometryFieldsForDiff = setOf("floor", "camera", "conveyorBelts", "machineSlots", "workerSpawnPoints", "scenery")</ID>
     <ID>NestedBlockDepth:ExportTools.kt$private fun diffJsonPaths( path: String, a: JsonElement, b: JsonElement, result: MutableList&lt;Triple&lt;String, JsonElement, JsonElement&gt;&gt; )</ID>
     <ID>NestedBlockDepth:RangeValidator.kt$RangeValidator$private fun validateWorkers(content: GameContent, warnings: MutableList&lt;String&gt;)</ID>
     <ID>NestedBlockDepth:ScenarioTools.kt$private fun diffJson( path: String, a: JsonElement, b: JsonElement, result: MutableMap&lt;String, Pair&lt;JsonElement, JsonElement&gt;&gt; )</ID>
-    <ID>ThrowsCount:OverlayApplier.kt$OverlayApplier$internal fun navigate( element: JsonElement, segments: ArrayDeque&lt;String&gt;, op: PatchOp, value: JsonElement, fullPath: String ): JsonElement</ID>
-    <ID>ThrowsCount:OverlayApplier.kt$OverlayApplier$private fun applyBlueprint(content: GameContent, patch: PatchOperation, segments: List&lt;String&gt;): GameContent</ID>
-    <ID>ThrowsCount:OverlayApplier.kt$OverlayApplier$private fun applyOp(current: JsonElement, op: PatchOp, value: JsonElement, path: String): JsonElement</ID>
     <ID>TooGenericExceptionCaught:BalanceServer.kt$BalanceServer$e: Exception</ID>
     <ID>UnusedParameter:RunEngine.kt$RunEngine$metrics: List&lt;String&gt;</ID>
     <ID>UnusedPrivateProperty:RunEngine.kt$private const val CACHE_MAX = 200_000</ID>

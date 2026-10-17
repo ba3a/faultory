@@ -21,7 +21,6 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
@@ -89,25 +88,19 @@ fun handleScenarioDiff(cm: ContentManager, store: ScenarioStore, args: JsonObjec
     val diffs = mutableMapOf<String, Pair<JsonElement, JsonElement>>()
     val json = FaultoryJson.instance
 
-    diffJson("catalog", json.encodeToJsonElement(ShopCatalog.serializer(), contentA.shopCatalog),
-        json.encodeToJsonElement(ShopCatalog.serializer(), contentB.shopCatalog), diffs)
-    diffJson("levels/levels", json.encodeToJsonElement(LevelCatalog.serializer(), contentA.levelCatalog),
-        json.encodeToJsonElement(LevelCatalog.serializer(), contentB.levelCatalog), diffs)
-
-    val levelIds = (contentA.levelCatalog.levels + contentB.levelCatalog.levels).map { it.id }.toSet()
-    for (levelId in levelIds) {
-        val level = contentA.levelCatalog.levels.firstOrNull { it.id == levelId }
-            ?: contentB.levelCatalog.levels.first { it.id == levelId }
-        val bpPath = level.shopAssetPath
-        val bpA = contentA.blueprintsByPath[bpPath]
-        val bpB = contentB.blueprintsByPath[bpPath]
-        if (bpA != null && bpB != null) {
-            diffJson("blueprint/$levelId",
-                json.encodeToJsonElement(ShopBlueprint.serializer(), bpA),
-                json.encodeToJsonElement(ShopBlueprint.serializer(), bpB),
-                diffs)
-        }
-    }
+    diffJson(
+        "catalog",
+        json.encodeToJsonElement(ShopCatalog.serializer(), contentA.shopCatalog),
+        json.encodeToJsonElement(ShopCatalog.serializer(), contentB.shopCatalog),
+        diffs
+    )
+    diffJson(
+        "levels/levels",
+        json.encodeToJsonElement(LevelCatalog.serializer(), contentA.levelCatalog),
+        json.encodeToJsonElement(LevelCatalog.serializer(), contentB.levelCatalog),
+        diffs
+    )
+    diffBlueprints(contentA, contentB, diffs)
 
     return buildJsonArray {
         for ((path, pair) in diffs.entries.sortedBy { it.key }) {
@@ -116,6 +109,30 @@ fun handleScenarioDiff(cm: ContentManager, store: ScenarioStore, args: JsonObjec
                 put("a", pair.first)
                 put("b", pair.second)
             })
+        }
+    }
+}
+
+private fun diffBlueprints(
+    contentA: GameContent,
+    contentB: GameContent,
+    diffs: MutableMap<String, Pair<JsonElement, JsonElement>>
+) {
+    val json = FaultoryJson.instance
+    val levelIds = (contentA.levelCatalog.levels + contentB.levelCatalog.levels).map { it.id }.toSet()
+    for (levelId in levelIds) {
+        val level = contentA.levelCatalog.levels.firstOrNull { it.id == levelId }
+            ?: contentB.levelCatalog.levels.first { it.id == levelId }
+        val bpPath = level.shopAssetPath
+        val bpA = contentA.blueprintsByPath[bpPath]
+        val bpB = contentB.blueprintsByPath[bpPath]
+        if (bpA != null && bpB != null) {
+            diffJson(
+                "blueprint/$levelId",
+                json.encodeToJsonElement(ShopBlueprint.serializer(), bpA),
+                json.encodeToJsonElement(ShopBlueprint.serializer(), bpB),
+                diffs
+            )
         }
     }
 }
@@ -154,7 +171,9 @@ private fun scenarioJson(scenario: Scenario, warnings: List<String>): JsonElemen
 private fun parsePatchList(arr: JsonArray): List<PatchOperation> =
     FaultoryJson.instance.decodeFromJsonElement<List<PatchOperation>>(arr)
 
-private val geometryFieldsForDiff = setOf("floor", "camera", "conveyorBelts", "machineSlots", "workerSpawnPoints", "scenery")
+private val geometryFieldsForDiff = setOf(
+    "floor", "camera", "conveyorBelts", "machineSlots", "workerSpawnPoints", "scenery"
+)
 
 private fun diffJson(
     path: String,
@@ -164,33 +183,50 @@ private fun diffJson(
 ) {
     if (a == b) return
     when {
-        a is JsonObject && b is JsonObject -> {
-            val allKeys = (a.keys + b.keys).toSet()
-            for (key in allKeys) {
-                if (key in geometryFieldsForDiff) continue
-                val aChild = a[key] ?: JsonNull
-                val bChild = b[key] ?: JsonNull
-                if (aChild != bChild) diffJson("$path/$key", aChild, bChild, result)
-            }
-        }
-        a is JsonArray && b is JsonArray -> {
-            val aById = a.associateBy { el ->
-                (el as? JsonObject)?.let { it["id"]?.jsonPrimitive?.contentOrNull ?: it["role"]?.jsonPrimitive?.contentOrNull }
-            }
-            val bById = b.associateBy { el ->
-                (el as? JsonObject)?.let { it["id"]?.jsonPrimitive?.contentOrNull ?: it["role"]?.jsonPrimitive?.contentOrNull }
-            }
-            val hasIds = aById.size == a.size && bById.size == b.size && !aById.containsKey(null)
-            if (hasIds) {
-                for (key in (aById.keys + bById.keys).filterNotNull().toSet()) {
-                    val aEl = aById[key] ?: JsonNull
-                    val bEl = bById[key] ?: JsonNull
-                    if (aEl != bEl) diffJson("$path/$key", aEl, bEl, result)
-                }
-            } else {
-                if (a != b) result[path] = a to b
-            }
-        }
+        a is JsonObject && b is JsonObject -> diffObjects(path, a, b, result)
+        a is JsonArray && b is JsonArray -> diffArrays(path, a, b, result)
         else -> result[path] = a to b
+    }
+}
+
+private fun diffObjects(
+    path: String,
+    a: JsonObject,
+    b: JsonObject,
+    result: MutableMap<String, Pair<JsonElement, JsonElement>>
+) {
+    for (key in (a.keys + b.keys).toSet()) {
+        if (key in geometryFieldsForDiff) continue
+        val aChild = a[key] ?: JsonNull
+        val bChild = b[key] ?: JsonNull
+        if (aChild != bChild) diffJson("$path/$key", aChild, bChild, result)
+    }
+}
+
+private fun diffArrays(
+    path: String,
+    a: JsonArray,
+    b: JsonArray,
+    result: MutableMap<String, Pair<JsonElement, JsonElement>>
+) {
+    val aById = a.associateBy { el ->
+        (el as? JsonObject)?.let {
+            it["id"]?.jsonPrimitive?.contentOrNull ?: it["role"]?.jsonPrimitive?.contentOrNull
+        }
+    }
+    val bById = b.associateBy { el ->
+        (el as? JsonObject)?.let {
+            it["id"]?.jsonPrimitive?.contentOrNull ?: it["role"]?.jsonPrimitive?.contentOrNull
+        }
+    }
+    val hasIds = aById.size == a.size && bById.size == b.size && !aById.containsKey(null)
+    if (hasIds) {
+        for (key in (aById.keys + bById.keys).filterNotNull().toSet()) {
+            val aEl = aById[key] ?: JsonNull
+            val bEl = bById[key] ?: JsonNull
+            if (aEl != bEl) diffJson("$path/$key", aEl, bEl, result)
+        }
+    } else {
+        if (a != b) result[path] = a to b
     }
 }

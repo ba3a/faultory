@@ -49,12 +49,14 @@ class BalanceIsolationTest {
     @Test
     fun `ContentManager reload does not write to assets`() {
         val assetsRoot = TestAssets.root
-        val before = Files.walk(assetsRoot).toList().filter { Files.isRegularFile(it) }.map { it to Files.getLastModifiedTime(it) }
+        val before = Files.walk(assetsRoot).toList()
+            .filter { Files.isRegularFile(it) }.map { it to Files.getLastModifiedTime(it) }
 
         val cm = ContentManager(assetsRoot)
         cm.reload()
 
-        val after = Files.walk(assetsRoot).toList().filter { Files.isRegularFile(it) }.map { it to Files.getLastModifiedTime(it) }
+        val after = Files.walk(assetsRoot).toList()
+            .filter { Files.isRegularFile(it) }.map { it to Files.getLastModifiedTime(it) }
         assertEquals(before, after, "reload() must not touch any file in assets/")
     }
 }
