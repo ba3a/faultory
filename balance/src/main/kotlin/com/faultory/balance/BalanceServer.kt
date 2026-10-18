@@ -1,6 +1,8 @@
 package com.faultory.balance
 
+import com.faultory.balance.tool.handleCompare
 import com.faultory.balance.tool.handleDescribeContent
+import com.faultory.balance.tool.handleDescribeMetrics
 import com.faultory.balance.tool.handleGetValue
 import com.faultory.balance.tool.handlePlanCheck
 import com.faultory.balance.tool.handlePlanDelete
@@ -9,6 +11,7 @@ import com.faultory.balance.tool.handlePlanList
 import com.faultory.balance.tool.handlePlanPut
 import com.faultory.balance.tool.handleReloadBase
 import com.faultory.balance.tool.handleRun
+import com.faultory.balance.tool.handleRunDetails
 import com.faultory.balance.tool.handleScenarioCreate
 import com.faultory.balance.tool.handleScenarioDiff
 import com.faultory.balance.tool.handleScenarioDiscard
@@ -16,6 +19,7 @@ import com.faultory.balance.tool.handleScenarioExport
 import com.faultory.balance.tool.handleScenarioGet
 import com.faultory.balance.tool.handleScenarioList
 import com.faultory.balance.tool.handleScenarioPatch
+import com.faultory.balance.tool.handleSweep
 import com.faultory.core.config.FaultoryJson
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.Implementation
@@ -35,7 +39,8 @@ class BalanceServer(
     private val cm: ContentManager,
     private val store: ScenarioStore,
     private val planStore: PlanStore,
-    private val engine: RunEngine
+    private val engine: RunEngine,
+    private val runStore: RunStore
 ) {
 
     fun buildServer(): Server {
@@ -202,7 +207,62 @@ class BalanceServer(
                 },
                 required = listOf("player")
             )
-        ) { args -> handleRun(cm, planStore, engine, args) }
+        ) { args -> handleRun(cm, planStore, engine, runStore, args) }
+
+        // --- Comparison ---
+        tool(server, "sweep",
+            "Vary one numeric parameter across values and return a table of per-value aggregated results.",
+            Tool.Input(
+                properties = buildJsonObject {
+                    putJsonObject("base") { put("type", "string"); put("description", "Scenario id to fork from (default: baseline)") }
+                    putJsonObject("path") { put("type", "string"); put("description", "Tunable path to vary, e.g. 'catalog/workers/anywork-1/hireCost'") }
+                    putJsonObject("values") { put("type", "array"); put("description", "Explicit list of numeric values to sweep") }
+                    putJsonObject("range") { put("type", "object"); put("description", "Generated range {from, to, steps}") }
+                    putJsonObject("op") { put("type", "string"); put("description", "Patch operation: set (default), add, or mul") }
+                    putJsonObject("levels") { put("type", "array"); put("description", "Level ids (default: all)") }
+                    putJsonObject("player") { put("type", "object"); put("description", "PlayerSpec") }
+                    putJsonObject("seeds") { put("type", "array"); put("description", "Explicit seed list") }
+                    putJsonObject("seedCount") { put("type", "integer"); put("description", "Seed count if seeds not specified (default: 10)") }
+                    putJsonObject("baseSeed") { put("type", "integer"); put("description", "First seed value (default: 1)") }
+                    putJsonObject("metrics") { put("type", "array"); put("description", "Counter names to include") }
+                },
+                required = listOf("path", "player")
+            )
+        ) { args -> handleSweep(cm, store, planStore, engine, runStore, args) }
+
+        tool(server, "compare",
+            "Run two scenarios on the same levels and paired seeds; per-metric differences with 95% CIs and a significant flag.",
+            Tool.Input(
+                properties = buildJsonObject {
+                    putJsonObject("a") { put("type", "string"); put("description", "First scenario id") }
+                    putJsonObject("b") { put("type", "string"); put("description", "Second scenario id") }
+                    putJsonObject("levels") { put("type", "array"); put("description", "Level ids (default: all)") }
+                    putJsonObject("player") { put("type", "object"); put("description", "PlayerSpec") }
+                    putJsonObject("seeds") { put("type", "array"); put("description", "Explicit seed list") }
+                    putJsonObject("seedCount") { put("type", "integer"); put("description", "Seed count if seeds not specified (default: 10)") }
+                    putJsonObject("baseSeed") { put("type", "integer"); put("description", "First seed value (default: 1)") }
+                    putJsonObject("metrics") { put("type", "array"); put("description", "Counter names to include") }
+                },
+                required = listOf("a", "b", "player")
+            )
+        ) { args -> handleCompare(cm, store, planStore, engine, args) }
+
+        tool(server, "run_details",
+            "Paginated per-seed rows for a previous run result.",
+            Tool.Input(
+                properties = buildJsonObject {
+                    putJsonObject("runId") { put("type", "string"); put("description", "Run id returned by run or sweep") }
+                    putJsonObject("cursor") { put("type", "integer"); put("description", "0-based row offset (default: 0)") }
+                    putJsonObject("rowCap") { put("type", "integer"); put("description", "Max rows per page, 1–200 (default: 50)") }
+                },
+                required = listOf("runId")
+            )
+        ) { args -> handleRunDetails(runStore, args) }
+
+        tool(server, "describe_metrics",
+            "Counter names seen in recent runs plus fixed report fields. Use this to choose metrics without guessing.",
+            Tool.Input()
+        ) { _ -> handleDescribeMetrics(runStore) }
     }
 
     private fun tool(
