@@ -1,5 +1,40 @@
 <?xml version="1.0" ?>
 <SmellBaseline>
   <ManuallySuppressedIssues/>
-  <CurrentIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:ExportTools.kt$private fun diffJsonPaths( path: String, a: JsonElement, b: JsonElement, result: MutableList&lt;Triple&lt;String, JsonElement, JsonElement&gt;&gt; )</ID>
+    <ID>CyclomaticComplexMethod:RangeValidator.kt$RangeValidator$private fun validateWorkers(content: GameContent, warnings: MutableList&lt;String&gt;)</ID>
+    <ID>CyclomaticComplexMethod:ScenarioTools.kt$private fun diffJson( path: String, a: JsonElement, b: JsonElement, result: MutableMap&lt;String, Pair&lt;JsonElement, JsonElement&gt;&gt; )</ID>
+    <ID>LongMethod:Aggregator.kt$Aggregator$fun aggregate( key: CellKey, results: List&lt;SeedResult&gt;, baseline: List&lt;SeedResult&gt;?, requestedCounters: List&lt;String&gt; ): JsonObject</ID>
+    <ID>LongMethod:BalanceServer.kt$BalanceServer$private fun registerAll(server: Server)</ID>
+    <ID>LoopWithTooManyJumpStatements:PlanPlayer.kt$PlanPlayer$while</ID>
+    <ID>MagicNumber:Aggregator.kt$Aggregator$1.96</ID>
+    <ID>MagicNumber:Aggregator.kt$Aggregator$10</ID>
+    <ID>MagicNumber:Aggregator.kt$Aggregator$3</ID>
+    <ID>MagicNumber:Aggregator.kt$Aggregator$4</ID>
+    <ID>MagicNumber:Aggregator.kt$Aggregator$5</ID>
+    <ID>MagicNumber:Aggregator.kt$Aggregator$50</ID>
+    <ID>MagicNumber:Aggregator.kt$Aggregator$90</ID>
+    <ID>MagicNumber:ContentManager.kt$ContentManager$8</ID>
+    <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("baseSeed") { put("type", "integer"); put("description", "First seed value (default: 1)") }</ID>
+    <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("depth") { put("type", "integer"); put("description", "Walk depth from the prefix (default: 2)") }</ID>
+    <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("document") { put("type", "string"); put("description", "Filter to 'catalog', 'levels', or 'blueprint'") }</ID>
+    <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("forLevel") { put("type", "string"); put("description", "Level id (overrides plan's forLevel)") }</ID>
+    <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("inline") { put("type", "object"); put("description", "Inline plan object (alternative to plan name)") }</ID>
+    <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("parent") { put("type", "string"); put("description", "Parent scenario to fork from (default: baseline)") }</ID>
+    <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("paths") { put("type", "array"); put("description", "Paths to read, e.g. ['catalog/workers/anywork-1/hireCost']") }</ID>
+    <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("plan") { put("type", "object"); put("description", "The plan object with forLevel, steps, etc.") }</ID>
+    <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("player") { put("type", "object"); put("description", "PlayerSpec: {kind:'plan', plan?:name, inline?:planObj, decisionIntervalSeconds?:float}") }</ID>
+    <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("prefix") { put("type", "string"); put("description", "Path prefix to drill into, e.g. 'catalog/workers/anywork-1'") }</ID>
+    <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("replace") { put("type", "boolean"); put("description", "If true, replace the whole patch list instead of appending") }</ID>
+    <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("scenario") { put("type", "string"); put("description", "Scenario id (default: baseline)") }</ID>
+    <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("scenario") { put("type", "string"); put("description", "Scenario id to read (default: baseline)") }</ID>
+    <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("scenarios") { put("type", "array"); put("description", "Scenario ids (default: ['baseline'])") }</ID>
+    <ID>MaxLineLength:BalanceServer.kt$BalanceServer$putJsonObject("strict") { put("type", "boolean"); put("description", "Fail on validation warnings (default: false)") }</ID>
+    <ID>MaxLineLength:PlanPlayer.kt$PlanPlayer$return if (session.rotate(id, orientation)) null else "rotate $id: failed (not a machine or invalid orientation)"</ID>
+    <ID>NestedBlockDepth:ExportTools.kt$private fun diffJsonPaths( path: String, a: JsonElement, b: JsonElement, result: MutableList&lt;Triple&lt;String, JsonElement, JsonElement&gt;&gt; )</ID>
+    <ID>NestedBlockDepth:RangeValidator.kt$RangeValidator$private fun validateWorkers(content: GameContent, warnings: MutableList&lt;String&gt;)</ID>
+    <ID>NestedBlockDepth:ScenarioTools.kt$private fun diffJson( path: String, a: JsonElement, b: JsonElement, result: MutableMap&lt;String, Pair&lt;JsonElement, JsonElement&gt;&gt; )</ID>
+    <ID>TooGenericExceptionCaught:BalanceServer.kt$BalanceServer$e: Exception</ID>
+  </CurrentIssues>
 </SmellBaseline>

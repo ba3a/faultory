@@ -10,10 +10,6 @@ import java.nio.file.Path
 import java.security.MessageDigest
 
 class ContentManager(private val assetsRoot: Path) {
-
-    companion object {
-        private const val HASH_HEX_LENGTH = 8
-    }
     private var base: GameContent = FileSystemContentSource(assetsRoot).load()
 
     val baseContent: GameContent get() = base
@@ -30,6 +26,8 @@ class ContentManager(private val assetsRoot: Path) {
         return OverlayApplier.apply(base, scenario.patches).content
     }
 
+    fun contentHash(content: GameContent): String = computeHash(content)
+
     private fun computeHash(content: GameContent): String {
         val json = FaultoryJson.instance
         val parts = buildString {
@@ -41,6 +39,6 @@ class ContentManager(private val assetsRoot: Path) {
         }
         val digest = MessageDigest.getInstance("SHA-256")
         val bytes = digest.digest(parts.toByteArray(Charsets.UTF_8))
-        return bytes.joinToString("") { "%02x".format(it) }.take(HASH_HEX_LENGTH)
+        return bytes.joinToString("") { "%02x".format(it) }.take(8)
     }
 }
