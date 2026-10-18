@@ -392,8 +392,8 @@ class SweepCompareTest {
             put("player", inlinePlayer(levelId))
             put("seeds", seeds(1L, 2L, 3L, 4L, 5L))
             put("values", buildJsonArray {
-                add(JsonPrimitive(100.0))
-                add(JsonPrimitive(200.0))
+                add(JsonPrimitive(100))
+                add(JsonPrimitive(200))
             })
         }
 
@@ -445,8 +445,8 @@ class SweepCompareTest {
             put("levels", buildJsonArray { add(levelId) })
             put("seeds", seeds(1L, 2L, 3L))
             put("values", buildJsonArray {
-                add(JsonPrimitive(100.0))
-                add(JsonPrimitive(200.0))
+                add(JsonPrimitive(100))
+                add(JsonPrimitive(200))
             })
         }
 
