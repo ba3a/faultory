@@ -1,8 +1,6 @@
 package com.faultory.balance
 
-import com.faultory.balance.tool.handleCompare
-import com.faultory.balance.tool.handleRunDetails
-import com.faultory.balance.tool.handleSweep
+import com.faultory.balance.tool.CompareTools
 import com.faultory.core.headless.HeadlessRunReport
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
@@ -101,15 +99,11 @@ class SweepCompareTest {
         val report = report(passed = true, stars = 2, cash = 500, good = 5, faulty = 0)
         val sr = SeedResult(report, emptyList())
         val results = listOf(sr, sr, sr)
+        val key = CellKey("a", "test-level", "plan:test")
 
         val diff = Aggregator.pairedDiff(
-            scenarioA = "a",
-            scenarioB = "b",
-            levelId = "test-level",
-            playerLabel = "plan:test",
-            resultsA = results,
-            resultsB = results,
-            requestedCounters = emptyList()
+            CellResult(key, buildJsonObject {}, results),
+            CellResult(key.copy(scenarioId = "b"), buildJsonObject {}, results)
         )
 
         fun diffOf(key: String) = diff[key]!!.jsonObject["diff"]!!.jsonPrimitive.double
@@ -129,10 +123,8 @@ class SweepCompareTest {
         val rB = report(passed = false, stars = 0, cash = 100, good = 0, faulty = 5)
 
         val diff = Aggregator.pairedDiff(
-            "a", "b", "l", "p",
-            listOf(SeedResult(rA, emptyList())),
-            listOf(SeedResult(rB, emptyList())),
-            emptyList()
+            CellResult(CellKey("a", "l", "p"), buildJsonObject {}, listOf(SeedResult(rA, emptyList()))),
+            CellResult(CellKey("b", "l", "p"), buildJsonObject {}, listOf(SeedResult(rB, emptyList())))
         )
 
         assertEquals(1.0, diff["passRate"]!!.jsonObject["a"]!!.jsonPrimitive.double, 1e-10)
@@ -162,7 +154,7 @@ class SweepCompareTest {
             })
         }
 
-        val result = handleSweep(cm, store, planStore, engine, runStore, args).jsonObject
+        val result = CompareTools(cm, store, planStore, engine, runStore).handleSweep(args).jsonObject
         val rows = result["rows"]!!.jsonArray
         assertEquals(3, rows.size)
 
@@ -190,7 +182,7 @@ class SweepCompareTest {
             put("values", buildJsonArray { add(JsonPrimitive(120)) })
         }
 
-        val result = handleSweep(cm, store, planStore, engine, runStore, args).jsonObject
+        val result = CompareTools(cm, store, planStore, engine, runStore).handleSweep(args).jsonObject
         val runId = result["runId"]?.jsonPrimitive?.content
         assertNotNull(runId)
         assertTrue(runId.isNotEmpty())
@@ -214,7 +206,7 @@ class SweepCompareTest {
             })
         }
 
-        val result = handleSweep(cm, store, planStore, engine, runStore, args).jsonObject
+        val result = CompareTools(cm, store, planStore, engine, runStore).handleSweep(args).jsonObject
         val rows = result["rows"]!!.jsonArray
         assertEquals(2, rows.size)
         // Both rows must report the same number of seeds (3)
@@ -243,7 +235,7 @@ class SweepCompareTest {
             }
         }
 
-        val result = handleSweep(cm, store, planStore, engine, runStore, args).jsonObject
+        val result = CompareTools(cm, store, planStore, engine, runStore).handleSweep(args).jsonObject
         val rows = result["rows"]!!.jsonArray
         assertEquals(3, rows.size, "range with steps=3 must produce 3 rows")
 
@@ -270,7 +262,7 @@ class SweepCompareTest {
             put("seeds", seeds(1L, 2L, 3L))
         }
 
-        val result = handleCompare(cm, store, planStore, engine, args).jsonArray
+        val result = CompareTools(cm, store, planStore, engine, runStore()).handleCompare(args).jsonArray
         assertTrue(result.isNotEmpty())
 
         for (row in result) {
@@ -299,7 +291,7 @@ class SweepCompareTest {
             put("seeds", seeds(5L, 6L, 7L, 8L))
         }
 
-        val result = handleCompare(cm, store, planStore, engine, args).jsonArray
+        val result = CompareTools(cm, store, planStore, engine, runStore()).handleCompare(args).jsonArray
         for (row in result) {
             val n = row.jsonObject["seeds"]!!.jsonPrimitive.int
             assertEquals(4, n, "compare must use the same 4 seeds for both scenarios")
@@ -319,7 +311,7 @@ class SweepCompareTest {
             put("seeds", seeds(1L, 2L))
         }
 
-        val result = handleCompare(cm, store, planStore, engine, args).jsonArray
+        val result = CompareTools(cm, store, planStore, engine, runStore()).handleCompare(args).jsonArray
         assertTrue(result.isNotEmpty())
         val row = result.first().jsonObject
 

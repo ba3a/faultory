@@ -1,8 +1,7 @@
 package com.faultory.balance
 
-import com.faultory.balance.tool.handleCompare
+import com.faultory.balance.tool.CompareTools
 import com.faultory.balance.tool.handleDescribeContent
-import com.faultory.balance.tool.handleDescribeMetrics
 import com.faultory.balance.tool.handleGetValue
 import com.faultory.balance.tool.handlePlanCheck
 import com.faultory.balance.tool.handlePlanDelete
@@ -11,7 +10,6 @@ import com.faultory.balance.tool.handlePlanList
 import com.faultory.balance.tool.handlePlanPut
 import com.faultory.balance.tool.handleReloadBase
 import com.faultory.balance.tool.handleRun
-import com.faultory.balance.tool.handleRunDetails
 import com.faultory.balance.tool.handleScenarioCreate
 import com.faultory.balance.tool.handleScenarioDiff
 import com.faultory.balance.tool.handleScenarioDiscard
@@ -19,7 +17,6 @@ import com.faultory.balance.tool.handleScenarioExport
 import com.faultory.balance.tool.handleScenarioGet
 import com.faultory.balance.tool.handleScenarioList
 import com.faultory.balance.tool.handleScenarioPatch
-import com.faultory.balance.tool.handleSweep
 import com.faultory.core.config.FaultoryJson
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.Implementation
@@ -55,6 +52,8 @@ class BalanceServer(
     }
 
     private fun registerAll(server: Server) {
+        val compareTools = CompareTools(cm, store, planStore, engine, runStore)
+
         // --- Discovery ---
         tool(server, "describe_content", "What exists in the game content and what can be tuned.",
             Tool.Input(
@@ -228,7 +227,7 @@ class BalanceServer(
                 },
                 required = listOf("path", "player")
             )
-        ) { args -> handleSweep(cm, store, planStore, engine, runStore, args) }
+        ) { args -> compareTools.handleSweep(args) }
 
         tool(server, "compare",
             "Run two scenarios on the same levels and paired seeds; per-metric differences with 95% CIs and a significant flag.",
@@ -245,7 +244,7 @@ class BalanceServer(
                 },
                 required = listOf("a", "b", "player")
             )
-        ) { args -> handleCompare(cm, store, planStore, engine, args) }
+        ) { args -> compareTools.handleCompare(args) }
 
         tool(server, "run_details",
             "Paginated per-seed rows for a previous run result.",
@@ -257,12 +256,12 @@ class BalanceServer(
                 },
                 required = listOf("runId")
             )
-        ) { args -> handleRunDetails(runStore, args) }
+        ) { args -> compareTools.handleRunDetails(args) }
 
         tool(server, "describe_metrics",
             "Counter names seen in recent runs plus fixed report fields. Use this to choose metrics without guessing.",
             Tool.Input()
-        ) { _ -> handleDescribeMetrics(runStore) }
+        ) { _ -> compareTools.handleDescribeMetrics() }
     }
 
     private fun tool(
