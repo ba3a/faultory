@@ -112,6 +112,65 @@ object Aggregator {
         }
     }
 
+    fun compareCells(
+        scenarioA: String,
+        scenarioB: String,
+        levelId: String,
+        playerLabel: String,
+        resultsA: List<SeedResult>,
+        resultsB: List<SeedResult>
+    ): JsonObject {
+        val reportsA = resultsA.map { it.report }
+        val reportsB = resultsB.map { it.report }
+        val n = minOf(reportsA.size, reportsB.size)
+
+        val passDeltas = (0 until n).map { i ->
+            (if (reportsA[i].passed) 1.0 else 0.0) - (if (reportsB[i].passed) 1.0 else 0.0)
+        }
+        val starsDeltas = (0 until n).map { i -> reportsA[i].starsEarned.toDouble() - reportsB[i].starsEarned.toDouble() }
+        val cashDeltas = (0 until n).map { i -> reportsA[i].finalCash.toDouble() - reportsB[i].finalCash.toDouble() }
+
+        return buildJsonObject {
+            put("scenario_a", scenarioA)
+            put("scenario_b", scenarioB)
+            put("level", levelId)
+            put("player", playerLabel)
+            put("seeds", n)
+            putJsonObject("passRateDelta") {
+                val (mean, ci, sig) = pairedStats(passDeltas)
+                put("mean", mean)
+                putJsonArray("ci95") { add(ci.first); add(ci.second) }
+                put("significant", sig)
+            }
+            putJsonObject("starsMeanDelta") {
+                val (mean, ci, sig) = pairedStats(starsDeltas)
+                put("mean", mean)
+                putJsonArray("ci95") { add(ci.first); add(ci.second) }
+                put("significant", sig)
+            }
+            putJsonObject("cashMeanDelta") {
+                val (mean, ci, sig) = pairedStats(cashDeltas)
+                put("mean", mean)
+                putJsonArray("ci95") { add(ci.first); add(ci.second) }
+                put("significant", sig)
+            }
+        }
+    }
+
+    /** Returns (mean, 95% CI pair, significant). */
+    internal fun pairedStats(deltas: List<Double>): Triple<Double, Pair<Double, Double>, Boolean> {
+        if (deltas.isEmpty()) return Triple(0.0, 0.0 to 0.0, false)
+        val mean = deltas.mean()
+        val n = deltas.size
+        if (n < 2) return Triple(mean, mean to mean, false)
+        val variance = deltas.sumOf { (it - mean) * (it - mean) } / (n - 1)
+        val se = kotlin.math.sqrt(variance / n)
+        val margin = 1.96 * se
+        val ci = (mean - margin) to (mean + margin)
+        val significant = ci.first > 0.0 || ci.second < 0.0
+        return Triple(mean, ci, significant)
+    }
+
     /** Wilson score interval for a proportion. */
     internal fun wilsonInterval(successes: Int, n: Int): Pair<Double, Double> {
         if (n == 0) return 0.0 to 0.0
