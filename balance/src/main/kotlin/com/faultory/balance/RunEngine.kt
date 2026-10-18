@@ -3,14 +3,10 @@ package com.faultory.balance
 import com.faultory.core.content.GameContent
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.headless.HeadlessGame
-import com.faultory.core.headless.HeadlessRunReport
 import com.faultory.core.save.InMemoryEncounterProgressRepository
 import com.faultory.core.save.InMemorySaveRepository
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
-
-private const val DEFAULT_SHIFT_LIMIT = 5_000
-private const val CACHE_MAX = 200_000
 
 data class RunRequest(
     val scenarios: List<String> = listOf("baseline"),
@@ -30,9 +26,14 @@ data class RunRequest(
  * Results are cached by `(contentHash, levelId, playerLabel, seed)`. A run that widens `seeds` only
  * pays for the new seeds.
  */
-class RunEngine(private val cm: ContentManager, private val store: ScenarioStore) {
+class RunEngine(
+    private val cm: ContentManager,
+    private val store: ScenarioStore,
+    private val planStore: PlanStore
+) : AutoCloseable {
 
     private val cache = ConcurrentHashMap<String, SeedResult>()
+    private val executor = Executors.newFixedThreadPool(maxOf(1, Runtime.getRuntime().availableProcessors() - 1))
 
     fun run(req: RunRequest): List<CellResult> {
         val seedList = req.seeds ?: (0 until req.seedCount).map { req.baseSeed + it }
@@ -58,10 +59,10 @@ class RunEngine(private val cm: ContentManager, private val store: ScenarioStore
 
                 val playerLabel = req.player.label()
 
-                val seedResults = runCell(content, contentHash, level, req.player, seedList, req.metrics)
+                val seedResults = runCell(content, contentHash, level, req.player, seedList)
 
                 val baselineResults = if (baselineContent != null && baselineHash != null) {
-                    runCell(baselineContent, baselineHash, level, req.player, seedList, req.metrics)
+                    runCell(baselineContent, baselineHash, level, req.player, seedList)
                 } else null
 
                 val key = CellKey(scenarioId, levelId, playerLabel)
@@ -77,23 +78,19 @@ class RunEngine(private val cm: ContentManager, private val store: ScenarioStore
         contentHash: String,
         level: LevelDefinition,
         playerSpec: PlayerSpec,
-        seeds: List<Long>,
-        metrics: List<String>
+        seeds: List<Long>
     ): List<SeedResult> {
         val playerLabel = playerSpec.label()
-        val threads = maxOf(1, Runtime.getRuntime().availableProcessors() - 1)
-        val executor = Executors.newFixedThreadPool(threads)
 
         val futures = seeds.map { seed ->
             val cacheKey = "$contentHash:${level.id}:$playerLabel:$seed"
             executor.submit<SeedResult> {
-                cache.getOrPut(cacheKey) {
+                cache.computeIfAbsent(cacheKey) {
                     runOneSeed(content, level, playerSpec, seed)
                 }
             }
         }
 
-        executor.shutdown()
         return futures.map { it.get() }
     }
 
@@ -131,15 +128,11 @@ class RunEngine(private val cm: ContentManager, private val store: ScenarioStore
     }
 
     private fun buildPlayer(spec: PlayerSpec): ShiftPlayer = when (spec) {
-        is PlayerSpec.StoredPlanSpec -> {
-            error("StoredPlanSpec must be resolved before RunEngine")
-        }
+        is PlayerSpec.StoredPlanSpec -> PlanPlayer(planStore.get(spec.planName).plan)
         is PlayerSpec.InlinePlanSpec -> PlanPlayer(spec.plan)
     }
 
-    fun evictCacheFor(contentHash: String) {
-        cache.keys.removeAll { it.startsWith("$contentHash:") }
-    }
+    override fun close() { executor.shutdown() }
 
     fun cacheSize(): Int = cache.size
 }

@@ -87,7 +87,12 @@ class ScenarioStore(private val scratchDir: Path) {
         }
     }
 
-    private fun scenarioFile(id: String): Path = scratchDir.resolve("scenarios/$id.json")
+    private fun scenarioFile(id: String): Path {
+        val dir = scratchDir.resolve("scenarios").normalize()
+        val resolved = dir.resolve("$id.json").normalize()
+        require(resolved.startsWith(dir)) { "Scenario id '$id' is invalid" }
+        return resolved
+    }
 
     companion object {
         const val BASELINE_ID = "baseline"

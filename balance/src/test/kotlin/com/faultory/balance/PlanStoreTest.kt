@@ -82,4 +82,11 @@ class PlanStoreTest {
     fun `empty store list returns empty`() {
         assertTrue(store().list().isEmpty())
     }
+
+    @Test
+    fun `path traversal in plan name is rejected`() {
+        val s = store()
+        assertFailsWith<IllegalArgumentException> { s.put("../../etc/shadow", plan()) }
+        assertFailsWith<IllegalArgumentException> { s.put("../bad", plan()) }
+    }
 }

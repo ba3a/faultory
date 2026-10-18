@@ -16,7 +16,7 @@ import com.faultory.core.shop.WorkerAssignmentResult
  */
 class PlanPlayer(private val plan: Plan) : ShiftPlayer {
 
-    data class Failure(val seed: Long, val elapsedSeconds: Float, val step: PlanStep, val reason: String)
+    data class Failure(val elapsedSeconds: Float, val step: PlanStep, val reason: String)
 
     private val labels = mutableMapOf<String, String>()
     private val failedLabels = mutableSetOf<String>()
@@ -38,7 +38,7 @@ class PlanPlayer(private val plan: Plan) : ShiftPlayer {
 
             val failureReason = executeStep(step, session)
             if (failureReason != null) {
-                failures += Failure(0L, elapsed, step, failureReason)
+                failures += Failure(elapsed, step, failureReason)
                 step.`as`?.let { failedLabels += it }
                 when (plan.onFailure) {
                     OnFailure.CONTINUE -> continue

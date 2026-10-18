@@ -21,14 +21,14 @@ fun main(args: Array<String>) {
     val planStore = PlanStore(scratchDir)
     System.err.println("balance: ${planStore.list().size} plan(s) loaded")
 
-    val engine = RunEngine(cm, store)
+    RunEngine(cm, store, planStore).use { engine ->
+        val server = BalanceServer(cm, store, planStore, engine).buildServer()
+        System.err.println("balance: MCP server ready, listening on stdio")
 
-    val server = BalanceServer(cm, store, planStore, engine).buildServer()
-    System.err.println("balance: MCP server ready, listening on stdio")
-
-    val transport = StdioServerTransport(
-        inputStream = System.`in`.asSource().buffered(),
-        outputStream = System.out.asSink().buffered()
-    )
-    runBlocking { server.connect(transport) }
+        val transport = StdioServerTransport(
+            inputStream = System.`in`.asSource().buffered(),
+            outputStream = System.out.asSink().buffered()
+        )
+        runBlocking { server.connect(transport) }
+    }
 }

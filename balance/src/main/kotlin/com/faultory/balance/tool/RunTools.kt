@@ -30,8 +30,8 @@ fun handleRun(cm: ContentManager, planStore: PlanStore, engine: RunEngine, args:
 
     val playerSpec = parsePlayerSpec(args, planStore)
 
-    val seedCount = args["seeds"]?.jsonPrimitive?.intOrNull ?: DEFAULT_SEEDS
-    val explicitSeeds = (args["seeds"] as? JsonArray)?.map { it.jsonPrimitive.longOrNull ?: 0L }
+    val seedCount = args["seedCount"]?.jsonPrimitive?.intOrNull ?: DEFAULT_SEEDS
+    val explicitSeeds = (args["explicitSeeds"] as? JsonArray)?.map { it.jsonPrimitive.longOrNull ?: 0L }
     val baseSeed = args["baseSeed"]?.jsonPrimitive?.longOrNull ?: DEFAULT_BASE_SEED
     val metrics = args["metrics"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
 

@@ -24,7 +24,8 @@ class RunEngineTest {
     private fun engine(): RunEngine {
         val cm = ContentManager(TestAssets.root)
         val store = ScenarioStore(tempDir)
-        return RunEngine(cm, store)
+        val planStore = PlanStore(tempDir)
+        return RunEngine(cm, store, planStore)
     }
 
     private fun emptyPlan(): Plan {
@@ -121,10 +122,29 @@ class RunEngineTest {
     }
 
     @Test
+    fun `stored plan spec is resolved by engine`() {
+        val cm = ContentManager(TestAssets.root)
+        val store = ScenarioStore(tempDir)
+        val planStore = PlanStore(tempDir)
+        val levelId = content.levelCatalog.levels.first().id
+        planStore.put("my-plan", Plan(forLevel = levelId, steps = emptyList()))
+        val e = RunEngine(cm, store, planStore)
+        val req = RunRequest(
+            scenarios = listOf(ScenarioStore.BASELINE_ID),
+            levels = listOf(levelId),
+            player = PlayerSpec.StoredPlanSpec("my-plan"),
+            seedCount = 1
+        )
+        val results = e.run(req)
+        assertEquals(1, results.size)
+        assertEquals(levelId, results[0].key.levelId)
+    }
+
+    @Test
     fun `run over two scenarios returns two results for same level`() {
         val cm = ContentManager(TestAssets.root)
         val store = ScenarioStore(tempDir)
-        val e = RunEngine(cm, store)
+        val e = RunEngine(cm, store, PlanStore(tempDir))
         store.create(id = "s1", baseHash = cm.baseHash)
 
         val levelId = content.levelCatalog.levels.first().id

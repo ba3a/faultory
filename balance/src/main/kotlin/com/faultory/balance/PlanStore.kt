@@ -55,5 +55,10 @@ class PlanStore(private val scratchDir: Path) {
         }
     }
 
-    private fun planFile(name: String): Path = scratchDir.resolve("plans/$name.json")
+    private fun planFile(name: String): Path {
+        val dir = scratchDir.resolve("plans").normalize()
+        val resolved = dir.resolve("$name.json").normalize()
+        require(resolved.startsWith(dir)) { "Plan name '$name' is invalid" }
+        return resolved
+    }
 }

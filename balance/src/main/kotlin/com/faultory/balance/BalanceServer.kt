@@ -194,7 +194,8 @@ class BalanceServer(
                     putJsonObject("scenarios") { put("type", "array"); put("description", "Scenario ids (default: ['baseline'])") }
                     putJsonObject("levels") { put("type", "array"); put("description", "Level ids (default: all)") }
                     putJsonObject("player") { put("type", "object"); put("description", "PlayerSpec: {kind:'plan', plan?:name, inline?:planObj, decisionIntervalSeconds?:float}") }
-                    putJsonObject("seeds") { put("type", "integer"); put("description", "Number of seeds (default: 30)") }
+                    putJsonObject("seedCount") { put("type", "integer"); put("description", "Seed count (default 30)") }
+                    putJsonObject("explicitSeeds") { put("type", "array"); put("description", "Explicit seed values") }
                     putJsonObject("baseSeed") { put("type", "integer"); put("description", "First seed value (default: 1)") }
                     putJsonObject("metrics") { put("type", "array"); put("description", "Counter names to include") }
                     putJsonObject("strict") { put("type", "boolean"); put("description", "Fail on validation warnings (default: false)") }

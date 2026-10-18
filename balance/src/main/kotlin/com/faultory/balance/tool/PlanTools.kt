@@ -124,7 +124,3 @@ fun handlePlanCheck(cm: ContentManager, store: ScenarioStore, planStore: PlanSto
 internal fun decodePlan(json: JsonObject): Plan {
     return FaultoryJson.instance.decodeFromJsonElement(Plan.serializer(), json)
 }
-
-private fun kotlinx.serialization.json.JsonArrayBuilder.add(value: JsonElement) {
-    add(value)
-}
