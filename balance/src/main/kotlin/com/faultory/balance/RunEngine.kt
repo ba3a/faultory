@@ -132,6 +132,38 @@ class RunEngine(
         is PlayerSpec.InlinePlanSpec -> PlanPlayer(spec.plan)
     }
 
+    /**
+     * Runs headless shifts for a specific [content] without going through [store]. Used by `sweep`
+     * and `compare` which create transient content not registered as scenarios.
+     *
+     * [baselineContent] is passed to [Aggregator.aggregate] for `vsBaseline`; pass `null` to omit it.
+     */
+    fun runCells(
+        scenarioId: String,
+        content: GameContent,
+        levels: List<String>?,
+        player: PlayerSpec,
+        seeds: List<Long>,
+        metrics: List<String> = emptyList(),
+        baselineContent: GameContent? = null
+    ): List<CellResult> {
+        val contentHash = cm.contentHash(content)
+        val baselineHash = baselineContent?.let { cm.contentHash(it) }
+        val levelIds = levels ?: content.levelCatalog.levels.map { it.id }
+        val results = mutableListOf<CellResult>()
+        for (levelId in levelIds) {
+            val level = content.levelCatalog.levels.firstOrNull { it.id == levelId } ?: continue
+            val seedResults = runCell(content, contentHash, level, player, seeds)
+            val baselineResults = if (baselineContent != null && baselineHash != null) {
+                runCell(baselineContent, baselineHash, level, player, seeds)
+            } else null
+            val key = CellKey(scenarioId, levelId, player.label())
+            val aggregated = Aggregator.aggregate(key, seedResults, baselineResults, metrics)
+            results += CellResult(key, aggregated, seedResults)
+        }
+        return results
+    }
+
     override fun close() { executor.shutdown() }
 
     fun cacheSize(): Int = cache.size

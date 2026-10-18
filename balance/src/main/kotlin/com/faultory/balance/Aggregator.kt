@@ -112,6 +112,117 @@ object Aggregator {
         }
     }
 
+    /**
+     * Computes per-metric paired differences between two lists of [SeedResult]s (same seed index maps
+     * A[i] → B[i]). Returns a [JsonObject] row suitable for the `compare` tool's output.
+     */
+    fun pairedDiff(
+        scenarioA: String,
+        scenarioB: String,
+        levelId: String,
+        playerLabel: String,
+        resultsA: List<SeedResult>,
+        resultsB: List<SeedResult>,
+        requestedCounters: List<String>
+    ): JsonObject {
+        val reportsA = resultsA.map { it.report }
+        val reportsB = resultsB.map { it.report }
+        val n = minOf(reportsA.size, reportsB.size)
+
+        fun diffs(selector: (HeadlessRunReport) -> Double): List<Double> =
+            (0 until n).map { i -> selector(reportsA[i]) - selector(reportsB[i]) }
+
+        val passDiffs = diffs { if (it.passed) 1.0 else 0.0 }
+        val starsDiffs = diffs { it.starsEarned.toDouble() }
+        val cashDiffs = diffs { it.finalCash.toDouble() }
+        val goodDiffs = diffs { it.goodProductsDelivered.toDouble() }
+        val faultyDiffs = diffs { it.faultyProductsDelivered.toDouble() }
+        val faultyShareDiffs = diffs { r ->
+            val total = r.goodProductsDelivered + r.faultyProductsDelivered
+            if (total > 0) r.faultyProductsDelivered.toDouble() / total else 0.0
+        }
+
+        val allCounterKeys = (reportsA.flatMap { it.counters.keys } +
+            reportsB.flatMap { it.counters.keys } +
+            requestedCounters).toSet()
+
+        fun meanOf(reports: List<HeadlessRunReport>, selector: (HeadlessRunReport) -> Double): Double =
+            reports.map(selector).mean()
+
+        fun metricObject(diffs: List<Double>, meanA: Double, meanB: Double): JsonElement {
+            val (lo, hi) = pairedCI(diffs)
+            return buildJsonObject {
+                put("a", meanA)
+                put("b", meanB)
+                put("diff", diffs.mean())
+                putJsonArray("ci95") { add(lo); add(hi) }
+                put("significant", lo > 0.0 || hi < 0.0)
+            }
+        }
+
+        val passA = reportsA.count { it.passed }.toDouble() / maxOf(reportsA.size, 1)
+        val passB = reportsB.count { it.passed }.toDouble() / maxOf(reportsB.size, 1)
+
+        return buildJsonObject {
+            put("scenario_a", scenarioA)
+            put("scenario_b", scenarioB)
+            put("level", levelId)
+            put("player", playerLabel)
+            put("seeds", n)
+            put("passRate", metricObject(passDiffs, passA, passB))
+            put("stars", metricObject(starsDiffs,
+                meanOf(reportsA) { it.starsEarned.toDouble() },
+                meanOf(reportsB) { it.starsEarned.toDouble() }))
+            put("cash", metricObject(cashDiffs,
+                meanOf(reportsA) { it.finalCash.toDouble() },
+                meanOf(reportsB) { it.finalCash.toDouble() }))
+            putJsonObject("delivered") {
+                put("good", metricObject(goodDiffs,
+                    meanOf(reportsA) { it.goodProductsDelivered.toDouble() },
+                    meanOf(reportsB) { it.goodProductsDelivered.toDouble() }))
+                put("faulty", metricObject(faultyDiffs,
+                    meanOf(reportsA) { it.faultyProductsDelivered.toDouble() },
+                    meanOf(reportsB) { it.faultyProductsDelivered.toDouble() }))
+            }
+            put("faultyShare", metricObject(faultyShareDiffs,
+                meanOf(reportsA) { r ->
+                    val t = r.goodProductsDelivered + r.faultyProductsDelivered
+                    if (t > 0) r.faultyProductsDelivered.toDouble() / t else 0.0
+                },
+                meanOf(reportsB) { r ->
+                    val t = r.goodProductsDelivered + r.faultyProductsDelivered
+                    if (t > 0) r.faultyProductsDelivered.toDouble() / t else 0.0
+                }))
+            if (allCounterKeys.isNotEmpty()) {
+                putJsonObject("counters") {
+                    for (k in allCounterKeys.sorted()) {
+                        val ctrDiffs = (0 until n).map { i ->
+                            (reportsA[i].counters[k] ?: 0L).toDouble() -
+                                (reportsB[i].counters[k] ?: 0L).toDouble()
+                        }
+                        put(k, metricObject(ctrDiffs,
+                            reportsA.map { (it.counters[k] ?: 0L).toDouble() }.mean(),
+                            reportsB.map { (it.counters[k] ?: 0L).toDouble() }.mean()))
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 95% CI for the mean of paired differences using a normal approximation with sample variance.
+     * Returns (0, 0) when [diffs] has fewer than 2 elements.
+     */
+    internal fun pairedCI(diffs: List<Double>): Pair<Double, Double> {
+        val n = diffs.size
+        if (n < 2) return 0.0 to 0.0
+        val mean = diffs.mean()
+        val sampleVariance = diffs.sumOf { (it - mean) * (it - mean) } / (n - 1)
+        val se = sqrt(sampleVariance / n)
+        val z = 1.96
+        return (mean - z * se) to (mean + z * se)
+    }
+
     /** Wilson score interval for a proportion. */
     internal fun wilsonInterval(successes: Int, n: Int): Pair<Double, Double> {
         if (n == 0) return 0.0 to 0.0
