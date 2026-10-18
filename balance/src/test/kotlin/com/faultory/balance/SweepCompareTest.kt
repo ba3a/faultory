@@ -186,7 +186,8 @@ class SweepCompareTest {
             put("path", "catalog/workers/target-intern/hireCost")
             put("player", inlinePlayer(levelId))
             put("seeds", seeds(1L))
-            put("values", buildJsonArray { add(JsonPrimitive(120.0)) })
+            // hireCost is Int — use integer JsonPrimitive to avoid deserialization failure
+            put("values", buildJsonArray { add(JsonPrimitive(120)) })
         }
 
         val result = handleSweep(cm, store, planStore, engine, runStore, args).jsonObject
@@ -206,9 +207,10 @@ class SweepCompareTest {
             put("path", "catalog/workers/target-intern/hireCost")
             put("player", inlinePlayer(levelId))
             put("seeds", seedList)
+            // hireCost is Int — use integer JsonPrimitive
             put("values", buildJsonArray {
-                add(JsonPrimitive(100.0))
-                add(JsonPrimitive(200.0))
+                add(JsonPrimitive(100))
+                add(JsonPrimitive(200))
             })
         }
 
@@ -229,8 +231,9 @@ class SweepCompareTest {
         val engine = engine(cm, store, planStore); val runStore = runStore()
         val levelId = cm.baseContent.levelCatalog.levels.first().id
 
+        // walkSpeed is Float so double values from the range are accepted by the serializer
         val args = buildJsonObject {
-            put("path", "catalog/workers/target-intern/hireCost")
+            put("path", "catalog/workers/target-intern/walkSpeed")
             put("player", inlinePlayer(levelId))
             put("seeds", seeds(1L))
             putJsonObject("range") {
@@ -347,8 +350,8 @@ class SweepCompareTest {
             put("player", inlinePlayer(levelId))
             put("seeds", seeds(1L, 2L, 3L))
             put("values", buildJsonArray {
-                add(JsonPrimitive(100.0))
-                add(JsonPrimitive(200.0))
+                add(JsonPrimitive(100))
+                add(JsonPrimitive(200))
             })
         }
 
@@ -409,7 +412,7 @@ class SweepCompareTest {
 
         val page2 = handleRunDetails(runStore, buildJsonObject {
             put("runId", runId)
-            put("cursor", nextCursor!!.jsonPrimitive.int)
+            put("cursor", nextCursor.jsonPrimitive.int)
             put("rowCap", 3)
         }).jsonObject
 
