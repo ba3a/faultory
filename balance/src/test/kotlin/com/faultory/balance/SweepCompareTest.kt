@@ -347,7 +347,8 @@ class SweepCompareTest {
             })
         }
 
-        val sweepResult = handleSweep(cm, store, planStore, engine, runStore, sweepArgs).jsonObject
+        val tools = CompareTools(cm, store, planStore, engine, runStore)
+        val sweepResult = tools.handleSweep(sweepArgs).jsonObject
         val runId = sweepResult["runId"]!!.jsonPrimitive.content
 
         val detailsArgs = buildJsonObject {
@@ -356,7 +357,7 @@ class SweepCompareTest {
             put("rowCap", 2)
         }
 
-        val details = handleRunDetails(runStore, detailsArgs).jsonObject
+        val details = tools.handleRunDetails(detailsArgs).jsonObject
         assertEquals(runId, details["runId"]!!.jsonPrimitive.content)
 
         val rows = details["rows"]!!.jsonArray
@@ -389,10 +390,11 @@ class SweepCompareTest {
             })
         }
 
-        val sweepResult = handleSweep(cm, store, planStore, engine, runStore, sweepArgs).jsonObject
+        val tools = CompareTools(cm, store, planStore, engine, runStore)
+        val sweepResult = tools.handleSweep(sweepArgs).jsonObject
         val runId = sweepResult["runId"]!!.jsonPrimitive.content
 
-        val page1 = handleRunDetails(runStore, buildJsonObject {
+        val page1 = tools.handleRunDetails(buildJsonObject {
             put("runId", runId)
             put("cursor", 0)
             put("rowCap", 3)
@@ -402,7 +404,7 @@ class SweepCompareTest {
         assertTrue(nextCursor != null && nextCursor !is JsonNull,
             "nextCursor must be set when more rows remain")
 
-        val page2 = handleRunDetails(runStore, buildJsonObject {
+        val page2 = tools.handleRunDetails(buildJsonObject {
             put("runId", runId)
             put("cursor", nextCursor.jsonPrimitive.int)
             put("rowCap", 3)
@@ -414,8 +416,12 @@ class SweepCompareTest {
         assertTrue(rows2.isNotEmpty())
 
         // Collect (scenario, level, seed) tuples and assert no overlap
-        fun rowKey(r: kotlinx.serialization.json.JsonElement) =
-            r.jsonObject.let { "${it["scenario"]!!.jsonPrimitive.content}:${it["level"]!!.jsonPrimitive.content}:${it["seed"]!!.jsonPrimitive.content}" }
+        fun rowKey(r: kotlinx.serialization.json.JsonElement): String {
+            val o = r.jsonObject
+            val scenario = o["scenario"]!!.jsonPrimitive.content
+            val level = o["level"]!!.jsonPrimitive.content
+            return "$scenario:$level:${o["seed"]!!.jsonPrimitive.content}"
+        }
 
         val keys1 = rows1.map { rowKey(it) }.toSet()
         val keys2 = rows2.map { rowKey(it) }.toSet()
@@ -442,10 +448,11 @@ class SweepCompareTest {
             })
         }
 
-        val sweepResult = handleSweep(cm, store, planStore, engine, runStore, sweepArgs).jsonObject
+        val tools = CompareTools(cm, store, planStore, engine, runStore)
+        val sweepResult = tools.handleSweep(sweepArgs).jsonObject
         val runId = sweepResult["runId"]!!.jsonPrimitive.content
 
-        val details = handleRunDetails(runStore, buildJsonObject {
+        val details = tools.handleRunDetails(buildJsonObject {
             put("runId", runId)
             put("rowCap", 200)
         }).jsonObject

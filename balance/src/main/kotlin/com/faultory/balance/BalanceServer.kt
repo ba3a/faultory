@@ -230,7 +230,8 @@ class BalanceServer(
         ) { args -> compareTools.handleSweep(args) }
 
         tool(server, "compare",
-            "Run two scenarios on the same levels and paired seeds; per-metric differences with 95% CIs and a significant flag.",
+            "Run two scenarios on the same levels and paired seeds; " +
+                "per-metric differences with 95% CIs and a significant flag.",
             Tool.Input(
                 properties = buildJsonObject {
                     putJsonObject("a") { put("type", "string"); put("description", "First scenario id") }
