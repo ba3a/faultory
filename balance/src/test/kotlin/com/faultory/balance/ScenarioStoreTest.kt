@@ -134,4 +134,11 @@ class ScenarioStoreTest {
         val stale = s.staleIds("hash-v2")
         assertEquals(listOf("old-base"), stale)
     }
+
+    @Test
+    fun `path traversal in scenario id is rejected`() {
+        val s = store()
+        assertFailsWith<IllegalArgumentException> { s.create(id = "../../etc/shadow", baseHash = "x") }
+        assertFailsWith<IllegalArgumentException> { s.create(id = "../bad", baseHash = "x") }
+    }
 }
