@@ -1,5 +1,6 @@
 package com.faultory.balance
 
+import com.faultory.balance.bot.BotRegistry
 import com.faultory.core.content.GameContent
 import com.faultory.core.content.LevelDefinition
 import com.faultory.core.headless.HeadlessGame
@@ -108,7 +109,7 @@ class RunEngine(
         )
 
         val session = game.openLevel(level.id)
-        val player = buildPlayer(playerSpec)
+        val player = buildPlayer(playerSpec, content, seed)
         val interval = playerSpec.decisionIntervalSeconds
 
         while (!session.isShiftEnded) {
@@ -127,9 +128,10 @@ class RunEngine(
         return SeedResult(report = report, playerFailures = failures)
     }
 
-    private fun buildPlayer(spec: PlayerSpec): ShiftPlayer = when (spec) {
+    private fun buildPlayer(spec: PlayerSpec, content: GameContent, seed: Long): ShiftPlayer = when (spec) {
         is PlayerSpec.StoredPlanSpec -> PlanPlayer(planStore.get(spec.planName).plan)
         is PlayerSpec.InlinePlanSpec -> PlanPlayer(spec.plan)
+        is PlayerSpec.BotSpec -> BotRegistry.build(spec.botName, content, seed)
     }
 
     /**

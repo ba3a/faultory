@@ -77,7 +77,12 @@ internal fun parsePlayerSpec(args: JsonObject, planStore: PlanStore): PlayerSpec
     val interval = playerObj["decisionIntervalSeconds"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull() ?: 1.0f
     return when (kind) {
         "plan" -> parsePlanSpec(playerObj, planStore, interval)
-        else -> throw IllegalArgumentException("Unknown player kind '$kind'; supported: 'plan'")
+        "bot" -> {
+            val botName = playerObj["bot"]?.jsonPrimitive?.contentOrNull
+                ?: throw IllegalArgumentException("player kind='bot' requires 'bot' (bot name)")
+            PlayerSpec.BotSpec(botName, interval)
+        }
+        else -> throw IllegalArgumentException("Unknown player kind '$kind'; supported: 'plan', 'bot'")
     }
 }
 

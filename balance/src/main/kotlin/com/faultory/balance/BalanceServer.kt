@@ -1,6 +1,7 @@
 package com.faultory.balance
 
 import com.faultory.balance.tool.CompareTools
+import com.faultory.balance.tool.handleBotList
 import com.faultory.balance.tool.handleDescribeContent
 import com.faultory.balance.tool.handleGetValue
 import com.faultory.balance.tool.handlePlanCheck
@@ -75,6 +76,11 @@ class BalanceServer(
                 required = listOf("paths")
             )
         ) { args -> handleGetValue(cm, store, args) }
+
+        // --- Bots ---
+        tool(server, "bot_list", "Returns available bot players, their tiers, and a one-line description each.",
+            Tool.Input()
+        ) { _ -> handleBotList() }
 
         // --- Scenarios ---
         tool(server, "scenario_create", "Create a new named scenario forked from a parent.",

@@ -29,8 +29,14 @@ sealed interface PlayerSpec {
         override val decisionIntervalSeconds: Float = 1.0f
     ) : PlayerSpec
 
+    data class BotSpec(
+        val botName: String,
+        override val decisionIntervalSeconds: Float = 1.0f
+    ) : PlayerSpec
+
     fun label(): String = when (this) {
         is StoredPlanSpec -> "plan:$planName"
         is InlinePlanSpec -> "plan:inline"
+        is BotSpec -> "bot:$botName"
     }
 }
