@@ -159,7 +159,8 @@ class BotPlayerTest {
         val playerArg = buildJsonObject { put("player", args) }
         val spec = parsePlayerSpec(playerArg, PlanStore(tempDir))
         assertTrue(spec is PlayerSpec.BotSpec)
-        assertEquals("naive", (spec as PlayerSpec.BotSpec).botName)
+        check(spec is PlayerSpec.BotSpec) // smart-cast
+        assertEquals("naive", spec.botName)
         assertEquals(0.5f, spec.decisionIntervalSeconds, 0.001f)
     }
 
