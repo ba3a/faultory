@@ -112,6 +112,81 @@ object Aggregator {
         }
     }
 
+    /**
+     * Computes per-metric paired differences between two [CellResult]s (same seed index maps
+     * A[i] → B[i]). Returns a [JsonObject] row suitable for the `compare` tool's output.
+     */
+    fun pairedDiff(
+        cellA: CellResult,
+        cellB: CellResult,
+        requestedCounters: List<String> = emptyList()
+    ): JsonObject {
+        val reportsA = cellA.seedResults.map { it.report }
+        val reportsB = cellB.seedResults.map { it.report }
+        val n = minOf(reportsA.size, reportsB.size)
+
+        val passDiffs = pairDiffs(reportsA, reportsB, n) { if (it.passed) 1.0 else 0.0 }
+        val starsDiffs = pairDiffs(reportsA, reportsB, n) { it.starsEarned.toDouble() }
+        val cashDiffs = pairDiffs(reportsA, reportsB, n) { it.finalCash.toDouble() }
+        val goodDiffs = pairDiffs(reportsA, reportsB, n) { it.goodProductsDelivered.toDouble() }
+        val faultyDiffs = pairDiffs(reportsA, reportsB, n) { it.faultyProductsDelivered.toDouble() }
+        val faultyShareDiffs = pairDiffs(reportsA, reportsB, n) { faultyShareOf(it) }
+
+        val allCounterKeys = (reportsA.flatMap { it.counters.keys } +
+            reportsB.flatMap { it.counters.keys } +
+            requestedCounters).toSet()
+
+        val passA = reportsA.count { it.passed }.toDouble() / maxOf(reportsA.size, 1)
+        val passB = reportsB.count { it.passed }.toDouble() / maxOf(reportsB.size, 1)
+
+        return buildJsonObject {
+            put("scenario_a", cellA.key.scenarioId)
+            put("scenario_b", cellB.key.scenarioId)
+            put("level", cellA.key.levelId)
+            put("player", cellA.key.playerLabel)
+            put("seeds", n)
+            put("passRate", pairedMetric(passDiffs, passA, passB))
+            put("stars", pairedMetric(starsDiffs,
+                meanOf(reportsA) { it.starsEarned.toDouble() },
+                meanOf(reportsB) { it.starsEarned.toDouble() }))
+            put("cash", pairedMetric(cashDiffs,
+                meanOf(reportsA) { it.finalCash.toDouble() },
+                meanOf(reportsB) { it.finalCash.toDouble() }))
+            putJsonObject("delivered") {
+                put("good", pairedMetric(goodDiffs,
+                    meanOf(reportsA) { it.goodProductsDelivered.toDouble() },
+                    meanOf(reportsB) { it.goodProductsDelivered.toDouble() }))
+                put("faulty", pairedMetric(faultyDiffs,
+                    meanOf(reportsA) { it.faultyProductsDelivered.toDouble() },
+                    meanOf(reportsB) { it.faultyProductsDelivered.toDouble() }))
+            }
+            put("faultyShare", pairedMetric(faultyShareDiffs,
+                meanOf(reportsA, ::faultyShareOf),
+                meanOf(reportsB, ::faultyShareOf)))
+            if (allCounterKeys.isNotEmpty()) {
+                putJsonObject("counters") {
+                    for (k in allCounterKeys.sorted()) {
+                        put(k, counterMetric(reportsA, reportsB, n, k))
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 95% CI for the mean of paired differences using a normal approximation with sample variance.
+     * Returns (0, 0) when [diffs] has fewer than 2 elements.
+     */
+    internal fun pairedCI(diffs: List<Double>): Pair<Double, Double> {
+        val n = diffs.size
+        if (n < 2) return 0.0 to 0.0
+        val mean = diffs.mean()
+        val sampleVariance = diffs.sumOf { (it - mean) * (it - mean) } / (n - 1)
+        val se = sqrt(sampleVariance / n)
+        val z = 1.96
+        return (mean - z * se) to (mean + z * se)
+    }
+
     /** Wilson score interval for a proportion. */
     internal fun wilsonInterval(successes: Int, n: Int): Pair<Double, Double> {
         if (n == 0) return 0.0 to 0.0
@@ -122,6 +197,51 @@ object Aggregator {
         val margin = z * sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / denominator
         return maxOf(0.0, centre - margin) to minOf(1.0, centre + margin)
     }
+
+    private fun pairDiffs(
+        reportsA: List<HeadlessRunReport>,
+        reportsB: List<HeadlessRunReport>,
+        n: Int,
+        selector: (HeadlessRunReport) -> Double
+    ): List<Double> = (0 until n).map { i -> selector(reportsA[i]) - selector(reportsB[i]) }
+
+    private fun pairedMetric(diffs: List<Double>, meanA: Double, meanB: Double): JsonElement {
+        val (lo, hi) = pairedCI(diffs)
+        return buildJsonObject {
+            put("a", meanA)
+            put("b", meanB)
+            put("diff", diffs.mean())
+            putJsonArray("ci95") { add(lo); add(hi) }
+            put("significant", lo > 0.0 || hi < 0.0)
+        }
+    }
+
+    private fun faultyShareOf(r: HeadlessRunReport): Double {
+        val total = r.goodProductsDelivered + r.faultyProductsDelivered
+        return if (total > 0) r.faultyProductsDelivered.toDouble() / total else 0.0
+    }
+
+    private fun counterMetric(
+        reportsA: List<HeadlessRunReport>,
+        reportsB: List<HeadlessRunReport>,
+        n: Int,
+        k: String
+    ): JsonElement {
+        val ctrDiffs = (0 until n).map { i ->
+            (reportsA[i].counters[k] ?: 0L).toDouble() -
+                (reportsB[i].counters[k] ?: 0L).toDouble()
+        }
+        return pairedMetric(
+            ctrDiffs,
+            reportsA.map { (it.counters[k] ?: 0L).toDouble() }.mean(),
+            reportsB.map { (it.counters[k] ?: 0L).toDouble() }.mean()
+        )
+    }
+
+    private fun meanOf(
+        reports: List<HeadlessRunReport>,
+        selector: (HeadlessRunReport) -> Double
+    ): Double = reports.map(selector).mean()
 
     private fun List<Double>.mean(): Double = if (isEmpty()) 0.0 else sum() / size
 
