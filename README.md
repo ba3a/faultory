@@ -2,6 +2,8 @@
 
 Desktop-only factory-quality scaffold built with Kotlin, LibGDX, and `kotlinx.serialization` for JSON saves.
 
+Source published for portfolio review. Not open source: all rights reserved — see [LICENSE](LICENSE).
+
 ## Modules
 
 - `core`: game bootstrap, screens, content loaders, shop model, simulation systems, and save pipeline
