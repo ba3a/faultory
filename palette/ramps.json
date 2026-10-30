@@ -1,0 +1,58 @@
+{
+  "order": "darkToLight",
+  "outline": "ink_1",
+  "ramps": {
+    "skin": [
+      "skin_1",
+      "skin_2",
+      "skin_3",
+      "skin_4"
+    ],
+    "hair": [
+      "hair_1",
+      "hair_2",
+      "hair_3",
+      "hair_4"
+    ],
+    "ochre": [
+      "ochre_1",
+      "ochre_2",
+      "ochre_3",
+      "ochre_4"
+    ],
+    "uniform": [
+      "uniform_1",
+      "uniform_2",
+      "uniform_3",
+      "uniform_4"
+    ],
+    "neutral": [
+      "neutral_1",
+      "neutral_2",
+      "neutral_3",
+      "neutral_4"
+    ],
+    "red": [
+      "red_1",
+      "red_2"
+    ],
+    "steel": [
+      "steel_1"
+    ],
+    "magenta": [
+      "magenta_1"
+    ],
+    "ink": [
+      "ink_1",
+      "ink_2",
+      "ink_3",
+      "ink_4",
+      "ink_5",
+      "ink_6",
+      "ink_7",
+      "ink_8",
+      "ink_9",
+      "ink_10"
+    ]
+  }
+}

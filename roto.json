@@ -1,0 +1,25 @@
+{
+  "palette": "palette/faultory.gpl",
+  "ramps": "palette/ramps.json",
+  "facings": ["NORTH", "EAST", "SOUTH", "WEST"],
+  "mirrorPairs": [["EAST", "WEST"]],
+  "actions": [
+    "idle",
+    "walk",
+    "belt_enter",
+    "belt_ride",
+    "belt_exit",
+    "pursue",
+    "fall",
+    "lie",
+    "stand_up",
+    "destroy",
+    "working",
+    "inspect",
+    "blocked"
+  ],
+  "canvas": { "width": 40, "height": 60, "groundRow": 59 },
+  "output": "raw-art/{profile}/{action}_{facing:lower}/{frame:000}.png",
+  "manifest": "raw-art/{profile}/{action}_{facing:lower}/clip.json",
+  "afterPublish": ["./gradlew.bat", ":editor:syncSkin", "--args={profile}"]
+}

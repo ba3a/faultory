@@ -1,0 +1,40 @@
+GIMP Palette
+Name: Faultory
+Columns: 8
+#
+# Colours of the art in raw-art/ as of this commit. Grouped by ramp; each ramp runs dark to light.
+#
+107  64  45	skin_1
+126  83  66	skin_2
+168 133 114	skin_3
+179 144 126	skin_4
+ 64  26  15	hair_1
+ 72  29  13	hair_2
+ 89  42  26	hair_3
+112  71  43	hair_4
+132  98  39	ochre_1
+158 122  61	ochre_2
+185 138  58	ochre_3
+211 166  89	ochre_4
+ 19  19 107	uniform_1
+ 33  26  97	uniform_2
+ 41  30 134	uniform_3
+ 45  45 152	uniform_4
+ 97  90  78	neutral_1
+185 177 165	neutral_2
+202 200 195	neutral_3
+255 255 255	neutral_4
+ 91  18  18	red_1
+188  33  33	red_2
+ 70  97 126	steel_1
+202  71 154	magenta_1
+  0   0   0	ink_1
+ 10   6   3	ink_2
+  8   7   5	ink_3
+  9   5   6	ink_4
+ 16   9   3	ink_5
+ 11  10   8	ink_6
+ 14  10  11	ink_7
+ 15  11  10	ink_8
+ 20  10   8	ink_9
+ 27  16  12	ink_10
