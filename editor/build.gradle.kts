@@ -25,3 +25,13 @@ application {
 tasks.named<JavaExec>("run") {
     workingDir = rootProject.file("assets")
 }
+
+// Run by roto's afterPublish hook: ./gradlew :editor:syncSkin --args=<skinId>
+tasks.register<JavaExec>("syncSkin") {
+    group = "application"
+    description = "Syncs a skin's JSON frames and durations from roto manifests, then bakes its atlas."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass = "com.faultory.editor.SyncSkinCliKt"
+    workingDir = rootProject.file("assets")
+    systemProperty("java.awt.headless", "true")
+}
