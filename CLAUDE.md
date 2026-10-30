@@ -189,6 +189,34 @@ Full contract — degradation order, sockets vs. interactions, mirroring, layer 
 the **`skin-actions`** skill (`.claude/skills/skin-actions/`). Load it before touching a resolver,
 a renderer, a `ShopFloorLayer`, or anything under `raw-art/`.
 
+## Roto workflow (sprite art)
+
+Frames in `raw-art/` come from **roto**, a separate open-source rotoscoping tool (spec:
+`docs/roto-spec.md`). roto knows nothing about Faultory; Faultory tells it what it needs through
+configuration and one hook, so nothing roto-specific lives in `core`.
+
+- `roto.json` (repo root) - `facings` and `actions` (plain string lists; action ids are
+  `SpriteAction` ids), the 40x60 `canvas`, the `output` / `manifest` path templates, and
+  `afterPublish`.
+- `palette/faultory.gpl` is the one source of colour values; `palette/ramps.json` names ramps
+  (dark to light) by palette entry. Add a colour to the palette first, then to a ramp.
+- A publish writes `raw-art/<profile>/<action>_<facing>/NNN.png` plus a `clip.json` manifest
+  (`RotoClipManifest`), then runs `./gradlew :editor:syncSkin --args=<profile>`.
+- `syncSkin` (`SyncSkinCli` -> `SkinSyncService`, in `editor`) rewrites, for each clip directory that
+  has a `clip.json`, that facing's frame list and the action's `loop` / `frameDurationSeconds` in
+  `assets/skins/<profile>.json`, then bakes the atlas. Directories without a manifest are
+  hand-authored and untouched. It is headless and needs no window.
+
+Rules:
+
+- The runtime plays an action at one uniform frame duration, so `syncSkin` averages roto's per-frame
+  durations and warns when they spread widely. Do not read `durationMs` anywhere else.
+- `RotoClipManifest.FILE_NAME` must match the `manifest` template in `roto.json`
+  (`SyncSkinCliTest` locks it). Changing the manifest shape is a change to roto's publisher too.
+- `raw-art/` is gitignored; only the baked atlas and the skin JSON are committed.
+- roto needs `ffmpeg` and `ffprobe` on `PATH`. If they are missing, say so rather than installing
+  them unprompted.
+
 ## Events
 
 Everything that happens on the factory floor publishes a `GameEvent`, whether or not anything is

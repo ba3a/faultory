@@ -33,6 +33,24 @@ Source published for portfolio review. Not open source: all rights reserved — 
 `./gradlew build`
 `./gradlew :editor:run`
 
+## Sprite art with roto
+
+Character art is rotoscoped pixel art. [roto](docs/roto-spec.md) is a separate tool that turns phone
+footage into a palette draft, hands it over as a layered `.ase` for polishing in LibreSprite or
+Aseprite, and publishes the finished frames into `raw-art/`. Faultory only supplies configuration
+and one hook:
+
+- `roto.json` - facings, actions, canvas size, output and manifest path templates, and the
+  `afterPublish` command
+- `palette/faultory.gpl` and `palette/ramps.json` - the project palette and its dark-to-light ramps
+- `./gradlew :editor:syncSkin --args=<skinId>` - run by roto after a publish; updates
+  `assets/skins/<skinId>.json` from the published `clip.json` manifests and bakes the atlas
+
+roto decodes video through **`ffmpeg` and `ffprobe`, which must be on `PATH`**. Check with
+`ffmpeg -version`. On Windows, `winget install Gyan.FFmpeg` installs both.
+
+`raw-art/` is gitignored; the published frames never enter the repository.
+
 ## Shop-floor camera
 
 The floor sits under a pan-and-zoom camera; the HUD, bank panel, menus and modals stay fixed on top.
