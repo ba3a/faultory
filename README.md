@@ -35,7 +35,7 @@ Source published for portfolio review. Not open source: all rights reserved — 
 
 ## Sprite art with roto
 
-Character art is rotoscoped pixel art. [roto](docs/roto-spec.md) is a separate tool that turns phone
+Character art is rotoscoped pixel art. roto is a separate tool that turns phone
 footage into a palette draft, hands it over as a layered `.ase` for polishing in LibreSprite or
 Aseprite, and publishes the finished frames into `raw-art/`. Faultory only supplies configuration
 and one hook:

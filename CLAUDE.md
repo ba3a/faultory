@@ -191,8 +191,7 @@ a renderer, a `ShopFloorLayer`, or anything under `raw-art/`.
 
 ## Roto workflow (sprite art)
 
-Frames in `raw-art/` come from **roto**, a separate open-source rotoscoping tool (spec:
-`docs/roto-spec.md`). roto knows nothing about Faultory; Faultory tells it what it needs through
+Frames in `raw-art/` come from **roto**, a separate open-source rotoscoping tool. roto knows nothing about Faultory; Faultory tells it what it needs through
 configuration and one hook, so nothing roto-specific lives in `core`.
 
 - `roto.json` (repo root) - `facings` and `actions` (plain string lists; action ids are
@@ -420,3 +419,7 @@ When a refactor clears out a mistake that could be made again, leave something b
   or a commit message. The file is local, gitignored, and renumbers as items land — the citation
   goes stale almost immediately and points at nothing for anyone without that exact local snapshot.
   State the rationale in the comment or commit body itself instead.
+- Spec files, plans, notes and other scratch files (everything under `docs/` that is not shipped
+  documentation, `.claude/specloop/`, and the like) are not tracked in git. Do not `git add` them,
+  and do not link to them from tracked files, code comments or commit messages: the reader has no
+  such file.
