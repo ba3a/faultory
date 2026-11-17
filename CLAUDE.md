@@ -9,6 +9,7 @@ Kotlin-first Gradle multi-module LibGDX desktop game. Modules:
 - `core` — game runtime, domain models, JSON loaders, save handling, screen flow, simulation systems
 - `desktop` — LWJGL3 launcher only (keep thin)
 - `editor` — standalone LibGDX asset editor (`./gradlew :editor:run` on Linux, `./gradlew.bat :editor:run` on Windows); owns validation, atlas baking, backup/restore, i18n, and reflection-driven inspector UI. Keep editor logic in `editor`; do not bleed it into `core`.
+- `balance` — headless balance tooling that depends on `core` (entry point `com.faultory.balance.BalanceMainKt`, uses the MCP Kotlin SDK)
 - `assets` — runtime JSON content loaded by LibGDX at startup (not a Gradle module)
 - `buildSrc` — shared Gradle convention plugin (`buildsrc.convention.kotlin-jvm`)
 
