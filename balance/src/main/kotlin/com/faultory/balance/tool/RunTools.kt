@@ -22,6 +22,7 @@ import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 
+/** Default seed count for run, sweep and compare. Paired seeds keep 10 enough to see large effects; widen before trusting small ones. */
 internal const val DEFAULT_SEEDS = 10
 internal const val DEFAULT_BASE_SEED = 1L
 private const val MAX_SHIFTS = 5_000

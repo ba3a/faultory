@@ -13,7 +13,7 @@ data class RunRequest(
     val scenarios: List<String> = listOf("baseline"),
     val levels: List<String>? = null,
     val player: PlayerSpec,
-    val seedCount: Int = 30,
+    val seedCount: Int = com.faultory.balance.tool.DEFAULT_SEEDS,
     val seeds: List<Long>? = null,
     val baseSeed: Long = 1L,
     val metrics: List<String> = emptyList(),

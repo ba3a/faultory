@@ -149,3 +149,50 @@ script it once it looks right.
   {"atSeconds": 9.0, "action": {"type": "camera", "x": 800.0, "y": 480.0, "zoom": 0.5, "seconds": 2.0}}
 ]}
 ```
+
+## Balance MCP Server
+
+`balance` is a headless MCP server for tuning game content. An AI agent patches catalog and level numbers in named scenarios, runs batches of simulated shifts on paired seeds, and reads aggregated results (pass rate, stars, cash, deliveries, 95% confidence intervals). It never writes to `assets/`. `scenario_export` returns the winning changes as path/old/new records for you to apply.
+
+Launch it (working directory is the repo root, content is read from `assets/`):
+
+```
+./gradlew :balance:run --console plain
+```
+
+MCP client config:
+
+```json
+{
+  "mcpServers": {
+    "balance": {
+      "command": "./gradlew.bat",
+      "args": ["-q", "--console", "plain", ":balance:run"]
+    }
+  }
+}
+```
+
+Use `./gradlew` on Linux and macOS. Scenarios and plans persist in `.balance/`.
+
+Connect the client, then request the **`balance-loop`** prompt. It carries the recommended tuning protocol: describe, baseline, sweep, judge by relative change on paired seeds, check side effects, widen seeds, export.
+
+Defaults: 10 seeds per cell (`seedCount`, starting at `baseSeed` 1), 1.0 s player decision interval (`decisionIntervalSeconds`), and a limit of 5,000 shifts per `run` (scenarios x levels x seeds). Widen `seeds` before you trust a small difference.
+
+Minimal example, a `sweep` of one worker's hire cost with the `naive` bot (output abridged):
+
+```json
+{ "path": "catalog/workers/anywork-1/hireCost", "values": [40, 120],
+  "levels": ["tutorial-shop"], "seedCount": 5,
+  "player": { "kind": "bot", "bot": "naive" } }
+```
+
+```json
+{ "runId": "run-1", "base": "baseline", "path": "catalog/workers/anywork-1/hireCost", "op": "set", "seeds": 5,
+  "rows": [ { "value": 40, "results": [ {
+    "level": "tutorial-shop", "player": "bot:naive", "seeds": 5,
+    "passRate": { "value": 1.0, "ci95": [0.566, 1.0] },
+    "stars": { "mean": 3.0, "hist": [0, 0, 0, 5] },
+    "cash": { "mean": 68.8, "p10": 6.0, "p50": 62.0, "p90": 84.0 } } ] },
+    { "value": 120, "results": [ "..." ] } ] }
+```

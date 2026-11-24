@@ -1,6 +1,7 @@
 package com.faultory.balance
 
 import io.modelcontextprotocol.kotlin.sdk.server.StdioServerTransport
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.asSink
 import kotlinx.io.asSource
@@ -30,6 +31,12 @@ fun main(args: Array<String>) {
             inputStream = System.`in`.asSource().buffered(),
             outputStream = System.out.asSink().buffered()
         )
-        runBlocking { server.connect(transport) }
+        runBlocking {
+            // connect() returns once the transport starts; wait for the client to close it.
+            val closed = Job()
+            server.onClose { closed.complete() }
+            server.connect(transport)
+            closed.join()
+        }
     }
 }

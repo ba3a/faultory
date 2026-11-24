@@ -45,10 +45,14 @@ class BalanceServer(
         val server = Server(
             serverInfo = Implementation(name = "balance", version = "0.2.0"),
             options = ServerOptions(
-                capabilities = ServerCapabilities(tools = ServerCapabilities.Tools(listChanged = false))
+                capabilities = ServerCapabilities(
+                    tools = ServerCapabilities.Tools(listChanged = false),
+                    prompts = ServerCapabilities.Prompts(listChanged = false)
+                )
             )
         )
         registerAll(server)
+        BalanceLoopPrompt.register(server)
         return server
     }
 
@@ -206,7 +210,7 @@ class BalanceServer(
                                 "or {kind:'bot', bot:name (see bot_list), decisionIntervalSeconds?:float}"
                         )
                     }
-                    putJsonObject("seedCount") { put("type", "integer"); put("description", "Seed count (default 30)") }
+                    putJsonObject("seedCount") { put("type", "integer"); put("description", "Seed count (default 10)") }
                     putJsonObject("explicitSeeds") { put("type", "array"); put("description", "Explicit seed values") }
                     putJsonObject("baseSeed") { put("type", "integer"); put("description", "First seed value (default: 1)") }
                     putJsonObject("metrics") { put("type", "array"); put("description", "Counter names to include") }
