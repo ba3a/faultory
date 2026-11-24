@@ -195,7 +195,7 @@ a renderer, a `ShopFloorLayer`, or anything under `raw-art/`.
 Frames in `raw-art/` come from **roto**, a separate open-source rotoscoping tool. roto knows nothing about Faultory; Faultory tells it what it needs through
 configuration and one hook, so nothing roto-specific lives in `core`.
 
-- `roto.json` (repo root) - `facings` and `actions` (plain string lists; action ids are
+- `roto.json` (repo root) - `id` (the project's folder name in roto's library; keep it stable), `facings` and `actions` (plain string lists; action ids are
   `SpriteAction` ids), the 40x60 `canvas`, the `output` / `manifest` path templates, and
   `afterPublish`.
 - `palette/faultory.gpl` is the one source of colour values; `palette/ramps.json` names ramps

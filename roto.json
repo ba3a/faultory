@@ -1,4 +1,5 @@
 {
+  "id": "faultory",
   "palette": "palette/faultory.gpl",
   "ramps": "palette/ramps.json",
   "facings": ["NORTH", "EAST", "SOUTH", "WEST"],
