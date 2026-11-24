@@ -29,8 +29,18 @@ sealed interface PlayerSpec {
         override val decisionIntervalSeconds: Float = 1.0f
     ) : PlayerSpec
 
+    /**
+     * A named bot policy (see [com.faultory.balance.bot.BotRegistry]) that plays without a plan.
+     * Its randomness is seeded from the run seed, so (bot, level, seed) is repeatable.
+     */
+    data class BotSpec(
+        val botName: String,
+        override val decisionIntervalSeconds: Float = 1.0f
+    ) : PlayerSpec
+
     fun label(): String = when (this) {
         is StoredPlanSpec -> "plan:$planName"
         is InlinePlanSpec -> "plan:inline"
+        is BotSpec -> "bot:$botName"
     }
 }

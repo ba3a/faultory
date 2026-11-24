@@ -10,7 +10,7 @@ import kotlin.test.assertNull
 
 /**
  * [ShortestPathFinder] reuses one scratch queue and one scratch visited-map per BFS variant across
- * calls instead of allocating fresh ones (see the fields on [ShortestPathFinder]). Each of these
+ * calls instead of allocating fresh ones (see the scratch buffers in [ShortestPathFinder], which are confined to the calling thread). Each of these
  * tests runs a successful search, then a different successful search, then a search that fails
  * (`null`), then repeats the first search — the repeat must reproduce the first result exactly,
  * which it can only do if clearing and reusing the pooled buffers leaves no stale visited/queue
@@ -77,5 +77,28 @@ class ShortestPathFinderPoolingTest {
 
         val repeatedFirstPath = assertNotNull(finder.findPath(grid, start, setOf(TileCoordinate(12, 10)), emptySet()))
         assertEquals(firstPath, repeatedFirstPath)
+    }
+
+    @Test
+    fun `concurrent searches on one finder do not corrupt each other`() {
+        val finder = ShortestPathFinder(BeltTraversal.ONE_TILE_RIDE)
+        val start = TileCoordinate(grid.floor.x, grid.floor.y)
+        val goal = TileCoordinate(grid.floor.maxX, grid.floor.maxY)
+        val expected = finder.findPath(grid, start, setOf(goal), emptySet())
+        assertNotNull(expected)
+
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(8)
+        try {
+            val results = (1..64).map {
+                pool.submit<List<TileCoordinate>?> {
+                    var last: List<TileCoordinate>? = null
+                    repeat(50) { last = finder.findPath(grid, start, setOf(goal), emptySet()) }
+                    last
+                }
+            }.map { it.get() }
+            results.forEach { assertEquals(expected, it) }
+        } finally {
+            pool.shutdown()
+        }
     }
 }

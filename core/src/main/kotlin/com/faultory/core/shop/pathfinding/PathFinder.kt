@@ -37,15 +37,20 @@ interface PathFinder {
 class ShortestPathFinder(
     override val beltTraversal: BeltTraversal
 ) : PathFinder {
-    // Reused across calls: MovementStrategies holds exactly 3 long-lived instances of this class for
-    // the game's lifetime, the sim is single-threaded, and findPath is never called reentrantly, so
-    // clearing and reusing these avoids a fresh ArrayDeque+HashMap allocation on every replan
-    // attempt. reconstructPath/reconstructStatePath still allocate their returned list fresh — that
-    // list becomes Worker.movementPath and must not alias pooled storage.
-    private val plainQueue = ArrayDeque<TileCoordinate>()
-    private val plainPreviousByTile = HashMap<TileCoordinate, TileCoordinate?>()
-    private val beltAwareQueue = ArrayDeque<BeltAwareState>()
-    private val beltAwarePreviousByState = HashMap<BeltAwareState, BeltAwareState?>()
+    // Scratch buffers are reused across calls to avoid a fresh ArrayDeque+HashMap per replan attempt.
+    // They are confined to the calling thread: MovementStrategies holds 3 long-lived instances of this
+    // class that every ShopFloor in the process shares, and a balance run simulates many shifts at
+    // once, so instance fields would be corrupted by concurrent searches. A single thread never calls
+    // findPath reentrantly. reconstructPath/reconstructStatePath still allocate their returned list
+    // fresh - that list becomes Worker.movementPath and must not alias pooled storage.
+    private class Scratch {
+        val plainQueue = ArrayDeque<TileCoordinate>()
+        val plainPreviousByTile = HashMap<TileCoordinate, TileCoordinate?>()
+        val beltAwareQueue = ArrayDeque<BeltAwareState>()
+        val beltAwarePreviousByState = HashMap<BeltAwareState, BeltAwareState?>()
+    }
+
+    private val scratch: ThreadLocal<Scratch> = ThreadLocal.withInitial(::Scratch)
 
     override fun findPath(
         grid: ShopGrid,
@@ -68,8 +73,9 @@ class ShortestPathFinder(
         goals: Set<TileCoordinate>,
         blockedTiles: Set<TileCoordinate>
     ): List<TileCoordinate>? {
-        val queue = plainQueue
-        val previousByTile = plainPreviousByTile
+        val buffers = scratch.get()
+        val queue = buffers.plainQueue
+        val previousByTile = buffers.plainPreviousByTile
         queue.clear()
         previousByTile.clear()
         queue.addLast(start)
@@ -104,8 +110,9 @@ class ShortestPathFinder(
         // State-aware BFS: `rideCommitted = true` means we just stepped onto a belt
         // entry tile and must ride exactly one tile to nextBeltTile(tile). After the
         // ride we are free to walk again — including starting a separate ride.
-        val queue = beltAwareQueue
-        val previousByState = beltAwarePreviousByState
+        val buffers = scratch.get()
+        val queue = buffers.beltAwareQueue
+        val previousByState = buffers.beltAwarePreviousByState
         queue.clear()
         previousByState.clear()
         val startState = BeltAwareState(start, rideCommitted = false)

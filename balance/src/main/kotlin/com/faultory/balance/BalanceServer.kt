@@ -1,6 +1,7 @@
 package com.faultory.balance
 
 import com.faultory.balance.tool.CompareTools
+import com.faultory.balance.tool.handleBotList
 import com.faultory.balance.tool.handleDescribeContent
 import com.faultory.balance.tool.handleGetValue
 import com.faultory.balance.tool.handlePlanCheck
@@ -197,7 +198,14 @@ class BalanceServer(
                 properties = buildJsonObject {
                     putJsonObject("scenarios") { put("type", "array"); put("description", "Scenario ids (default: ['baseline'])") }
                     putJsonObject("levels") { put("type", "array"); put("description", "Level ids (default: all)") }
-                    putJsonObject("player") { put("type", "object"); put("description", "PlayerSpec: {kind:'plan', plan?:name, inline?:planObj, decisionIntervalSeconds?:float}") }
+                    putJsonObject("player") {
+                        put("type", "object")
+                        put(
+                            "description",
+                            "PlayerSpec: {kind:'plan', plan?:name, inline?:planObj, decisionIntervalSeconds?:float} " +
+                                "or {kind:'bot', bot:name (see bot_list), decisionIntervalSeconds?:float}"
+                        )
+                    }
                     putJsonObject("seedCount") { put("type", "integer"); put("description", "Seed count (default 30)") }
                     putJsonObject("explicitSeeds") { put("type", "array"); put("description", "Explicit seed values") }
                     putJsonObject("baseSeed") { put("type", "integer"); put("description", "First seed value (default: 1)") }
@@ -246,6 +254,12 @@ class BalanceServer(
                 required = listOf("a", "b", "player")
             )
         ) { args -> compareTools.handleCompare(args) }
+
+        tool(server, "bot_list",
+            "Available bot players, their tiers and a one-line description each. " +
+                "Use as player {kind:'bot', bot:<name>}.",
+            Tool.Input()
+        ) { _ -> handleBotList() }
 
         tool(server, "run_details",
             "Paginated per-seed rows for a previous run result.",

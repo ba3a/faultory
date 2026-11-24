@@ -366,6 +366,10 @@ When a refactor clears out a mistake that could be made again, leave something b
   `WorkerRole.entries` and fails when either is added half-wired. `CleanerSpawnSystem`'s inline
   belt check is the one deliberate exception: it runs before the worker, and therefore before any
   strategy, exists.
+- **Anything shared across `ShopFloor`s is thread-safe.** `balance` runs many shifts in parallel, and
+  `DefaultMovementStrategyResolver` and its `ShortestPathFinder`s are process-wide singletons. Their
+  scratch buffers are `ThreadLocal`; an instance-field buffer corrupted concurrent searches
+  (`NoSuchElementException`, OOM). `ShortestPathFinderPoolingTest` locks it.
 - Do not introduce new dependencies without strong justification; add via `gradle/libs.versions.toml` and the relevant `build.gradle.kts`.
 - Do not introduce Spring, Ktor, Hibernate, or any backend framework speculatively.
 - Tests live in the module they exercise: `core/src/test/kotlin/com/faultory/core/...` for runtime

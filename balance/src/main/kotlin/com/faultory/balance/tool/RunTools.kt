@@ -1,6 +1,7 @@
 package com.faultory.balance.tool
 
 import com.faultory.balance.ContentManager
+import com.faultory.balance.bot.BotRegistry
 import com.faultory.balance.PlanStore
 import com.faultory.balance.PlayerSpec
 import com.faultory.balance.RunEngine
@@ -77,8 +78,16 @@ internal fun parsePlayerSpec(args: JsonObject, planStore: PlanStore): PlayerSpec
     val interval = playerObj["decisionIntervalSeconds"]?.jsonPrimitive?.contentOrNull?.toFloatOrNull() ?: 1.0f
     return when (kind) {
         "plan" -> parsePlanSpec(playerObj, planStore, interval)
-        else -> throw IllegalArgumentException("Unknown player kind '$kind'; supported: 'plan'")
+        "bot" -> parseBotSpec(playerObj, interval)
+        else -> throw IllegalArgumentException("Unknown player kind '$kind'; supported: 'plan', 'bot'")
     }
+}
+
+internal fun parseBotSpec(playerObj: JsonObject, interval: Float): PlayerSpec {
+    val name = playerObj["bot"]?.jsonPrimitive?.contentOrNull
+        ?: throw IllegalArgumentException("player kind='bot' requires 'bot' (name); see bot_list")
+    require(interval > 0f) { "decisionIntervalSeconds must be positive" }
+    return PlayerSpec.BotSpec(BotRegistry.info(name).name, interval)
 }
 
 internal fun parsePlanSpec(playerObj: JsonObject, planStore: PlanStore, interval: Float): PlayerSpec {
