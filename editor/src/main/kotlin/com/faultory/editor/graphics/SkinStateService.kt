@@ -158,6 +158,44 @@ class SkinStateService(private val assetsRoot: Path) {
     }
 
     /**
+     * Prepares [toAction] to receive a copy of [fromAction]'s pose for [orientation], unflipped.
+     *
+     * A clip that does not exist yet inherits the source's loop flag and frame duration, so a copied
+     * walk keeps its pace. Sockets for [orientation] are copied as-is; a clip that already exists
+     * keeps its own timing. Frames and cutout layers are set separately with [setOrientationFrames]
+     * and [setPart], since they need the baked region names.
+     */
+    fun copyPoseMetadata(
+        current: SkinDefinition,
+        fromAction: String,
+        toAction: String,
+        orientation: Orientation,
+    ): SkinDefinition {
+        val source = current.actions[fromAction] ?: return current
+        val target = current.actions[toAction]
+            ?: ActionClip(
+                frames = emptyMap(),
+                loop = source.loop,
+                frameDurationSeconds = source.frameDurationSeconds,
+            )
+
+        var sockets = target.sockets
+        source.sockets.forEach { (name, socket) ->
+            val byOrientation = socket.byOrientation[orientation]
+            val byFrame = socket.byFrame[orientation]
+            if (byOrientation == null && byFrame == null) return@forEach
+            val existing = sockets[name] ?: SocketClip()
+            sockets = sockets + (name to existing.copy(
+                byOrientation = byOrientation?.let { existing.byOrientation + (orientation to it) }
+                    ?: existing.byOrientation,
+                byFrame = byFrame?.let { existing.byFrame + (orientation to it) } ?: existing.byFrame,
+            ))
+        }
+
+        return current.copy(actions = current.actions + (toAction to target.copy(sockets = sockets)))
+    }
+
+    /**
      * Reflects a sprite-local point about the frame's vertical centre line.
      *
      * `width - x`, not `width - 1 - x`: [SocketPoint] is a continuous offset from the region's

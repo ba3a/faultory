@@ -6,9 +6,9 @@ import com.faultory.core.shop.Orientation
  * Picks the clip a sprite should actually draw, degrading gracefully when the requested
  * action or orientation was never authored.
  *
- * The chain is, in order: the requested action facing the requested way, then facing
- * [Orientation.SOUTH], then facing the nearest authored orientation by turning order;
- * then the same three steps again for any stand-in the action declares, and finally for
+ * The chain is, in order: the requested action, then its stand-in, each facing the requested way;
+ * then, for the requested action, facing [Orientation.SOUTH] and then the nearest authored
+ * orientation by turning order; the same again for the stand-in, and finally for
  * [SpriteAction.IDLE]. An unresolved lookup means the caller should fall back to shape rendering.
  */
 object SkinFrameResolver {
@@ -19,7 +19,19 @@ object SkinFrameResolver {
     )
 
     fun resolve(definition: SkinDefinition, action: String, orientation: Orientation): Resolution? {
-        for (candidateAction in actionCandidates(action)) {
+        // The requested facing beats any other facing of the same action, so a stand-in drawn for
+        // this facing is chosen over the action's art for another one: a `carry` authored only
+        // for EAST must not turn a north-bound worker to face south. Idle is left out of this
+        // pass - a different action in the right facing is not worth more than the right action.
+        val candidates = actionCandidates(action)
+        for (candidateAction in candidates) {
+            if (candidateAction == SpriteAction.IDLE.id && action != SpriteAction.IDLE.id) continue
+            val clip = definition.actions[candidateAction] ?: continue
+            if (!clip.frames[orientation].isNullOrEmpty()) {
+                return Resolution(clip = clip, action = candidateAction, orientation = orientation)
+            }
+        }
+        for (candidateAction in candidates) {
             resolveExactAction(definition, candidateAction, orientation)?.let { return it }
         }
         return null

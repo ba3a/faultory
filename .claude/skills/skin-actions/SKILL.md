@@ -15,11 +15,12 @@ name and an orientation, and `SkinFrameResolver` picks the clip to draw.
 `SkinFrameResolver` degrades in a fixed order, so partially authored art still renders:
 
 1. Requested action facing the requested way
-2. That action facing `SOUTH`
-3. That action at the nearest authored orientation by turning order — clockwise neighbour,
+2. Its **stand-in** (if any) facing the requested way
+3. The requested action facing `SOUTH`
+4. That action at the nearest authored orientation by turning order — clockwise neighbour,
    counter-clockwise neighbour, opposite
-4. Those same three steps again for any **stand-in** the action declares
-5. Those same three steps for `idle`
+5. Steps 3–4 again for the stand-in
+6. Those steps for `idle`
 
 Stand-ins exist because idle is the wrong substitute for anything that plays while the entity is
 moving or off its feet — an unauthored `pursue` borrows `walk` rather than freezing a guard
@@ -60,13 +61,22 @@ An action the runtime asks for but the enum does not list is an animation that n
 contract by driving the resolvers over every `UnitPhase`, `BeltRidePhase`, `InteractionRole`,
 `ShopProductState` and `BeltTileShape`.
 
-## Two things that look like actions but are not
+## Carrying and handing over
 
-- **Carrying** is the payload riding the `hands` socket over the ordinary pose.
+- **Carrying** has two parts. The payload rides the `hands` socket. While a worker walks with a
+  product (`carriedProductId != null`) it plays `carry`, which stands in on `walk`: people's arms
+  cannot be faked on a walk cycle, so `carry` is its own clip. An unauthored `carry` — or one
+  authored for other facings only — shows the `walk` for that facing. The editor's cell menu on a
+  `carry` cell offers "Copy walk/<FACING> into carry/<FACING>" (frames, parts, sockets, timing).
+  Standing still with a product is plain `idle`.
 - **Handing over** is an interaction, whose two halves are authored per interaction rather than as
   constants.
 
 Reach for a socket or an interaction before adding an action.
+
+Stand-ins are tried in the **requested facing first** (action, then stand-in), and only then in
+other facings of the action, so partial per-facing art degrades to the stand-in, not to the wrong
+facing.
 
 ## Where art lives
 

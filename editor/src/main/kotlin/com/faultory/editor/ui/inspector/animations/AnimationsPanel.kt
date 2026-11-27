@@ -9,6 +9,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.utils.Disposable
 import com.badlogic.gdx.utils.Array as GdxArray
 import com.faultory.core.graphics.SkinDefinition
+import com.faultory.core.graphics.SpriteAction
 import com.faultory.core.shop.Orientation
 import com.faultory.editor.graphics.AtlasBaker
 import com.faultory.editor.graphics.FrameBatchPlanner
@@ -376,8 +377,112 @@ class AnimationsPanel(
             }
         }
 
+        addStandInCopyItems(menu, action)
+
         val input = Gdx.input ?: return
         menu.showMenu(stage, input.x.toFloat(), stage.height - input.y.toFloat())
+    }
+
+    /**
+     * For an action that borrows another when unauthored (`carry` from `walk`), offers to copy the
+     * stand-in's art into it facing by facing. A person's carry is the walk cycle with the arms
+     * posed differently, but for some workers the walk already reads right and only the facings
+     * that differ need drawing; copying just the chosen facings leaves the rest falling back to
+     * the walk at runtime.
+     */
+    private fun addStandInCopyItems(menu: PopupMenu, action: String) {
+        val standIn = SpriteAction.standIns[action]?.firstOrNull() ?: return
+        val available = Orientation.entries.filter {
+            frameMirrorService.framesIn(skinId, standIn, it).isNotEmpty()
+        }
+        if (available.isEmpty()) return
+
+        fun addCopy(label: String, facings: List<Orientation>) {
+            menu.addItem(
+                MenuItem(label).apply {
+                    addListener(object : ChangeListener() {
+                        override fun changed(event: ChangeEvent?, actor: Actor?) {
+                            confirmCopy(action, standIn, facings)
+                        }
+                    })
+                },
+            )
+        }
+
+        available.forEach { addCopy("Copy $standIn/${it.name} into $action/${it.name}", listOf(it)) }
+        if (available.size > 1) {
+            addCopy("Copy $standIn into every facing it has (${available.size})", available)
+        }
+    }
+
+    /** Copying replaces drawn art in the target facings, which raw art's lack of version control makes final. */
+    private fun confirmCopy(action: String, standIn: String, facings: List<Orientation>) {
+        val stage = stageProvider() ?: return
+        val replaced = facings.filter { frameMirrorService.framesIn(skinId, action, it).isNotEmpty() }
+        if (replaced.isEmpty()) {
+            copyFromStandIn(action, standIn, facings)
+            return
+        }
+
+        ConfirmDialog(
+            title = "Replace drawn art?",
+            message = "$action already has art for ${replaced.joinToString { it.name }}.\n" +
+                "Replace it with a copy of $standIn?\n" +
+                "Raw art is not under version control, so this cannot be undone.",
+            confirmText = "Copy",
+            onConfirm = { copyFromStandIn(action, standIn, facings) },
+        ).showOn(stage)
+    }
+
+    /**
+     * Copies [standIn]'s frames, cutout layers and sockets into [action] for each of [facings], in
+     * one [importAndBake] so a half-applied copy rolls back as a whole.
+     */
+    private fun copyFromStandIn(action: String, standIn: String, facings: List<Orientation>) {
+        val copied = importAndBake(
+            failureDetail = { " Raw art for $action may already have been replaced." },
+        ) { base ->
+            facings.fold(base) { current, facing ->
+                val withMetadata = skinStateService.copyPoseMetadata(current, standIn, action, facing)
+                val withFrames = skinStateService.setOrientationFrames(
+                    current = withMetadata,
+                    action = action,
+                    orientation = facing,
+                    regionNames = frameImportService.importFrames(
+                        skinId,
+                        action,
+                        facing,
+                        frameMirrorService.framesIn(skinId, standIn, facing),
+                    ),
+                )
+                skin?.actions?.get(standIn)?.parts.orEmpty().entries.fold(withFrames) { acc, (name, part) ->
+                    val partFrames = frameMirrorService.framesIn(skinId, partImportAction(standIn, name), facing)
+                    if (partFrames.isEmpty()) {
+                        acc
+                    } else {
+                        skinStateService.setPart(
+                            current = acc,
+                            action = action,
+                            orientation = facing,
+                            partName = name,
+                            depth = part.depth,
+                            regionNames = frameImportService.importFrames(
+                                skinId,
+                                partImportAction(action, name),
+                                facing,
+                                partFrames,
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+
+        if (copied) {
+            statusLabel.setText(
+                "Copied $standIn into $action for ${facings.joinToString { it.name }}. ${statusLabel.text}",
+            )
+        }
     }
 
     /**

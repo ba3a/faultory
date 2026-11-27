@@ -37,6 +37,7 @@ object WorkerActionResolver {
             null -> when {
                 !isMoving(placedObject) -> SpriteAction.IDLE.id
                 placedObject.pursuitTargetWorkerId != null -> SpriteAction.PURSUE.id
+                placedObject.carriedProductId != null -> SpriteAction.CARRY.id
                 else -> SpriteAction.WALK.id
             }
         }

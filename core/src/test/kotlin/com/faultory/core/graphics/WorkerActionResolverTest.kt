@@ -94,6 +94,23 @@ class WorkerActionResolverTest {
     }
 
     @Test
+    fun `a worker carrying a product while moving plays carry`() {
+        val carrier = worker(
+            movementPath = listOf(TileCoordinate(6, 5)),
+            movementProgress = 0.4f
+        ).copy(carriedProductId = "product-1")
+
+        assertEquals(SpriteAction.CARRY.id, WorkerActionResolver.actionFor(carrier, WorkerAnimationState()))
+    }
+
+    @Test
+    fun `a worker standing still with a product is idle`() {
+        val holder = worker(movementPath = emptyList()).copy(carriedProductId = "product-1")
+
+        assertEquals(SpriteAction.IDLE.id, WorkerActionResolver.actionFor(holder, WorkerAnimationState()))
+    }
+
+    @Test
     fun `a guard standing still mid-chase is idle rather than pursuing`() {
         // Pursuit is alert locomotion; a stationary run pose would read as a glitch.
         val replanning = worker(movementPath = emptyList()).copy(pursuitTargetWorkerId = "worker-9")

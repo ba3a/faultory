@@ -24,10 +24,10 @@ enum class SpriteKind { WORKER, MACHINE, PRODUCT, BELT, TILE }
  * for an action this table does not list.
  *
  * Declaration order is authoring order: [IDLE] leads so every kind's list starts with it, and the
- * rest follow the order the editor should show them in. Two worker states are deliberately absent —
- * carrying is the payload riding the `hands` socket over the ordinary pose, and handing over is an
- * interaction whose clip names are authored per interaction and merged in by
- * [SkinActionCatalog.workerActions].
+ * rest follow the order the editor should show them in. Handing over is deliberately absent: it is
+ * an interaction whose clip names are authored per interaction and merged in by
+ * [SkinActionCatalog.workerActions]. [CARRY] is a walk cycle with the arms posed for a payload,
+ * which a person's walk cannot fake; the payload itself still rides the `hands` socket.
  */
 enum class SpriteAction(
     val id: String,
@@ -37,6 +37,7 @@ enum class SpriteAction(
 ) {
     IDLE("idle", setOf(WORKER, MACHINE, PRODUCT, BELT, TILE)),
     WALK("walk", setOf(WORKER)),
+    CARRY("carry", setOf(WORKER), standInId = "walk"),
     BELT_ENTER("belt_enter", setOf(WORKER), standInId = "belt_ride"),
     BELT_RIDE("belt_ride", setOf(WORKER)),
     BELT_EXIT("belt_exit", setOf(WORKER), standInId = "belt_ride"),

@@ -157,10 +157,40 @@ class SkinFrameResolverTest {
     }
 
     @Test
-    fun `a stand-in is only tried after every orientation of the requested action`() {
+    fun `a stand-in in the requested facing beats the action in another facing`() {
+        // carry is drawn for EAST only: a north-bound carrier must keep walking north, not turn south.
+        val definition = definition(
+            SpriteAction.CARRY.id to frames(Orientation.EAST),
+            SpriteAction.WALK.id to frames(Orientation.NORTH, Orientation.EAST)
+        )
+
+        assertEquals(
+            SpriteAction.WALK.id to Orientation.NORTH,
+            SkinFrameResolver.resolve(definition, SpriteAction.CARRY.id, Orientation.NORTH).actionAndOrientation()
+        )
+        assertEquals(
+            SpriteAction.CARRY.id to Orientation.EAST,
+            SkinFrameResolver.resolve(definition, SpriteAction.CARRY.id, Orientation.EAST).actionAndOrientation()
+        )
+    }
+
+    @Test
+    fun `an unauthored carry falls back to walk`() {
+        val definition = definition(
+            SpriteAction.WALK.id to frames(Orientation.NORTH),
+            SpriteAction.IDLE.id to frames(Orientation.NORTH)
+        )
+
+        val resolution = SkinFrameResolver.resolve(definition, SpriteAction.CARRY.id, Orientation.NORTH)
+
+        assertEquals(SpriteAction.WALK.id to Orientation.NORTH, resolution.actionAndOrientation())
+    }
+
+    @Test
+    fun `a stand-in is only tried in another facing after the action has no art for the requested one`() {
         val definition = definition(
             SpriteAction.PURSUE.id to frames(Orientation.WEST),
-            SpriteAction.WALK.id to frames(Orientation.NORTH)
+            SpriteAction.WALK.id to frames(Orientation.EAST)
         )
 
         val resolution = SkinFrameResolver.resolve(definition, SpriteAction.PURSUE.id, Orientation.NORTH)

@@ -45,7 +45,7 @@ class SpriteActionTest {
     fun `the per-kind lists are exactly what the catalog and editor expect`() {
         assertEquals(
             listOf(
-                "idle", "walk", "belt_enter", "belt_ride", "belt_exit",
+                "idle", "walk", "carry", "belt_enter", "belt_ride", "belt_exit",
                 "pursue", "fall", "lie", "stand_up", "destroy"
             ),
             SpriteAction.idsFor(SpriteKind.WORKER)
@@ -75,6 +75,7 @@ class SpriteActionTest {
         assertEquals(SpriteAction.idsFor(SpriteKind.TILE), SkinActionCatalog.tile)
         assertEquals(
             mapOf(
+                "carry" to listOf("walk"),
                 "belt_enter" to listOf("belt_ride"),
                 "belt_exit" to listOf("belt_ride"),
                 "pursue" to listOf("walk"),
